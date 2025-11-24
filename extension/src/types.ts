@@ -71,6 +71,11 @@ export interface FieldFocusedMessage {
   fieldContext: FieldContext;
 }
 
+export interface ManualSuggestMessage {
+  type: "MANUAL_SUGGEST";
+  tabId: number;
+}
+
 export interface SuggestionAvailableMessage {
   type: "SUGGESTION_AVAILABLE";
   fieldId: string;
@@ -85,11 +90,18 @@ export interface SuggestionErrorMessage {
 
 export type ExtensionMessage =
   | FieldFocusedMessage
+  | ManualSuggestMessage
   | SuggestionAvailableMessage
   | SuggestionErrorMessage;
 
 // Configuration
 export interface ExtensionConfig {
   backendUrl: string;
+}
+
+// Extension settings
+export interface ExtensionSettings {
+  enabled: boolean;
+  autoSuggest: boolean;  // Auto-suggest on focus vs manual only
 }
 

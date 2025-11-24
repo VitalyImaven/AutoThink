@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Smart Autofill</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            width: 320px;
+            padding: 16px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            font-size: 20px;
+            margin-bottom: 4px;
+        }
+        
+        .subtitle {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        
+        .control-group {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            color: #333;
+        }
+        
+        .control-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .control-item:last-child {
+            border-bottom: none;
+        }
+        
+        .control-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .control-description {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .3s;
+            border-radius: 24px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: #667eea;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+        
+        .status {
+            text-align: center;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+        
+        .status.enabled {
+            background: rgba(76, 175, 80, 0.3);
+        }
+        
+        .status.disabled {
+            background: rgba(244, 67, 54, 0.3);
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            background: white;
+            color: #667eea;
+            transition: all 0.2s;
+            margin-bottom: 8px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        
+        .info {
+            font-size: 11px;
+            text-align: center;
+            opacity: 0.8;
+            margin-top: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🤖 AI Smart Autofill</h1>
+        <div class="subtitle">Control your autofill assistant</div>
+    </div>
+    
+    <div id="status" class="status">Loading...</div>
+    
+    <div class="control-group">
+        <div class="control-item">
+            <div>
+                <div class="control-label">Extension Enabled</div>
+                <div class="control-description">Master on/off switch</div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="enabledToggle" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+        
+        <div class="control-item">
+            <div>
+                <div class="control-label">Auto-Suggest</div>
+                <div class="control-description">Suggest on field focus</div>
+            </div>
+            <label class="toggle-switch">
+                <input type="checkbox" id="autoSuggestToggle">
+                <span class="slider"></span>
+            </label>
+        </div>
+    </div>
+    
+    <button class="btn" id="openOptions">⚙️ Manage Knowledge Base</button>
+    <button class="btn btn-secondary" id="testSuggestion">✨ Test on Current Page</button>
+    
+    <div class="info">
+        💡 Tip: Right-click on any field and select "AI Autofill Suggest" for manual suggestions
+    </div>
+    
+    <script src="popup.js"></script>
+</body>
+</html>
+

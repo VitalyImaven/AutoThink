@@ -240,3 +240,24 @@ input[type='file'] {
   opacity: 0.3;
 }
 
+.setting-card {
+  flex: 1;
+  min-width: 280px;
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 12px;
+  border: 2px solid #e0e0e0;
+  transition: all 0.3s;
+}
+
+.setting-card:hover {
+  border-color: #4285f4;
+  box-shadow: 0 4px 12px rgba(66, 133, 244, 0.15);
+}
+
+.setting-header {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+

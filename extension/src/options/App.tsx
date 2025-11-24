@@ -15,11 +15,35 @@ const App: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<StatusMessage | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [enabled, setEnabled] = useState(true);
+  const [autoSuggest, setAutoSuggest] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     loadKnowledgeBase();
+    loadSettings();
   }, []);
+
+  const loadSettings = () => {
+    chrome.storage.sync.get(['enabled', 'autoSuggest'], (result) => {
+      setEnabled(result.enabled !== false);
+      setAutoSuggest(result.autoSuggest === true);
+    });
+  };
+
+  const handleEnabledToggle = () => {
+    const newEnabled = !enabled;
+    setEnabled(newEnabled);
+    chrome.storage.sync.set({ enabled: newEnabled });
+    showStatus('info', `Extension ${newEnabled ? 'enabled' : 'disabled'}`);
+  };
+
+  const handleAutoSuggestToggle = () => {
+    const newAutoSuggest = !autoSuggest;
+    setAutoSuggest(newAutoSuggest);
+    chrome.storage.sync.set({ autoSuggest: newAutoSuggest });
+    showStatus('info', `Auto-suggest ${newAutoSuggest ? 'enabled' : 'disabled'}`);
+  };
 
   const loadKnowledgeBase = async () => {
     setLoading(true);
@@ -176,6 +200,63 @@ const App: React.FC = () => {
           {statusMessage.text}
         </div>
       )}
+
+      {/* Extension Settings */}
+      <div className="section">
+        <h2>⚙️ Extension Settings</h2>
+        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+          <div className="setting-card">
+            <div className="setting-header">
+              <span style={{ fontSize: '20px' }}>{enabled ? '✅' : '❌'}</span>
+              <div>
+                <div style={{ fontWeight: '600', marginBottom: '4px' }}>Extension Enabled</div>
+                <div style={{ fontSize: '13px', color: '#666' }}>
+                  {enabled ? 'Extension is active' : 'Extension is disabled'}
+                </div>
+              </div>
+            </div>
+            <button
+              className={`btn ${enabled ? 'btn-danger' : 'btn-primary'}`}
+              onClick={handleEnabledToggle}
+              style={{ marginTop: '12px', width: '100%' }}
+            >
+              {enabled ? 'Disable Extension' : 'Enable Extension'}
+            </button>
+          </div>
+
+          <div className="setting-card">
+            <div className="setting-header">
+              <span style={{ fontSize: '20px' }}>{autoSuggest ? '⚡' : '👆'}</span>
+              <div>
+                <div style={{ fontWeight: '600', marginBottom: '4px' }}>Suggestion Mode</div>
+                <div style={{ fontSize: '13px', color: '#666' }}>
+                  {autoSuggest ? 'Auto-suggest on focus' : 'Manual (right-click)'}
+                </div>
+              </div>
+            </div>
+            <button
+              className="btn btn-primary"
+              onClick={handleAutoSuggestToggle}
+              style={{ marginTop: '12px', width: '100%' }}
+            >
+              {autoSuggest ? 'Switch to Manual' : 'Enable Auto-Suggest'}
+            </button>
+          </div>
+        </div>
+        
+        <div style={{ 
+          marginTop: '16px', 
+          padding: '12px', 
+          background: '#f8f9fa', 
+          borderRadius: '8px',
+          fontSize: '14px',
+          color: '#666'
+        }}>
+          💡 <strong>Tip:</strong> {autoSuggest 
+            ? 'Auto-suggest will show suggestions automatically when you click on a field.' 
+            : 'Right-click on any field and select "✨ AI Autofill Suggest" to get suggestions on demand.'}
+        </div>
+      </div>
 
       {/* Upload Section */}
       <div className="section">

@@ -162,5 +162,29 @@ chrome.runtime.onMessage.addListener(
   }
 );
 
+/**
+ * Create context menu for manual suggestions
+ */
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.contextMenus.create({
+    id: 'ai-autofill-suggest',
+    title: '✨ AI Autofill Suggest',
+    contexts: ['editable'],  // Only show on text inputs and textareas
+  });
+});
+
+/**
+ * Handle context menu clicks
+ */
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === 'ai-autofill-suggest' && tab?.id) {
+    // Send message to content script to trigger suggestion for focused field
+    chrome.tabs.sendMessage(tab.id, {
+      type: 'MANUAL_SUGGEST',
+      tabId: tab.id,
+    } as ExtensionMessage);
+  }
+});
+
 console.log('AI Smart Autofill background service worker loaded');
 

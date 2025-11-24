@@ -9,6 +9,25 @@ import { FieldContext, ExtensionMessage } from './types';
 let currentFieldId: string | null = null;
 let suggestionPopup: HTMLElement | null = null;
 let currentField: HTMLInputElement | HTMLTextAreaElement | null = null;
+let extensionSettings = { enabled: true, autoSuggest: false };  // Default: enabled but manual only
+
+// Load settings
+chrome.storage.sync.get(['enabled', 'autoSuggest'], (result) => {
+  extensionSettings.enabled = result.enabled !== false;  // Default true
+  extensionSettings.autoSuggest = result.autoSuggest === true;  // Default false (manual only)
+});
+
+// Listen for settings changes
+chrome.storage.onChanged.addListener((changes, namespace) => {
+  if (namespace === 'sync') {
+    if (changes.enabled) {
+      extensionSettings.enabled = changes.enabled.newValue;
+    }
+    if (changes.autoSuggest) {
+      extensionSettings.autoSuggest = changes.autoSuggest.newValue;
+    }
+  }
+});
 
 /**
  * Extract context information from a form field
@@ -95,8 +114,39 @@ function handleFieldFocus(event: FocusEvent) {
     return;
   }
 
+  // Store the current field for manual suggestions
   currentField = element;
+
+  // Only auto-suggest if enabled AND autoSuggest is on
+  if (!extensionSettings.enabled || !extensionSettings.autoSuggest) {
+    return;
+  }
+
   const fieldContext = extractFieldContext(element);
+  currentFieldId = fieldContext.field_id;
+
+  // Send message to background script
+  chrome.runtime.sendMessage({
+    type: 'FIELD_FOCUSED',
+    fieldContext,
+  } as ExtensionMessage);
+}
+
+/**
+ * Manually trigger suggestion for currently focused field
+ */
+function triggerManualSuggestion() {
+  if (!extensionSettings.enabled) {
+    console.log('AI Autofill is disabled');
+    return;
+  }
+
+  if (!currentField || !isFillableField(currentField)) {
+    console.log('No valid field is focused');
+    return;
+  }
+
+  const fieldContext = extractFieldContext(currentField);
   currentFieldId = fieldContext.field_id;
 
   // Send message to background script
@@ -225,6 +275,8 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
     showSuggestionPopup(message.fieldId, message.suggestionText);
   } else if (message.type === 'SUGGESTION_ERROR') {
     console.error('AI Autofill error:', message.error);
+  } else if (message.type === 'MANUAL_SUGGEST') {
+    triggerManualSuggestion();
   }
 });
 

@@ -41,12 +41,19 @@ export default defineConfig({
       input: {
         background: resolve(__dirname, 'src/background.ts'),
         content: resolve(__dirname, 'src/content.ts'),
+        popup: resolve(__dirname, 'src/popup.ts'),
         options: resolve(__dirname, 'src/options/index.html'),
+        'popup-page': resolve(__dirname, 'src/popup.html'),
       },
       output: {
         entryFileNames: '[name].js',
         chunkFileNames: '[name].js',
-        assetFileNames: '[name].[ext]',
+        assetFileNames: (assetInfo) => {
+          if (assetInfo.name === 'popup-page.html') {
+            return 'popup.html';
+          }
+          return '[name].[ext]';
+        },
       },
     },
   },
