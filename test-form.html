@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Autofill Test Form</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 12px;
+            font-size: 32px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 32px;
+            font-size: 16px;
+        }
+        
+        .section {
+            margin-bottom: 32px;
+        }
+        
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #444;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #555;
+        }
+        
+        input[type="text"],
+        input[type="email"],
+        input[type="tel"],
+        input[type="url"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .hint {
+            font-size: 13px;
+            color: #999;
+            margin-top: 4px;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .info-box {
+            background: #e8f0fe;
+            border-left: 4px solid #4285f4;
+            padding: 16px;
+            margin-bottom: 24px;
+            border-radius: 4px;
+        }
+        
+        .info-box p {
+            margin: 0;
+            color: #1967d2;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 AI Smart Autofill Test Form</h1>
+        <p class="subtitle">
+            Test the AI autofill extension by focusing on any field below.
+            The extension will automatically suggest relevant content!
+        </p>
+        
+        <div class="info-box">
+            <p>
+                💡 <strong>Tip:</strong> Click on any field and wait 2-3 seconds for an AI-powered suggestion to appear.
+                Make sure you've uploaded your documents via the extension's Options page first!
+            </p>
+        </div>
+        
+        <form onsubmit="event.preventDefault(); alert('Form submitted! (This is just a test)');">
+            
+            <!-- Personal Information Section -->
+            <div class="section">
+                <div class="section-title">📋 Personal Information</div>
+                
+                <div class="form-group">
+                    <label for="full-name">Full Name</label>
+                    <input type="text" id="full-name" name="full-name" placeholder="Enter your full name">
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" placeholder="your@email.com">
+                </div>
+                
+                <div class="form-group">
+                    <label for="phone">Phone Number</label>
+                    <input type="tel" id="phone" name="phone" placeholder="+1 (555) 123-4567">
+                </div>
+                
+                <div class="form-group">
+                    <label for="location">Location / Address</label>
+                    <input type="text" id="location" name="location" placeholder="City, State/Country">
+                </div>
+                
+                <div class="form-group">
+                    <label for="website">Website or LinkedIn</label>
+                    <input type="url" id="website" name="website" placeholder="https://yourwebsite.com">
+                </div>
+            </div>
+            
+            <!-- Professional Background Section -->
+            <div class="section">
+                <div class="section-title">💼 Professional Background</div>
+                
+                <div class="form-group">
+                    <label for="bio">Tell us about yourself</label>
+                    <textarea id="bio" name="bio" placeholder="Describe your background and experience"></textarea>
+                    <div class="hint">Share your professional background, skills, and experience</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="skills">Your key skills</label>
+                    <input type="text" id="skills" name="skills" placeholder="List your main skills">
+                </div>
+            </div>
+            
+            <!-- Company/Startup Information Section -->
+            <div class="section">
+                <div class="section-title">🚀 Company Information</div>
+                
+                <div class="form-group">
+                    <label for="company-name">Company Name</label>
+                    <input type="text" id="company-name" name="company-name" placeholder="Your company name">
+                </div>
+                
+                <div class="form-group">
+                    <label for="company-description">Company Description</label>
+                    <textarea id="company-description" name="company-description" placeholder="Brief description of your company" maxlength="200"></textarea>
+                    <div class="hint">Maximum 200 characters - keep it concise!</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="problem">What problem are you solving?</label>
+                    <textarea id="problem" name="problem" placeholder="Describe the problem your company addresses"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="solution">How does your solution work?</label>
+                    <textarea id="solution" name="solution" placeholder="Explain your solution"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="traction">Traction and Metrics</label>
+                    <textarea id="traction" name="traction" placeholder="Share your key metrics and achievements"></textarea>
+                    <div class="hint">Users, revenue, growth rate, etc.</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="team">Tell us about your team</label>
+                    <textarea id="team" name="team" placeholder="Describe your team members and their backgrounds"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="funding">How will you use the funding?</label>
+                    <textarea id="funding" name="funding" placeholder="Explain your plans for the funds"></textarea>
+                </div>
+            </div>
+            
+            <!-- Additional Information Section -->
+            <div class="section">
+                <div class="section-title">📝 Additional Information</div>
+                
+                <div class="form-group">
+                    <label for="additional">Any other information you'd like to share?</label>
+                    <textarea id="additional" name="additional" placeholder="Optional additional information"></textarea>
+                </div>
+            </div>
+            
+            <button type="submit">Submit Application</button>
+        </form>
+    </div>
+    
+    <script>
+        // Log field focus events for debugging
+        document.querySelectorAll('input, textarea').forEach(field => {
+            field.addEventListener('focus', (e) => {
+                console.log('Field focused:', {
+                    id: e.target.id,
+                    name: e.target.name,
+                    type: e.target.type,
+                    label: document.querySelector(`label[for="${e.target.id}"]`)?.textContent
+                });
+            });
+            
+            field.addEventListener('input', (e) => {
+                if (e.target.value) {
+                    console.log('Field filled:', e.target.id, '- Length:', e.target.value.length);
+                }
+            });
+        });
+        
+        console.log('🤖 AI Autofill Test Form Ready!');
+        console.log('Focus on any field to test the extension.');
+    </script>
+</body>
+</html>
+

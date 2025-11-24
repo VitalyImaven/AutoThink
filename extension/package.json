@@ -1,0 +1,26 @@
+{
+  "name": "ai-smart-autofill",
+  "version": "1.0.0",
+  "description": "AI-powered smart autofill assistant for web forms",
+  "type": "module",
+  "scripts": {
+    "dev": "vite build --watch --mode development",
+    "build": "node scripts/create-placeholder-icons.js && tsc && vite build",
+    "build:icons": "node scripts/create-placeholder-icons.js",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "idb": "^8.0.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.254",
+    "@types/react": "^18.2.43",
+    "@types/react-dom": "^18.2.17",
+    "@vitejs/plugin-react": "^4.2.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.8"
+  }
+}
+

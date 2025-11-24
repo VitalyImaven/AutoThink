@@ -1,0 +1,51 @@
+Personal Information
+===================
+
+Name: John Doe
+Age: 32
+Nationality: American
+Date of Birth: January 15, 1992
+Location: San Francisco, California
+
+Contact Information
+------------------
+Email: john.doe@example.com
+Phone: +1 (555) 123-4567
+LinkedIn: linkedin.com/in/johndoe
+GitHub: github.com/johndoe
+Website: johndoe.com
+
+Address:
+123 Market Street
+Apt 4B
+San Francisco, CA 94103
+United States
+
+Professional Background
+----------------------
+I'm a software engineer with 10 years of experience in full-stack development. 
+I specialize in building scalable web applications using modern technologies like 
+React, Node.js, and Python.
+
+I have a passion for creating user-friendly products that solve real problems. 
+In my spare time, I contribute to open-source projects and mentor junior developers.
+
+Education
+--------
+Bachelor of Science in Computer Science
+Stanford University, 2014
+GPA: 3.8/4.0
+
+Certifications:
+- AWS Certified Solutions Architect
+- Google Cloud Professional Developer
+
+Skills
+------
+Programming: JavaScript, TypeScript, Python, Go
+Frontend: React, Vue.js, HTML/CSS
+Backend: Node.js, FastAPI, Django
+Databases: PostgreSQL, MongoDB, Redis
+Cloud: AWS, Google Cloud, Azure
+DevOps: Docker, Kubernetes, CI/CD
+
