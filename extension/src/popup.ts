@@ -7,6 +7,7 @@ const enabledToggle = document.getElementById('enabledToggle') as HTMLInputEleme
 const autoSuggestToggle = document.getElementById('autoSuggestToggle') as HTMLInputElement;
 const statusDiv = document.getElementById('status') as HTMLDivElement;
 const openOptionsBtn = document.getElementById('openOptions') as HTMLButtonElement;
+const autoFillPageBtn = document.getElementById('autoFillPage') as HTMLButtonElement;
 const testSuggestionBtn = document.getElementById('testSuggestion') as HTMLButtonElement;
 
 // Load current settings
@@ -54,6 +55,16 @@ autoSuggestToggle.addEventListener('change', () => {
 // Open options page
 openOptionsBtn.addEventListener('click', () => {
   chrome.runtime.openOptionsPage();
+});
+
+// Auto-fill entire page
+autoFillPageBtn.addEventListener('click', async () => {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  
+  if (tab.id) {
+    chrome.tabs.sendMessage(tab.id, { type: 'AUTO_FILL_PAGE' });
+    window.close();
+  }
 });
 
 // Test suggestion on current page

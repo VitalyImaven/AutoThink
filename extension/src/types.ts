@@ -76,6 +76,10 @@ export interface ManualSuggestMessage {
   tabId: number;
 }
 
+export interface AutoFillPageMessage {
+  type: "AUTO_FILL_PAGE";
+}
+
 export interface SuggestionAvailableMessage {
   type: "SUGGESTION_AVAILABLE";
   fieldId: string;
@@ -91,6 +95,7 @@ export interface SuggestionErrorMessage {
 export type ExtensionMessage =
   | FieldFocusedMessage
   | ManualSuggestMessage
+  | AutoFillPageMessage
   | SuggestionAvailableMessage
   | SuggestionErrorMessage;
 

@@ -277,6 +277,238 @@ function escapeHtml(text: string): string {
 }
 
 /**
+ * Auto-Fill Page Functionality
+ */
+let autoFillInProgress = false;
+let autoFillCancelled = false;
+let progressBar: HTMLElement | null = null;
+
+/**
+ * Scan page for all fillable fields
+ */
+function scanAllFields(): (HTMLInputElement | HTMLTextAreaElement)[] {
+  const fields: (HTMLInputElement | HTMLTextAreaElement)[] = [];
+  
+  // Get all input and textarea elements
+  const inputs = document.querySelectorAll('input, textarea');
+  
+  inputs.forEach((element) => {
+    if (isFillableField(element as Element)) {
+      const field = element as HTMLInputElement | HTMLTextAreaElement;
+      // Skip if field already has a value (unless it's empty or placeholder-like)
+      if (!field.value || field.value.trim() === '') {
+        fields.push(field);
+      }
+    }
+  });
+  
+  return fields;
+}
+
+/**
+ * Create progress bar UI
+ */
+function createProgressBar(total: number): HTMLElement {
+  const container = document.createElement('div');
+  container.id = 'ai-autofill-progress';
+  container.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 16px 24px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 999999;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  `;
+  
+  container.innerHTML = `
+    <div style="flex: 1;">
+      <div style="font-size: 14px; font-weight: 600; margin-bottom: 4px;">
+        🤖 Auto-Filling Page...
+      </div>
+      <div id="ai-autofill-progress-text" style="font-size: 12px; opacity: 0.9;">
+        Preparing... (0 of ${total} fields)
+      </div>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <button id="ai-autofill-cancel" style="
+        background: rgba(255,255,255,0.2);
+        border: none;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 13px;
+        font-weight: 500;
+        transition: background 0.2s;
+      ">❌ Cancel</button>
+    </div>
+  `;
+  
+  document.body.appendChild(container);
+  
+  // Add cancel handler
+  const cancelBtn = container.querySelector('#ai-autofill-cancel') as HTMLButtonElement;
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', () => {
+      autoFillCancelled = true;
+      removeProgressBar();
+    });
+  }
+  
+  return container;
+}
+
+/**
+ * Update progress bar
+ */
+function updateProgress(current: number, total: number, fieldName: string) {
+  const progressText = document.getElementById('ai-autofill-progress-text');
+  if (progressText) {
+    progressText.textContent = `Filling "${fieldName}"... (${current} of ${total} fields)`;
+  }
+}
+
+/**
+ * Remove progress bar
+ */
+function removeProgressBar() {
+  if (progressBar) {
+    progressBar.remove();
+    progressBar = null;
+  }
+}
+
+/**
+ * Auto-fill a single field
+ */
+async function autoFillSingleField(field: HTMLInputElement | HTMLTextAreaElement): Promise<boolean> {
+  return new Promise((resolve) => {
+    const fieldContext = extractFieldContext(field);
+    const tempFieldId = fieldContext.field_id;
+    
+    // Set up one-time listener for this field's suggestion
+    const messageHandler = (message: ExtensionMessage) => {
+      if (message.type === 'SUGGESTION_AVAILABLE' && message.fieldId === tempFieldId) {
+        // Fill the field
+        field.value = message.suggestionText;
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+        field.dispatchEvent(new Event('change', { bubbles: true }));
+        
+        // Highlight the field briefly
+        const originalBorder = field.style.border;
+        field.style.border = '2px solid #4CAF50';
+        setTimeout(() => {
+          field.style.border = originalBorder;
+        }, 1000);
+        
+        chrome.runtime.onMessage.removeListener(messageHandler);
+        resolve(true);
+      } else if (message.type === 'SUGGESTION_ERROR' && message.fieldId === tempFieldId) {
+        console.log(`Skipping field ${fieldContext.label_text || 'unknown'}: ${message.error}`);
+        chrome.runtime.onMessage.removeListener(messageHandler);
+        resolve(false);
+      }
+    };
+    
+    chrome.runtime.onMessage.addListener(messageHandler);
+    
+    // Send request to background
+    try {
+      chrome.runtime.sendMessage({
+        type: 'FIELD_FOCUSED',
+        fieldContext,
+      } as ExtensionMessage);
+      
+      // Timeout after 10 seconds
+      setTimeout(() => {
+        chrome.runtime.onMessage.removeListener(messageHandler);
+        resolve(false);
+      }, 10000);
+    } catch (error) {
+      console.error('Error requesting suggestion:', error);
+      chrome.runtime.onMessage.removeListener(messageHandler);
+      resolve(false);
+    }
+  });
+}
+
+/**
+ * Process all fields sequentially
+ */
+async function processAllFields() {
+  if (autoFillInProgress) {
+    console.log('Auto-fill already in progress');
+    return;
+  }
+  
+  autoFillInProgress = true;
+  autoFillCancelled = false;
+  
+  // Scan for fields
+  const fields = scanAllFields();
+  
+  if (fields.length === 0) {
+    alert('No empty form fields found on this page!');
+    autoFillInProgress = false;
+    return;
+  }
+  
+  console.log(`Found ${fields.length} fields to fill`);
+  
+  // Show progress bar
+  progressBar = createProgressBar(fields.length);
+  
+  let filled = 0;
+  let skipped = 0;
+  
+  // Process each field
+  for (let i = 0; i < fields.length; i++) {
+    if (autoFillCancelled) {
+      console.log('Auto-fill cancelled by user');
+      break;
+    }
+    
+    const field = fields[i];
+    const fieldName = extractFieldContext(field).label_text || 
+                     field.placeholder || 
+                     field.name || 
+                     `Field ${i + 1}`;
+    
+    updateProgress(i + 1, fields.length, fieldName);
+    
+    const success = await autoFillSingleField(field);
+    if (success) {
+      filled++;
+    } else {
+      skipped++;
+    }
+    
+    // Small delay between fields to avoid overwhelming the API
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+  
+  // Show completion message
+  removeProgressBar();
+  
+  if (!autoFillCancelled) {
+    const message = `✅ Auto-fill complete!\n\n` +
+                   `Filled: ${filled} fields\n` +
+                   `Skipped: ${skipped} fields\n\n` +
+                   `Please review the filled information before submitting.`;
+    alert(message);
+  }
+  
+  autoFillInProgress = false;
+}
+
+/**
  * Listen for messages from background script
  */
 chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
@@ -286,6 +518,8 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
     console.error('AI Autofill error:', message.error);
   } else if (message.type === 'MANUAL_SUGGEST') {
     triggerManualSuggestion();
+  } else if (message.type === 'AUTO_FILL_PAGE') {
+    processAllFields();
   }
 });
 
