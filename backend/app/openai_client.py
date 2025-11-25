@@ -68,7 +68,11 @@ Return ONLY the JSON array, no other text."""
                 {"role": "system", "content": "You are a document analysis expert. Extract structured knowledge chunks from documents."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.3,
+            # GPT-5 parameters for structured data extraction
+            extra_body={
+                "verbosity": "low",  # Concise for JSON output
+                "reasoning_effort": "low"  # Fast categorization
+            }
         )
         
         content = response.choices[0].message.content.strip()
@@ -175,7 +179,11 @@ Return ONLY the JSON object, no other text."""
                 {"role": "system", "content": "You are a form field classification expert. Analyze field context and determine what information is being requested."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.2,
+            # GPT-5 parameters for fast classification
+            extra_body={
+                "verbosity": "low",  # Concise JSON response
+                "reasoning_effort": "low"  # Fast field classification
+            }
         )
         
         content = response.choices[0].message.content.strip()
@@ -256,8 +264,12 @@ Generate the field response:"""
                 {"role": "system", "content": "You are an expert form-filling assistant. Generate concise, accurate responses based strictly on provided information."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.3,
-            max_tokens=classification.max_length if classification.max_length and classification.max_length < 4000 else 500,
+            max_completion_tokens=classification.max_length if classification.max_length and classification.max_length < 4000 else 500,
+            # GPT-5 parameters for quality suggestions
+            extra_body={
+                "verbosity": "medium",  # Normal detail for user-facing content
+                "reasoning_effort": "medium"  # Better quality suggestions
+            }
         )
         
         suggestion_text = response.choices[0].message.content.strip()

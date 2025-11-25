@@ -52,6 +52,9 @@ export default defineConfig({
           if (assetInfo.name === 'popup-page.html') {
             return 'popup.html';
           }
+          if (assetInfo.name === 'index.html') {
+            return 'options/index.html';
+          }
           return '[name].[ext]';
         },
       },

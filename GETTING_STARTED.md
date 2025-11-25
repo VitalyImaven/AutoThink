@@ -63,7 +63,9 @@ cp .env.example .env
 Your `.env` file should look like this:
 ```
 OPENAI_API_KEY=sk-your-actual-openai-key-here
-OPENAI_MODEL=gpt-4o-mini
+OPENAI_MODEL=gpt-5-mini
+OPENAI_VERBOSITY=1
+OPENAI_REASONING_EFFORT=medium
 BACKEND_HOST=0.0.0.0
 BACKEND_PORT=8000
 ```

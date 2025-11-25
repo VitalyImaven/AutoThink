@@ -15,6 +15,7 @@ let extensionSettings = { enabled: true, autoSuggest: false };  // Default: enab
 chrome.storage.sync.get(['enabled', 'autoSuggest'], (result) => {
   extensionSettings.enabled = result.enabled !== false;  // Default true
   extensionSettings.autoSuggest = result.autoSuggest === true;  // Default false (manual only)
+  console.log('AI Autofill settings loaded:', extensionSettings);
 });
 
 // Listen for settings changes
@@ -119,17 +120,25 @@ function handleFieldFocus(event: FocusEvent) {
 
   // Only auto-suggest if enabled AND autoSuggest is on
   if (!extensionSettings.enabled || !extensionSettings.autoSuggest) {
+    console.log('Auto-suggest skipped. Enabled:', extensionSettings.enabled, 'AutoSuggest:', extensionSettings.autoSuggest);
     return;
   }
 
   const fieldContext = extractFieldContext(element);
   currentFieldId = fieldContext.field_id;
 
-  // Send message to background script
-  chrome.runtime.sendMessage({
-    type: 'FIELD_FOCUSED',
-    fieldContext,
-  } as ExtensionMessage);
+  console.log('Sending field context to background:', fieldContext);
+
+  // Send message to background script (fire and forget)
+  try {
+    chrome.runtime.sendMessage({
+      type: 'FIELD_FOCUSED',
+      fieldContext,
+    } as ExtensionMessage);
+    console.log('Message sent to background');
+  } catch (error) {
+    console.error('Error sending message:', error);
+  }
 }
 
 /**

@@ -37,6 +37,9 @@ cp .env.example .env
 In `.env`:
 ```
 OPENAI_API_KEY=sk-your-actual-key-here
+OPENAI_MODEL=gpt-5-mini
+OPENAI_VERBOSITY=1
+OPENAI_REASONING_EFFORT=medium
 ```
 
 Start the backend:

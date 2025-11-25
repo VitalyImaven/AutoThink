@@ -46,7 +46,7 @@ AI Smart Autofill is designed as a **two-tier architecture** with strict separat
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                      OPENAI API                              │
-│                  (GPT-4 / GPT-3.5)                           │
+│                     (GPT-5)                                  │
 └─────────────────────────────────────────────────────────────┘
 ```
 

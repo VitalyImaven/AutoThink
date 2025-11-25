@@ -9,7 +9,6 @@ import {
   FieldContext,
   ClassificationResult,
   SuggestionRequest,
-  KnowledgeChunk,
 } from './types';
 import { getChunksByCategory } from './db';
 
@@ -154,11 +153,11 @@ async function handleFieldFocused(
  * Message listener
  */
 chrome.runtime.onMessage.addListener(
-  (message: ExtensionMessage, sender, sendResponse) => {
+  (message: ExtensionMessage, sender) => {
     if (message.type === 'FIELD_FOCUSED') {
       handleFieldFocused(message.fieldContext, sender);
     }
-    return true; // Keep message channel open for async response
+    // Don't return true - we're not sending a response back to content script
   }
 );
 
