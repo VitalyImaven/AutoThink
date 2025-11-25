@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from typing import List
 from app.models import IngestRequest, KnowledgeChunk
 from app.openai_client import call_llm_ingest
+import traceback
 
 router = APIRouter()
 
@@ -31,5 +32,9 @@ async def ingest_text(request: IngestRequest):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
+        # Log the full error with traceback
+        error_details = traceback.format_exc()
+        print(f"ERROR in ingest_text:")
+        print(error_details)
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 

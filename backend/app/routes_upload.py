@@ -3,6 +3,7 @@ from typing import List
 from app.models import KnowledgeChunk
 from app.openai_client import call_llm_ingest
 from app.utils.file_extractors import extract_text_from_file
+import traceback
 
 router = APIRouter()
 
@@ -45,5 +46,9 @@ async def upload_file(file: UploadFile = File(...)):
     except HTTPException:
         raise
     except Exception as e:
+        # Log the full error with traceback
+        error_details = traceback.format_exc()
+        print(f"ERROR in upload_file:")
+        print(error_details)
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 

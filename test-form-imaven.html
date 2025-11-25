@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iMaven Payment System - Test Form</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #1e3c72;
+            margin-bottom: 8px;
+            font-size: 32px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 32px;
+            font-size: 16px;
+        }
+        
+        .section {
+            margin-bottom: 32px;
+            background: #f9f9f9;
+            padding: 24px;
+            border-radius: 12px;
+            border-left: 4px solid #2a5298;
+        }
+        
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1e3c72;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #555;
+        }
+        
+        input[type="text"],
+        input[type="email"],
+        input[type="tel"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #2a5298;
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .hint {
+            font-size: 13px;
+            color: #999;
+            margin-top: 4px;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(42, 82, 152, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 16px;
+            margin-bottom: 24px;
+            border-radius: 8px;
+        }
+        
+        .info-box p {
+            margin: 0;
+            color: #1565c0;
+            font-size: 14px;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #4caf50;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💳 iMaven Payment System - Booking Form</h1>
+        <p class="subtitle">
+            Test form for the iMaven booking and payment system with AI autofill
+        </p>
+        
+        <div class="info-box">
+            <p>
+                💡 <strong>Test Instructions:</strong> Click on any field to see AI-powered suggestions from your uploaded iMaven payment system PDF. The system should automatically extract relevant information!
+            </p>
+        </div>
+        
+        <form onsubmit="event.preventDefault(); alert('Booking submitted! (Test only)');">
+            
+            <!-- User Information Section -->
+            <div class="section">
+                <div class="section-title">
+                    👤 User Information
+                </div>
+                
+                <div class="form-group">
+                    <label for="user-name">Full Name</label>
+                    <input type="text" id="user-name" name="user-name" placeholder="Enter your full name">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="user-email">Email Address</label>
+                        <input type="email" id="user-email" name="user-email" placeholder="your@email.com">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="user-phone">Phone Number</label>
+                        <input type="tel" id="user-phone" name="user-phone" placeholder="+1 (555) 123-4567">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="user-company">Company/Organization</label>
+                    <input type="text" id="user-company" name="user-company" placeholder="Your company name">
+                </div>
+            </div>
+            
+            <!-- Session Configuration Section -->
+            <div class="section">
+                <div class="section-title">
+                    📅 Session Configuration
+                    <span class="badge">Phase 1</span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="adviser-name">Adviser Name</label>
+                    <input type="text" id="adviser-name" name="adviser-name" placeholder="Select your adviser">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="session-fee">Session Fee ($)</label>
+                        <input type="number" id="session-fee" name="session-fee" placeholder="100.00" min="0" step="0.01">
+                        <div class="hint">Total session cost</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="prepayment">Prepayment Amount ($)</label>
+                        <input type="number" id="prepayment" name="prepayment" placeholder="10.00" min="0" step="0.01">
+                        <div class="hint">Must be ≤ session fee</div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="session-topic">What would you like to discuss?</label>
+                    <textarea id="session-topic" name="session-topic" placeholder="Describe the topics or issues you'd like to cover"></textarea>
+                </div>
+            </div>
+            
+            <!-- Payment Method Section -->
+            <div class="section">
+                <div class="section-title">
+                    💳 Payment Method
+                </div>
+                
+                <div class="form-group">
+                    <label for="payment-provider">Payment Provider</label>
+                    <select id="payment-provider" name="payment-provider">
+                        <option value="">Select payment provider...</option>
+                        <option value="stripe">Stripe</option>
+                        <option value="saved">Use Saved Payment Method</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="customer-id">Stripe Customer ID (if existing)</label>
+                    <input type="text" id="customer-id" name="customer-id" placeholder="cus_xxxxxxxxxxxxx">
+                    <div class="hint">Leave blank if this is your first booking</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="payment-method-id">Payment Method ID (if existing)</label>
+                    <input type="text" id="payment-method-id" name="payment-method-id" placeholder="pm_xxxxxxxxxxxxx">
+                    <div class="hint">For returning users with saved payment methods</div>
+                </div>
+            </div>
+            
+            <!-- System Requirements Section -->
+            <div class="section">
+                <div class="section-title">
+                    🎯 Platform Objectives & Requirements
+                </div>
+                
+                <div class="form-group">
+                    <label for="platform-objective">What is the main objective of the platform?</label>
+                    <textarea id="platform-objective" name="platform-objective" placeholder="Describe the core objective of your booking/payment system"></textarea>
+                    <div class="hint">Core functionality and goals</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="key-features">List the key functional requirements</label>
+                    <textarea id="key-features" name="key-features" placeholder="List main features needed (booking, payment, notifications, etc.)"></textarea>
+                    <div class="hint">Example: Adviser configuration, booking process, payment handling</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="payment-flow">Describe the payment handling process</label>
+                    <textarea id="payment-flow" name="payment-flow" placeholder="Explain how payments should be processed before and after sessions"></textarea>
+                    <div class="hint">Include prepayment, final charge, and missed session scenarios</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="email-notifications">Email notification requirements</label>
+                    <textarea id="email-notifications" name="email-notifications" placeholder="What email notifications should be sent?"></textarea>
+                    <div class="hint">Confirmations, receipts, failure notifications, etc.</div>
+                </div>
+            </div>
+            
+            <!-- Admin Features Section -->
+            <div class="section">
+                <div class="section-title">
+                    ⚙️ Admin Panel Requirements
+                </div>
+                
+                <div class="form-group">
+                    <label for="admin-features">What should admins be able to view and manage?</label>
+                    <textarea id="admin-features" name="admin-features" placeholder="List admin capabilities (view bookings, payment status, manual overrides, etc.)"></textarea>
+                    <div class="hint">Include booking details, payment logs, and override capabilities</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="reporting">Required reports and analytics</label>
+                    <textarea id="reporting" name="reporting" placeholder="What reports should the system generate?"></textarea>
+                    <div class="hint">Payment logs, session history, adviser performance, etc.</div>
+                </div>
+            </div>
+            
+            <!-- Security & Compliance Section -->
+            <div class="section">
+                <div class="section-title">
+                    🔒 Security & Compliance
+                </div>
+                
+                <div class="form-group">
+                    <label for="security-requirements">Security and compliance requirements</label>
+                    <textarea id="security-requirements" name="security-requirements" placeholder="List security requirements (PCI compliance, data handling, HTTPS, etc.)"></textarea>
+                    <div class="hint">PCI compliance, secure storage, encryption</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="data-storage">How should sensitive data be stored?</label>
+                    <textarea id="data-storage" name="data-storage" placeholder="Describe data storage strategy for payment information"></textarea>
+                    <div class="hint">Stripe identifiers, customer data, transaction logs</div>
+                </div>
+            </div>
+            
+            <!-- Future Features Section -->
+            <div class="section">
+                <div class="section-title">
+                    🚀 Phase 2: Future Monetization
+                    <span class="badge" style="background: #ff9800;">Coming Soon</span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="advanced-features">Advanced monetization features for Phase 2</label>
+                    <textarea id="advanced-features" name="advanced-features" placeholder="List future features (revenue share, subscriptions, metered billing, etc.)"></textarea>
+                    <div class="hint">Dynamic revenue share, adviser plans, pay-per-feature</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="revenue-model">Platform revenue model</label>
+                    <textarea id="revenue-model" name="revenue-model" placeholder="How will the platform generate revenue?"></textarea>
+                    <div class="hint">Commission structure, subscription tiers, feature pricing</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="billing-dashboard">Adviser billing dashboard requirements</label>
+                    <textarea id="billing-dashboard" name="billing-dashboard" placeholder="What should advisers see in their billing dashboard?"></textarea>
+                    <div class="hint">Usage tracking, earnings, payment history</div>
+                </div>
+            </div>
+            
+            <!-- Additional Notes Section -->
+            <div class="section">
+                <div class="section-title">
+                    📝 Additional Notes
+                </div>
+                
+                <div class="form-group">
+                    <label for="special-requirements">Special requirements or preferences</label>
+                    <textarea id="special-requirements" name="special-requirements" placeholder="Any additional requirements or notes"></textarea>
+                </div>
+            </div>
+            
+            <button type="submit">📝 Submit Booking Request</button>
+        </form>
+    </div>
+    
+    <script>
+        // Enforce prepayment <= session fee validation
+        const sessionFeeInput = document.getElementById('session-fee');
+        const prepaymentInput = document.getElementById('prepayment');
+        
+        function validatePrepayment() {
+            const sessionFee = parseFloat(sessionFeeInput.value) || 0;
+            const prepayment = parseFloat(prepaymentInput.value) || 0;
+            
+            if (prepayment > sessionFee) {
+                alert('⚠️ Prepayment amount cannot exceed session fee!');
+                prepaymentInput.value = sessionFee;
+            }
+        }
+        
+        prepaymentInput.addEventListener('change', validatePrepayment);
+        sessionFeeInput.addEventListener('change', validatePrepayment);
+        
+        // Log field focus events for debugging
+        document.querySelectorAll('input, textarea, select').forEach(field => {
+            field.addEventListener('focus', (e) => {
+                console.log('Field focused:', {
+                    id: e.target.id,
+                    name: e.target.name,
+                    type: e.target.type,
+                    label: document.querySelector(`label[for="${e.target.id}"]`)?.textContent
+                });
+            });
+            
+            field.addEventListener('input', (e) => {
+                if (e.target.value) {
+                    console.log('Field filled:', e.target.id, '- Length:', e.target.value.length);
+                }
+            });
+        });
+        
+        console.log('💳 iMaven Payment System Test Form Ready!');
+        console.log('Focus on any field to test the AI autofill with your uploaded PDF.');
+    </script>
+</body>
+</html>
+
