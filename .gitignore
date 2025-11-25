@@ -26,6 +26,11 @@ extension/dist/
 .env
 .env.local
 
+# API Keys and secrets
+**/key.txt
+**/keys.txt
+**/*secret*.txt
+
 # IDE
 .vscode/
 .idea/
