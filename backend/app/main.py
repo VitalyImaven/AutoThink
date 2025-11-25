@@ -1,12 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app import routes_ingest, routes_classify, routes_suggest
+from app import routes_ingest, routes_classify, routes_suggest, routes_upload
 
 app = FastAPI(
     title="AI Smart Autofill Backend",
     description="Backend API for AI-powered form autofill",
-    version="1.0.0"
+    version="2.0.0"
 )
 
 # CORS middleware for Chrome extension
@@ -20,6 +20,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(routes_ingest.router, prefix="/ingest", tags=["Ingestion"])
+app.include_router(routes_upload.router, prefix="/upload", tags=["Upload"])
 app.include_router(routes_classify.router, tags=["Classification"])
 app.include_router(routes_suggest.router, tags=["Suggestion"])
 
@@ -27,7 +28,7 @@ app.include_router(routes_suggest.router, tags=["Suggestion"])
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {"status": "ok"}
+    return {"status": "ok", "version": "2.0.0"}
 
 
 if __name__ == "__main__":

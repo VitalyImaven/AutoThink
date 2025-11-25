@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { config } from '../config';
-import { KnowledgeChunk, IngestRequest } from '../types';
+import { KnowledgeChunk } from '../types';
 import { saveChunks, getAllChunks, clearAllChunks, getChunkCount } from '../db';
 
 interface StatusMessage {
@@ -71,37 +71,43 @@ const App: React.FC = () => {
     let successCount = 0;
     let errorCount = 0;
 
+    const supportedTypes = [
+      '.txt', '.md', '.pdf', '.docx', '.doc', 
+      '.xlsx', '.xls', '.json', '.xml', '.pptx', '.ppt'
+    ];
+
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
+      const fileName = file.name.toLowerCase();
 
       // Check file type
-      if (!file.name.endsWith('.txt') && !file.name.endsWith('.md')) {
-        showStatus('error', `Skipped ${file.name}: Only .txt and .md files are supported`);
+      const isSupported = supportedTypes.some(ext => fileName.endsWith(ext));
+      if (!isSupported) {
+        showStatus('error', `Skipped ${file.name}: Unsupported file type. Supported: ${supportedTypes.join(', ')}`);
         errorCount++;
         continue;
       }
 
       try {
-        // Read file content
-        const text = await readFileAsText(file);
+        // Show progress
+        showStatus('info', `📤 Uploading ${file.name} (${i + 1}/${files.length})...`);
 
-        // Call backend to ingest
-        const request: IngestRequest = {
-          source_file_name: file.name,
-          text: text,
-        };
+        // Create form data for file upload
+        const formData = new FormData();
+        formData.append('file', file);
 
-        const response = await fetch(`${config.backendUrl}/ingest/text`, {
+        // Call backend to upload and process
+        const response = await fetch(`${config.backendUrl}/upload/file`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(request),
+          body: formData,
         });
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+          const errorText = await response.text();
+          throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
+
+        showStatus('info', `⚙️ Processing ${file.name}...`);
 
         const newChunks: KnowledgeChunk[] = await response.json();
 
@@ -109,7 +115,10 @@ const App: React.FC = () => {
         await saveChunks(newChunks);
 
         successCount++;
-        showStatus('success', `✓ Processed ${file.name}: ${newChunks.length} chunks extracted`);
+        showStatus('success', `✓ Processed ${file.name}: ${newChunks.length} chunks extracted (${i + 1}/${files.length})`);
+        
+        // Small delay to show progress
+        await new Promise(resolve => setTimeout(resolve, 500));
       } catch (error) {
         errorCount++;
         showStatus('error', `Failed to process ${file.name}: ${(error as Error).message}`);
@@ -125,19 +134,13 @@ const App: React.FC = () => {
     if (successCount > 0) {
       showStatus(
         'success',
-        `Successfully uploaded ${successCount} file(s). ${errorCount > 0 ? `${errorCount} failed.` : ''}`
+        `🎉 Successfully uploaded ${successCount} file(s)! ${errorCount > 0 ? `${errorCount} failed.` : ''}`
       );
+    } else if (errorCount > 0) {
+      showStatus('error', `❌ All ${errorCount} file(s) failed to upload.`);
     }
   };
 
-  const readFileAsText = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = () => reject(reader.error);
-      reader.readAsText(file);
-    });
-  };
 
   const handleClearKnowledgeBase = async () => {
     if (!confirm('Are you sure you want to clear all knowledge? This cannot be undone.')) {
@@ -272,13 +275,15 @@ const App: React.FC = () => {
           <div className="upload-text">
             {uploading ? 'Processing...' : 'Click to upload or drag and drop files here'}
           </div>
-          <div className="upload-hint">Supported formats: .txt, .md</div>
+          <div className="upload-hint">
+            Supported formats: PDF, DOCX, XLSX, MD, TXT, JSON, XML, PPTX
+          </div>
         </div>
         <input
           ref={fileInputRef}
           type="file"
           multiple
-          accept=".txt,.md"
+          accept=".txt,.md,.pdf,.docx,.doc,.xlsx,.xls,.json,.xml,.pptx,.ppt"
           onChange={(e) => handleFileSelect(e.target.files)}
         />
       </div>
