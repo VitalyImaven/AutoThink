@@ -110,10 +110,55 @@ async function saveConversationHistory() {
   }
 }
 
+function formatMessage(content: string): string {
+  // Convert markdown-like formatting to HTML
+  let formatted = content;
+  
+  // Handle bullet points (lines starting with - or •)
+  formatted = formatted.replace(/^- (.+)$/gm, '<div style="margin-left: 12px; margin-bottom: 4px;">• $1</div>');
+  formatted = formatted.replace(/^• (.+)$/gm, '<div style="margin-left: 12px; margin-bottom: 4px;">• $1</div>');
+  
+  // Handle numbered lists (lines starting with numbers)
+  formatted = formatted.replace(/^(\d+)\.\s+(.+)$/gm, '<div style="margin-left: 12px; margin-bottom: 4px;"><strong>$1.</strong> $2</div>');
+  formatted = formatted.replace(/^(\d+)\)\s+(.+)$/gm, '<div style="margin-left: 12px; margin-bottom: 4px;"><strong>$1)</strong> $2</div>');
+  
+  // Handle bold text (wrapped in ** or __)
+  formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  formatted = formatted.replace(/__(.+?)__/g, '<strong>$1</strong>');
+  
+  // Handle italic text (wrapped in * or _)
+  formatted = formatted.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  formatted = formatted.replace(/_(.+?)_/g, '<em>$1</em>');
+  
+  // Handle headers (lines ending with :)
+  formatted = formatted.replace(/^([A-Z][^:]+):$/gm, '<div style="font-weight: 600; margin-top: 12px; margin-bottom: 6px; color: #667eea;">$1:</div>');
+  
+  // Handle sections with dashes
+  formatted = formatted.replace(/^—\s*(.+)$/gm, '<div style="margin-left: 16px; margin-bottom: 4px;">— $1</div>');
+  
+  // Convert line breaks to proper HTML
+  formatted = formatted.split('\n\n').map(para => {
+    if (para.includes('<div')) {
+      return para; // Already has divs, don't wrap
+    }
+    return `<p style="margin-bottom: 8px; line-height: 1.5;">${para.replace(/\n/g, '<br>')}</p>`;
+  }).join('');
+  
+  return formatted;
+}
+
 function addMessageToUI(content: string, type: 'user' | 'assistant' | 'system') {
   const messageDiv = document.createElement('div');
   messageDiv.className = `chat-message ${type}`;
-  messageDiv.textContent = content;
+  
+  if (type === 'assistant') {
+    // Format assistant messages with rich HTML
+    messageDiv.innerHTML = formatMessage(content);
+  } else {
+    // User and system messages stay as plain text
+    messageDiv.textContent = content;
+  }
+  
   chatMessages.appendChild(messageDiv);
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }

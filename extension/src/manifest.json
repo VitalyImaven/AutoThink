@@ -26,7 +26,6 @@
   ],
   "options_page": "src/options/index.html",
   "action": {
-    "default_popup": "src/main-panel.html",
     "default_icon": {
       "16": "icon16.png",
       "48": "icon48.png",

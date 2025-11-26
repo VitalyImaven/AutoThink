@@ -303,5 +303,42 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   console.log(`Cleaned up chat history for tab ${tabId}`);
 });
 
+// Track open panel windows
+let panelWindowId: number | null = null;
+
+// Handle extension icon click - open draggable window
+chrome.action.onClicked.addListener(async () => {
+  // Check if window already exists
+  if (panelWindowId !== null) {
+    try {
+      await chrome.windows.get(panelWindowId);
+      // Window exists, focus it
+      chrome.windows.update(panelWindowId, { focused: true });
+      return;
+    } catch (e) {
+      // Window was closed, create new one
+      panelWindowId = null;
+    }
+  }
+  
+  // Create new window
+  const window = await chrome.windows.create({
+    url: chrome.runtime.getURL('src/main-panel.html'),
+    type: 'popup',
+    width: 420,
+    height: 600,
+    focused: true
+  });
+  
+  panelWindowId = window.id || null;
+});
+
+// Clean up window ID when closed
+chrome.windows.onRemoved.addListener((windowId) => {
+  if (windowId === panelWindowId) {
+    panelWindowId = null;
+  }
+});
+
 console.log('AI Smart Autofill background service worker loaded');
 
