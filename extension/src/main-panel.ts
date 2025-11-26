@@ -365,6 +365,119 @@ async function updatePageInfo() {
   }
 }
 
+// Toggle side panel mode
+document.getElementById('toggleSidePanelBtn')?.addEventListener('click', async () => {
+  try {
+    console.log('🔵 Dock button clicked!');
+    
+    // Get THIS popup window's ID so we can exclude it
+    const currentWindow = await chrome.windows.getCurrent();
+    console.log('📱 This popup window ID:', currentWindow.id);
+    
+    // Get ALL windows including normal browser windows
+    const allWindows = await chrome.windows.getAll({ populate: true, windowTypes: ['normal'] });
+    console.log('🪟 Found', allWindows.length, 'total windows');
+    
+    // Filter out this popup window and find browser windows with tabs
+    const browserWindows = allWindows.filter(w => 
+      w.id !== currentWindow.id && 
+      w.tabs && 
+      w.tabs.length > 0
+    );
+    
+    console.log('🪟 Browser windows (excluding popup):', browserWindows.length);
+    
+    if (browserWindows.length === 0) {
+      console.log('❌ No browser windows found');
+      alert('⚠️ No browser window found.\n\nPlease open a browser window first.');
+      return;
+    }
+    
+    // Get the first browser window (or the focused one if available)
+    const browserWindow = browserWindows.find(w => w.focused) || browserWindows[0];
+    console.log('🎯 Target browser window ID:', browserWindow.id);
+    console.log('   Window has', browserWindow.tabs?.length, 'tabs');
+    
+    // Find the ACTIVE tab in that window
+    const activeTab = browserWindow.tabs?.find(t => t.active);
+    console.log('👁️ Active tab:', activeTab?.title, activeTab?.url);
+    
+    // Check if it's a valid page for extensions
+    if (!activeTab || !activeTab.id || !activeTab.url) {
+      console.log('❌ No active tab found');
+      alert('⚠️ Cannot dock - no active tab found.');
+      return;
+    }
+    
+    // Check if it's a Chrome system page
+    if (activeTab.url.startsWith('chrome://') || 
+        activeTab.url.startsWith('chrome-extension://') ||
+        activeTab.url.startsWith('edge://') ||
+        activeTab.url.startsWith('about:')) {
+      console.log('❌ Active tab is a Chrome system page');
+      alert('⚠️ Cannot dock to Chrome system pages!\n\n' +
+            'Current page: ' + activeTab.url.split('/')[2] + '\n\n' +
+            'Please open a regular website (like Google, GitHub, etc.) first.');
+      return;
+    }
+    
+    const tabId = activeTab.id;
+    console.log('🎯 Target tab:', activeTab);
+    console.log('   Tab ID:', tabId);
+    console.log('   Tab URL:', activeTab.url);
+    console.log('   Tab Title:', activeTab.title);
+    
+    console.log('📌 Sending TOGGLE_SIDE_PANEL message to tab', tabId);
+    
+    try {
+      // Try to send message to content script
+      const response = await chrome.tabs.sendMessage(tabId, { 
+        type: 'TOGGLE_SIDE_PANEL'
+      } as ExtensionMessage);
+      
+      console.log('✅ Message sent successfully, response:', response);
+      
+      // Wait a bit for the panel to open, then close this window
+      setTimeout(() => {
+        console.log('🔒 Closing window...');
+        window.close();
+      }, 150);
+      
+    } catch (error) {
+      console.error('Content script not ready:', error);
+      
+      // Content script not loaded yet - inject it manually
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: tabId },
+          files: ['content.js']
+        });
+        
+        // Wait a bit for content script to initialize
+        setTimeout(async () => {
+          try {
+            await chrome.tabs.sendMessage(tabId, { 
+              type: 'TOGGLE_SIDE_PANEL'
+            } as ExtensionMessage);
+            
+            setTimeout(() => {
+              window.close();
+            }, 150);
+          } catch (retryError) {
+            alert('⚠️ Failed to dock panel.\n\nPlease refresh the page and try again.');
+          }
+        }, 500);
+        
+      } catch (injectError) {
+        alert('⚠️ Cannot inject panel on this page.\n\nSome pages (like Chrome Web Store) block extensions.');
+      }
+    }
+  } catch (error) {
+    console.error('Error toggling side panel:', error);
+    alert('⚠️ An error occurred. Please try again.');
+  }
+});
+
 // Initialize
 loadConversationHistory();
 updatePageInfo();

@@ -99,6 +99,9 @@ async function handleChatMessage(
   conversationHistory: Array<{role: string, content: string}> | undefined,
   _sender: chrome.runtime.MessageSender
 ) {
+  // Define targetTab outside try/catch so it's available for both success and error cases
+  let targetTab: chrome.tabs.Tab | undefined;
+  
   try {
     console.log('💬 Handling chat message:', message);
     
@@ -109,7 +112,7 @@ async function handleChatMessage(
     
     // Find the most recently active non-extension tab
     const regularTabs = tabs.filter(t => t.url && !t.url.startsWith('chrome://') && !t.url.startsWith('chrome-extension://'));
-    const targetTab = regularTabs.find(t => t.active) || regularTabs[0]; // Active tab or first regular tab
+    targetTab = regularTabs.find(t => t.active) || regularTabs[0]; // Active tab or first regular tab
     
     let pageContext = '';
     
@@ -183,19 +186,44 @@ Note: Could not extract full page content. Error: ${e}`;
 
     const result = await response.json();
     
-    // Send response back
+    console.log('   ✅ Got result from backend');
+    
+    // Send response back to ALL contexts (both popup and content script)
+    // Use runtime.sendMessage for popup/options
     chrome.runtime.sendMessage({
       type: 'CHAT_RESPONSE',
       response: result.response
     } as ExtensionMessage);
     
+    // Also send to the content script of the target tab
+    if (targetTab && targetTab.id) {
+      console.log('   📤 Sending CHAT_RESPONSE to tab', targetTab.id);
+      chrome.tabs.sendMessage(targetTab.id, {
+        type: 'CHAT_RESPONSE',
+        response: result.response
+      } as ExtensionMessage).catch(err => {
+        console.log('   ⚠️ Could not send to tab (might be closed):', err);
+      });
+    }
+    
   } catch (error) {
     console.error('Error handling chat:', error);
+    
+    // Send error to all contexts
     chrome.runtime.sendMessage({
       type: 'CHAT_RESPONSE',
       response: '',
       error: error instanceof Error ? error.message : 'Unknown error'
     } as ExtensionMessage);
+    
+    // Also send to content script if tab exists
+    if (targetTab && targetTab.id) {
+      chrome.tabs.sendMessage(targetTab.id, {
+        type: 'CHAT_RESPONSE',
+        response: '',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      } as ExtensionMessage).catch(() => {});
+    }
   }
 }
 
@@ -321,12 +349,12 @@ chrome.action.onClicked.addListener(async () => {
     }
   }
   
-  // Create new window
+  // Create new window with better sizing
   const window = await chrome.windows.create({
     url: chrome.runtime.getURL('src/main-panel.html'),
     type: 'popup',
-    width: 420,
-    height: 600,
+    width: 440,
+    height: 650,
     focused: true
   });
   

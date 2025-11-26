@@ -688,17 +688,22 @@ async function highlightElements(query: string) {
   const elements = document.querySelectorAll(selectors.join(','));
   console.log(`Found ${elements.length} total elements`);
   
-  // Filter visible elements
+  // Filter visible elements (exclude our own panel!)
   const visibleElements = Array.from(elements).filter(el => {
     const element = el as HTMLElement;
     const rect = element.getBoundingClientRect();
     const style = window.getComputedStyle(element);
     
+    // Exclude elements inside our AI panel
+    const isInAIPanel = element.closest('#ai-assistant-sidepanel') || 
+                        element.id === 'ai-assistant-sidepanel';
+    
     return rect.width > 0 && 
            rect.height > 0 && 
            style.display !== 'none' && 
            style.visibility !== 'hidden' &&
-           style.opacity !== '0';
+           style.opacity !== '0' &&
+           !isInAIPanel;
   }) as HTMLElement[];
   
   console.log(`Found ${visibleElements.length} visible interactive elements`);
@@ -1006,6 +1011,644 @@ function clearHighlights() {
 }
 
 /**
+ * Side Panel Feature
+ */
+let sidePanelOpen = false;
+let sidePanelIframe: HTMLIFrameElement | null = null;
+let sidePanelChatHandler: ((content: string, type: 'user' | 'assistant' | 'system') => void) | null = null;
+let sidePanelSummaryHandler: ((summary: string, error?: string) => void) | null = null;
+
+function toggleSidePanel() {
+  if (sidePanelOpen) {
+    closeSidePanel();
+  } else {
+    openSidePanel();
+  }
+}
+
+function openSidePanel() {
+  if (sidePanelIframe) {
+    console.log('📍 Side panel already open');
+    return;
+  }
+  
+  console.log('📍 Opening side panel...');
+  
+  // Create overlay
+  const overlay = document.createElement('div');
+  overlay.id = 'ai-assistant-overlay';
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 2147483646;
+    transition: opacity 0.3s;
+  `;
+  
+  overlay.addEventListener('click', () => closeSidePanel());
+  
+  // Inject CSS for toggles and animations
+  const style = document.createElement('style');
+  style.textContent = `
+    .ai-toggle-container {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+    
+    .ai-toggle-input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .ai-toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .3s;
+      border-radius: 24px;
+    }
+    
+    .ai-toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    
+    .ai-toggle-input:checked + .ai-toggle-slider {
+      background-color: #667eea;
+    }
+    
+    .ai-toggle-input:checked + .ai-toggle-slider:before {
+      transform: translateX(20px);
+    }
+    
+    @keyframes typing {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.7; }
+      30% { transform: translateY(-8px); opacity: 1; }
+    }
+  `;
+  document.head.appendChild(style);
+  
+  // Create side panel (inject HTML directly!)
+  const panel = document.createElement('div');
+  panel.id = 'ai-assistant-sidepanel';
+  panel.style.cssText = `
+    position: fixed;
+    top: 0;
+    right: -420px;
+    width: 420px;
+    height: 100%;
+    border-left: 2px solid #667eea;
+    box-shadow: -4px 0 12px rgba(0, 0, 0, 0.2);
+    z-index: 2147483647;
+    transition: right 0.3s ease-out;
+    background: #f5f5f5;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex;
+    flex-direction: column;
+  `;
+  
+  // Build complete panel with exact same layout as floating window
+  panel.innerHTML = `
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h1 style="font-size: 18px; margin: 0 0 4px 0; font-weight: 600;">🤖 AI Smart Assistant</h1>
+          <div style="font-size: 12px; opacity: 0.9; margin: 0;">Docked to this page</div>
+        </div>
+        <button id="ai-close-panel-btn" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 6px; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: bold; transition: all 0.2s;">×</button>
+      </div>
+    </div>
+    
+    <div style="display: flex; background: white; border-bottom: 2px solid #e0e0e0;">
+      <button class="ai-tab-btn" data-tab="controls" style="flex: 1; padding: 14px 8px; border: none; background: #f9f9ff; cursor: pointer; font-size: 13px; font-weight: 500; color: #667eea; border-bottom: 3px solid #667eea; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 6px;">
+        <span style="font-size: 16px;">⚙️</span><span>Controls</span>
+      </button>
+      <button class="ai-tab-btn" data-tab="chat" style="flex: 1; padding: 14px 8px; border: none; background: white; cursor: pointer; font-size: 13px; font-weight: 500; color: #666; border-bottom: 3px solid transparent; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 6px;">
+        <span style="font-size: 16px;">💬</span><span>Chat</span>
+      </button>
+      <button class="ai-tab-btn" data-tab="summary" style="flex: 1; padding: 14px 8px; border: none; background: white; cursor: pointer; font-size: 13px; font-weight: 500; color: #666; border-bottom: 3px solid transparent; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 6px;">
+        <span style="font-size: 16px;">📄</span><span>Summary</span>
+      </button>
+    </div>
+    
+    <div style="flex: 1; overflow-y: auto; overflow-x: hidden;">
+      <!-- Controls Tab (First - Same as floating) -->
+      <div class="ai-tab-content" data-tab="controls" style="display: flex; flex-direction: column; height: 100%; padding: 16px;">
+        <div style="background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+          <h3 style="font-size: 14px; margin: 0 0 12px 0; color: #333;">Extension Settings</h3>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f0f0f0;">
+            <div>
+              <div style="font-size: 13px; color: #333;">Extension Enabled</div>
+              <div style="font-size: 11px; color: #666; margin-top: 3px;">Master on/off switch</div>
+            </div>
+            <div class="ai-toggle-container">
+              <input type="checkbox" id="ai-enabled-toggle" class="ai-toggle-input" checked>
+              <span class="ai-toggle-slider"></span>
+            </div>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0;">
+            <div>
+              <div style="font-size: 13px; color: #333;">Auto-Suggest</div>
+              <div style="font-size: 11px; color: #666; margin-top: 3px;">Suggest on field focus</div>
+            </div>
+            <div class="ai-toggle-container">
+              <input type="checkbox" id="ai-autosuggest-toggle" class="ai-toggle-input">
+              <span class="ai-toggle-slider"></span>
+            </div>
+          </div>
+        </div>
+        
+        <div style="background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+          <h3 style="font-size: 14px; margin: 0 0 12px 0; color: #333;">Quick Actions</h3>
+          <button id="ai-summarize-btn" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; margin-bottom: 8px; transition: all 0.2s;">📄 Summarize This Page</button>
+          <button id="ai-highlight-btn" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; margin-bottom: 8px; transition: all 0.2s;">✨ Highlight Important Elements</button>
+          <button id="ai-autofill-btn" style="width: 100%; padding: 12px; background: white; color: #667eea; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;">🤖 Auto-Fill Entire Page</button>
+        </div>
+        
+        <div style="background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+          <h3 style="font-size: 14px; margin: 0 0 12px 0; color: #333;">Panel Mode</h3>
+          <button id="ai-float-btn" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;">🪟 Undock (Floating Window)</button>
+        </div>
+        
+        <div style="padding: 12px; text-align: center; font-size: 11px; color: #999; margin-top: 12px;">
+          💡 Switch to Chat tab to ask questions about this page
+        </div>
+      </div>
+      
+      <!-- Chat Tab -->
+      <div class="ai-tab-content" data-tab="chat" style="display: none; flex-direction: column; height: 100%;">
+        <div style="padding: 12px 16px; background: white; border-bottom: 1px solid #e0e0e0; display: flex; gap: 6px; flex-wrap: wrap;">
+          <button class="ai-quick-btn" data-action="summarize" style="padding: 6px 12px; background: #f0f0f0; border: 1px solid #e0e0e0; border-radius: 16px; font-size: 11px; cursor: pointer; transition: all 0.2s; white-space: nowrap;">📄 Summarize</button>
+          <button class="ai-quick-btn" data-action="highlight" style="padding: 6px 12px; background: #f0f0f0; border: 1px solid #e0e0e0; border-radius: 16px; font-size: 11px; cursor: pointer; transition: all 0.2s; white-space: nowrap;">✨ Highlight</button>
+          <button class="ai-quick-btn" data-action="explain" style="padding: 6px 12px; background: #f0f0f0; border: 1px solid #e0e0e0; border-radius: 16px; font-size: 11px; cursor: pointer; transition: all 0.2s; white-space: nowrap;">💡 Explain page</button>
+          <button class="ai-quick-btn" data-action="clear" style="padding: 6px 12px; background: #f0f0f0; border: 1px solid #e0e0e0; border-radius: 16px; font-size: 11px; cursor: pointer; transition: all 0.2s; white-space: nowrap;">🗑️ Clear</button>
+        </div>
+        <div style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background: #f5f5f5;" id="ai-chat-messages">
+          <div style="max-width: 90%; padding: 10px 14px; border-radius: 12px; background: #fff3cd; color: #856404; font-size: 12px; align-self: center; text-align: center;">
+            👋 Hello! I can help you navigate this page, answer questions, and find information. What would you like to know?
+          </div>
+        </div>
+        <div style="padding: 12px 16px; background: white; border-top: 1px solid #e0e0e0; display: flex; gap: 8px;">
+          <input type="text" id="ai-chat-input" placeholder="Ask me anything about this page..." style="flex: 1; padding: 10px 12px; border: 1px solid #e0e0e0; border-radius: 20px; font-size: 13px; outline: none; font-family: inherit; transition: border-color 0.2s;">
+          <button id="ai-chat-send" style="padding: 10px 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 20px; font-size: 13px; font-weight: 500; cursor: pointer; transition: transform 0.2s;">Send</button>
+        </div>
+      </div>
+      
+      <!-- Summary Tab -->
+      <div class="ai-tab-content" data-tab="summary" style="display: none; padding: 16px;">
+        <div id="ai-summary-display">
+          <div style="text-align: center; padding: 40px 20px;">
+            <div style="font-size: 48px; margin-bottom: 16px;">📄</div>
+            <p style="color: #666; margin-bottom: 16px; font-size: 14px;">No summary yet</p>
+            <button id="ai-gen-summary-btn" style="padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;">Generate Page Summary</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Actions Tab -->
+      <div class="ai-tab-content" data-tab="actions" style="display: none; padding: 16px;">
+        <div style="background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+          <h3 style="font-size: 14px; margin: 0 0 12px 0; color: #333;">Quick Actions</h3>
+          <button id="ai-highlight-btn" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; margin-bottom: 8px; transition: all 0.2s;">✨ Highlight Important Elements</button>
+          <button id="ai-autofill-btn" style="width: 100%; padding: 12px; background: white; color: #667eea; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; margin-bottom: 8px; transition: all 0.2s;">🤖 Auto-Fill Entire Page</button>
+          <button id="ai-clear-btn" style="width: 100%; padding: 12px; background: white; color: #667eea; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;">Clear Highlights</button>
+        </div>
+        <div style="background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+          <h3 style="font-size: 14px; margin: 0 0 12px 0; color: #333;">Window Mode</h3>
+          <button id="ai-float-btn" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;">🪟 Switch to Floating Window</button>
+        </div>
+        <div style="padding: 12px; text-align: center; font-size: 11px; color: #999; margin-top: 12px;">
+          💡 Use Chat tab to ask questions with AI
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Append to DOM FIRST
+  document.body.appendChild(overlay);
+  document.body.appendChild(panel);
+  sidePanelIframe = panel as any;
+  sidePanelOpen = true;
+  
+  // Initialize handlers IMMEDIATELY after appending
+  console.log('🔧 Initializing handlers...');
+  initializeSidePanelHandlers(panel);
+  
+  // Animate in
+  setTimeout(() => {
+    panel.style.right = '0';
+  }, 10);
+  
+  console.log('   ✅ Side panel opened!');
+}
+
+function initializeSidePanelHandlers(panel: HTMLElement) {
+  // Load and apply extension settings
+  chrome.storage.sync.get(['enabled', 'autoSuggest'], (result) => {
+    const enabledToggle = panel.querySelector('#ai-enabled-toggle') as HTMLInputElement;
+    const autoSuggestToggle = panel.querySelector('#ai-autosuggest-toggle') as HTMLInputElement;
+    
+    if (enabledToggle) {
+      enabledToggle.checked = result.enabled !== false;
+      enabledToggle.addEventListener('change', () => {
+        chrome.storage.sync.set({ enabled: enabledToggle.checked });
+      });
+    }
+    
+    if (autoSuggestToggle) {
+      autoSuggestToggle.checked = result.autoSuggest === true;
+      autoSuggestToggle.addEventListener('change', () => {
+        chrome.storage.sync.set({ autoSuggest: autoSuggestToggle.checked });
+      });
+    }
+  });
+  
+  // Tab switching with proper styles
+  const tabBtns = panel.querySelectorAll('.ai-tab-btn');
+  const tabContents = panel.querySelectorAll('.ai-tab-content');
+  
+  tabBtns.forEach(btn => {
+    // Add hover effect
+    btn.addEventListener('mouseenter', () => {
+      if (!(btn as HTMLElement).classList.contains('active')) {
+        (btn as HTMLElement).style.background = '#f5f5f5';
+        (btn as HTMLElement).style.color = '#667eea';
+      }
+    });
+    
+    btn.addEventListener('mouseleave', () => {
+      if (!(btn as HTMLElement).classList.contains('active')) {
+        (btn as HTMLElement).style.background = 'white';
+        (btn as HTMLElement).style.color = '#666';
+      }
+    });
+    
+    btn.addEventListener('click', () => {
+      const tabName = (btn as HTMLElement).dataset.tab;
+      
+      // Update tab buttons
+      tabBtns.forEach(b => {
+        b.classList.remove('active');
+        (b as HTMLElement).style.background = 'white';
+        (b as HTMLElement).style.color = '#666';
+        (b as HTMLElement).style.borderBottom = '3px solid transparent';
+      });
+      
+      btn.classList.add('active');
+      (btn as HTMLElement).style.background = '#f9f9ff';
+      (btn as HTMLElement).style.color = '#667eea';
+      (btn as HTMLElement).style.borderBottom = '3px solid #667eea';
+      
+      // Update tab contents
+      tabContents.forEach(content => {
+        (content as HTMLElement).style.display = 'none';
+      });
+      
+      const targetContent = panel.querySelector(`.ai-tab-content[data-tab="${tabName}"]`) as HTMLElement;
+      if (targetContent) {
+        targetContent.style.display = 'flex';
+      }
+    });
+  });
+  
+  // Close button
+  panel.querySelector('#ai-close-panel-btn')?.addEventListener('click', () => closeSidePanel());
+  
+  // Chat functionality
+  const chatInput = panel.querySelector('#ai-chat-input') as HTMLInputElement;
+  const chatSend = panel.querySelector('#ai-chat-send') as HTMLButtonElement;
+  const chatMessages = panel.querySelector('#ai-chat-messages') as HTMLElement;
+  
+  console.log('🔧 Chat elements:', {
+    input: !!chatInput,
+    send: !!chatSend,
+    messages: !!chatMessages
+  });
+  
+  if (!chatInput || !chatSend || !chatMessages) {
+    console.error('❌ Chat elements not found in panel!');
+    return;
+  }
+  
+  let conversationHistory: Array<{role: string, content: string}> = [];
+  let isProcessing = false;
+  
+  function addMessage(content: string, type: 'user' | 'assistant' | 'system') {
+    console.log(`   📝 Adding ${type} message: ${content.substring(0, 50)}...`);
+    const msg = document.createElement('div');
+    
+    if (type === 'user') {
+      msg.style.cssText = 'max-width: 85%; align-self: flex-end; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.5;';
+    } else if (type === 'assistant') {
+      msg.style.cssText = 'max-width: 85%; align-self: flex-start; background: white; color: #333; padding: 10px 14px; border-radius: 12px; font-size: 13px; box-shadow: 0 2px 4px rgba(0,0,0,0.08); line-height: 1.5;';
+    } else {
+      msg.style.cssText = 'max-width: 90%; align-self: center; background: #fff3cd; color: #856404; padding: 8px 12px; border-radius: 12px; font-size: 12px; text-align: center;';
+    }
+    
+    msg.textContent = content;
+    chatMessages.appendChild(msg);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    console.log(`   ✅ Message added to DOM`);
+    
+    if (type !== 'system') {
+      conversationHistory.push({ role: type, content });
+    }
+    
+    // Remove typing indicator and re-enable chat input after assistant response
+    if (type === 'assistant') {
+      removeTypingIndicator();
+      isProcessing = false;
+      chatSend.disabled = false;
+      console.log(`   ✅ Chat re-enabled`);
+    }
+  }
+  
+  // Set the global handler so global listener can forward messages
+  console.log('🔗 Setting sidePanelChatHandler...');
+  sidePanelChatHandler = addMessage;
+  console.log('✅ sidePanelChatHandler set:', !!sidePanelChatHandler);
+  
+  function showTypingIndicator() {
+    const typing = document.createElement('div');
+    typing.id = 'ai-typing-indicator';
+    typing.style.cssText = 'max-width: 85%; align-self: flex-start; background: white; padding: 12px 16px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);';
+    typing.innerHTML = `
+      <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #667eea; margin: 0 3px; animation: typing 1.4s infinite;"></span>
+      <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #667eea; margin: 0 3px; animation: typing 1.4s infinite 0.2s;"></span>
+      <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #667eea; margin: 0 3px; animation: typing 1.4s infinite 0.4s;"></span>
+    `;
+    chatMessages.appendChild(typing);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+  
+  function removeTypingIndicator() {
+    const typing = document.getElementById('ai-typing-indicator');
+    if (typing) typing.remove();
+  }
+  
+  function sendMessage() {
+    console.log('💬 Send message called');
+    const text = chatInput.value.trim();
+    console.log('   Text:', text);
+    console.log('   isProcessing:', isProcessing);
+    
+    if (!text || isProcessing) {
+      console.log('   ⚠️ Skipping - empty or processing');
+      return;
+    }
+    
+    isProcessing = true;
+    chatSend.disabled = true;
+    chatInput.value = '';
+    
+    console.log('   ✅ Adding user message and sending to backend');
+    addMessage(text, 'user');
+    
+    // Show typing indicator
+    showTypingIndicator();
+    
+    // Check for navigation query
+    const navKeywords = ['how', 'where', 'find', 'show', 'click', 'need'];
+    if (navKeywords.some(k => text.toLowerCase().includes(k))) {
+      console.log('   🎯 Navigation query detected');
+      highlightElements(text);
+      setTimeout(() => addMessage('💡 Highlighted relevant elements!', 'system'), 1000);
+    }
+    
+    console.log('   📤 Sending to background...');
+    
+    // Send message (fire-and-forget - response comes via global listener)
+    chrome.runtime.sendMessage({
+      type: 'CHAT_MESSAGE',
+      message: text,
+      conversationHistory: conversationHistory
+    } as ExtensionMessage);
+    
+    console.log('   ✅ Message sent to background');
+  }
+  
+  // Set summary handler for global listener
+  sidePanelSummaryHandler = (summary: string, error?: string) => {
+    const summaryDiv = panel.querySelector('#ai-summary-display') as HTMLElement;
+    if (!summaryDiv) return;
+    
+    if (error) {
+      summaryDiv.innerHTML = `
+        <div style="text-align: center; padding: 40px 20px;">
+          <div style="font-size: 48px; margin-bottom: 16px;">❌</div>
+          <p style="color: #dc3545; margin-bottom: 16px; font-size: 14px;">Error: ${error}</p>
+          <button id="ai-gen-summary-btn" style="padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer;">Try Again</button>
+        </div>`;
+    } else {
+      summaryDiv.innerHTML = `
+        <div style="background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+          <h3 style="font-size: 15px; margin: 0 0 12px 0; color: #667eea;">📄 Page Summary</h3>
+          <p style="font-size: 13px; line-height: 1.6; color: #333; margin: 0; white-space: pre-wrap;">${summary}</p>
+          <button id="ai-refresh-summary-btn" style="width: 100%; margin-top: 16px; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer;">Refresh Summary</button>
+        </div>`;
+    }
+    
+    // Re-attach generate button handler
+    const genBtn = summaryDiv.querySelector('#ai-gen-summary-btn, #ai-refresh-summary-btn') as HTMLButtonElement;
+    if (genBtn) {
+      genBtn.addEventListener('click', () => {
+        const mainGenBtn = panel.querySelector('#ai-gen-summary-btn') as HTMLButtonElement;
+        if (mainGenBtn) {
+          const content = document.body.innerText.substring(0, 5000);
+          summaryDiv.innerHTML = '<div style="text-align: center; padding: 40px 20px;"><div style="width: 40px; height: 40px; border: 3px solid #f3f3f3; border-top: 3px solid #667eea; border-radius: 50%; margin: 0 auto 16px;"></div><p style="color: #666; font-size: 14px;">Analyzing page...</p></div>';
+          chrome.runtime.sendMessage({
+            type: 'SUMMARIZE_PAGE',
+            pageContent: content,
+            pageTitle: document.title,
+            pageUrl: window.location.href
+          });
+        }
+      });
+    }
+  };
+  
+  console.log('🔧 Attaching chat event listeners...');
+  chatSend.addEventListener('click', () => {
+    console.log('🖱️ Send button clicked!');
+    sendMessage();
+  });
+  chatInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      console.log('⌨️ Enter key pressed!');
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+  console.log('✅ Chat handlers attached');
+  
+  // Quick action buttons in chat tab
+  panel.querySelectorAll('.ai-quick-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const action = (btn as HTMLElement).dataset.action;
+      
+      if (action === 'summarize') {
+        chatInput.value = 'Please summarize this page for me.';
+        sendMessage();
+      } else if (action === 'highlight') {
+        highlightElements('important interactive elements');
+      } else if (action === 'explain') {
+        chatInput.value = 'What does this page do and how do I use it?';
+        sendMessage();
+      } else if (action === 'clear') {
+        chatMessages.innerHTML = '<div style="max-width: 90%; padding: 10px 14px; border-radius: 12px; background: #fff3cd; color: #856404; font-size: 12px; align-self: center; text-align: center;">👋 Hello! I can help you navigate this page, answer questions, and find information. What would you like to know?</div>';
+        conversationHistory = [];
+      }
+    });
+    
+    // Hover effect
+    btn.addEventListener('mouseenter', () => {
+      (btn as HTMLElement).style.background = '#667eea';
+      (btn as HTMLElement).style.color = 'white';
+      (btn as HTMLElement).style.borderColor = '#667eea';
+    });
+    btn.addEventListener('mouseleave', () => {
+      (btn as HTMLElement).style.background = '#f0f0f0';
+      (btn as HTMLElement).style.color = 'inherit';
+      (btn as HTMLElement).style.borderColor = '#e0e0e0';
+    });
+  });
+  
+  // Action buttons with hover effects
+  const actionButtons = [
+    { id: '#ai-summarize-btn', handler: () => {
+      console.log('📄 Summarize button clicked - switching to summary tab');
+      // Switch to summary tab
+      const summaryTabBtn = panel.querySelector('.ai-tab-btn[data-tab="summary"]') as HTMLButtonElement;
+      if (summaryTabBtn) {
+        summaryTabBtn.click();
+        // Wait for tab to switch, then generate
+        setTimeout(() => {
+          const genBtn = panel.querySelector('#ai-gen-summary-btn') as HTMLButtonElement;
+          if (genBtn) {
+            console.log('   🔘 Clicking generate summary button');
+            genBtn.click();
+          } else {
+            console.error('   ❌ Generate summary button not found!');
+          }
+        }, 150);
+      }
+    }},
+    { id: '#ai-highlight-btn', handler: () => {
+      console.log('✨ Highlight button clicked');
+      highlightElements('important interactive elements');
+    }},
+    { id: '#ai-clear-btn', handler: () => {
+      console.log('🧹 Clear highlights clicked');
+      clearHighlights();
+    }},
+    { id: '#ai-autofill-btn', handler: () => {
+      console.log('🤖 Auto-fill clicked');
+      processAllFields();
+    }},
+    { id: '#ai-gen-summary-btn', handler: () => {
+      console.log('📝 Generate summary clicked');
+      const summaryDiv = panel.querySelector('#ai-summary-display') as HTMLElement;
+      if (summaryDiv) {
+        summaryDiv.innerHTML = '<div style="text-align: center; padding: 40px 20px;"><div style="width: 40px; height: 40px; border: 3px solid #f3f3f3; border-top: 3px solid #667eea; border-radius: 50%; margin: 0 auto 16px;"></div><p style="color: #666; font-size: 14px;">Analyzing page...</p></div>';
+        const content = document.body.innerText.substring(0, 5000);
+        chrome.runtime.sendMessage({
+          type: 'SUMMARIZE_PAGE',
+          pageContent: content,
+          pageTitle: document.title,
+          pageUrl: window.location.href
+        });
+      }
+    }},
+    { id: '#ai-float-btn', handler: () => {
+      console.log('🪟 Undock clicked - switching to floating window');
+      closeSidePanel();
+      chrome.windows.create({
+        url: chrome.runtime.getURL('src/main-panel.html'),
+        type: 'popup',
+        width: 440,
+        height: 650
+      });
+    }}
+  ];
+  
+  console.log('🔧 Attaching action button handlers...');
+  let attachedCount = 0;
+  
+  actionButtons.forEach(({ id, handler }) => {
+    const btn = panel.querySelector(id) as HTMLButtonElement;
+    if (btn) {
+      console.log(`   ✅ Found button: ${id}`);
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        console.log(`🖱️ Button clicked: ${id}`);
+        handler();
+      });
+      
+      // Add hover effect
+      btn.addEventListener('mouseenter', () => {
+        if (btn.style.background.includes('gradient')) {
+          btn.style.transform = 'translateY(-1px)';
+          btn.style.boxShadow = '0 4px 8px rgba(102, 126, 234, 0.3)';
+        } else {
+          btn.style.background = '#f5f5f5';
+        }
+      });
+      btn.addEventListener('mouseleave', () => {
+        btn.style.transform = 'translateY(0)';
+        btn.style.boxShadow = 'none';
+        if (!btn.style.background.includes('gradient')) {
+          btn.style.background = 'white';
+        }
+      });
+      attachedCount++;
+    } else {
+      console.warn(`   ⚠️ Button not found: ${id}`);
+    }
+  });
+  
+  console.log(`✅ Attached ${attachedCount}/${actionButtons.length} action buttons`);
+}
+
+function closeSidePanel() {
+  const panel = document.getElementById('ai-assistant-sidepanel');
+  if (!panel) return;
+  
+  console.log('📍 Closing side panel');
+  
+  // Clear handlers
+  sidePanelChatHandler = null;
+  sidePanelSummaryHandler = null;
+  
+  // Animate out
+  panel.style.right = '-420px';
+  
+  setTimeout(() => {
+    panel.remove();
+    document.getElementById('ai-assistant-overlay')?.remove();
+    sidePanelIframe = null;
+    sidePanelOpen = false;
+  }, 300);
+}
+
+/**
  * Listen for messages from background script
  */
 chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
@@ -1027,7 +1670,36 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
   } else if (message.type === 'SUMMARIZE_PAGE') {
     summarizePage();
   } else if (message.type === 'SUMMARIZE_PAGE_RESULT') {
-    showSummaryResult(message.summary, !!message.error);
+    console.log('   📄 Summary result received');
+    // If side panel is open, use its handler
+    if (sidePanelSummaryHandler) {
+      console.log('   🎯 Forwarding to side panel summary handler');
+      sidePanelSummaryHandler(message.summary, message.error);
+    } else {
+      // Otherwise use the floating result
+      showSummaryResult(message.summary, !!message.error);
+    }
+  } else if (message.type === 'CHAT_RESPONSE') {
+    console.log('   💬 Chat response received!');
+    console.log('   Side panel open?', sidePanelOpen);
+    console.log('   Handler set?', !!sidePanelChatHandler);
+    
+    // Forward to side panel if open
+    if (sidePanelOpen && sidePanelChatHandler) {
+      console.log('   🎯 Forwarding to side panel chat handler');
+      if (message.error) {
+        sidePanelChatHandler('Error: ' + message.error, 'system');
+      } else {
+        sidePanelChatHandler(message.response, 'assistant');
+      }
+    } else {
+      console.log('   ⚠️ Side panel not ready to receive message');
+      console.log('   sidePanelOpen:', sidePanelOpen);
+      console.log('   sidePanelChatHandler:', sidePanelChatHandler);
+    }
+  } else if (message.type === 'TOGGLE_SIDE_PANEL') {
+    console.log('   📍 TOGGLE_SIDE_PANEL message received!');
+    toggleSidePanel();
   }
 });
 

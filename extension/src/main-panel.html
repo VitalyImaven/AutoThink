@@ -429,12 +429,43 @@
             color: white;
             border-color: #667eea;
         }
+        
+        /* Dock button */
+        .dock-btn {
+            background: rgba(255,255,255,0.15);
+            border: none;
+            color: white;
+            padding: 6px;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .dock-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.1);
+        }
+        
+        .dock-btn:active {
+            transform: scale(0.95);
+        }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>🤖 AI Smart Assistant</h1>
-        <div class="subtitle" id="pageInfo">Connected to current page</div>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h1>🤖 AI Smart Assistant</h1>
+                <div class="subtitle" id="pageInfo">Connected to current page</div>
+            </div>
+            <button id="toggleSidePanelBtn" class="dock-btn" title="Dock to page side">⛶</button>
+        </div>
     </div>
     
     <nav class="tab-nav">

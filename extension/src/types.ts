@@ -129,6 +129,10 @@ export interface ClearHighlightsMessage {
   type: "CLEAR_HIGHLIGHTS";
 }
 
+export interface ToggleSidePanelMessage {
+  type: "TOGGLE_SIDE_PANEL";
+}
+
 export type ExtensionMessage =
   | FieldFocusedMessage
   | ManualSuggestMessage
@@ -141,7 +145,8 @@ export type ExtensionMessage =
   | HighlightElementsResultMessage
   | SummarizePageMessage
   | SummarizePageResultMessage
-  | ClearHighlightsMessage;
+  | ClearHighlightsMessage
+  | ToggleSidePanelMessage;
 
 // Configuration
 export interface ExtensionConfig {
