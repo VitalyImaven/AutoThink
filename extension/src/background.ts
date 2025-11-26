@@ -81,11 +81,19 @@ async function handleFieldFocused(
   } catch (error) {
     console.error('Error handling field focus:', error);
     
+    let errorMessage = '';
+    
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      errorMessage = 'Backend server not running. Please start: python -m uvicorn app.main:app --reload --port 8000';
+    } else {
+      errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    }
+    
     if (sender.tab?.id) {
       chrome.tabs.sendMessage(sender.tab.id, {
         type: 'SUGGESTION_ERROR',
         fieldId: fieldContext.field_id,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
       });
     }
   }
@@ -110,14 +118,29 @@ async function handleChatMessage(
     const tabs = await chrome.tabs.query({});
     console.log(`   Found ${tabs.length} tabs total`);
     
+    // Log ALL tabs first
+    console.log('   All tabs:');
+    tabs.forEach(t => console.log(`     - [${t.active ? 'ACTIVE' : 'inactive'}] ${t.title} | ${t.url?.substring(0, 60)}`));
+    
     // Find the most recently active non-extension tab
-    const regularTabs = tabs.filter(t => t.url && !t.url.startsWith('chrome://') && !t.url.startsWith('chrome-extension://'));
+    const regularTabs = tabs.filter(t => {
+      if (!t.url) return false;
+      const url = t.url.toLowerCase();
+      return !url.startsWith('chrome://') && 
+             !url.startsWith('chrome-extension://') &&
+             !url.startsWith('edge://') &&
+             !url.startsWith('about:');
+    });
+    
+    console.log(`   Regular tabs found: ${regularTabs.length}`);
+    regularTabs.forEach(t => console.log(`     - ${t.title} (${t.url?.substring(0, 50)})`));
+    
     targetTab = regularTabs.find(t => t.active) || regularTabs[0]; // Active tab or first regular tab
     
     let pageContext = '';
     
     if (targetTab && targetTab.id) {
-      console.log(`   Target tab: ${targetTab.title} (${targetTab.url?.substring(0, 50)}...)`);
+      console.log(`   ✅ Target tab: ${targetTab.title} (${targetTab.url?.substring(0, 50)}...)`);
       
       try {
         // Execute script to extract page info
@@ -159,10 +182,12 @@ URL: ${targetTab.url || 'Unknown'}
 Note: Could not extract full page content. Error: ${e}`;
       }
     } else {
-      console.log('   ⚠️ No target tab found');
+      console.log('   ⚠️ No target tab found - no page context available');
+      console.log('   Will send chat without page context');
     }
     
     console.log('   Sending to backend...');
+    console.log('   Backend URL:', config.backendUrl);
     
     // Call backend chat endpoint
     const response = await fetch(`${config.backendUrl}/chat`, {
@@ -209,11 +234,37 @@ Note: Could not extract full page content. Error: ${e}`;
   } catch (error) {
     console.error('Error handling chat:', error);
     
+    // Determine user-friendly error message
+    let userMessage = '';
+    
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      // Backend is not running or not reachable
+      userMessage = `⚠️ Cannot connect to backend server!
+
+The AI backend is not running or not reachable.
+
+**How to fix:**
+1. Start the backend server:
+   \`cd backend\`
+   \`python -m uvicorn app.main:app --reload --port 8000\`
+
+2. Check backend URL in extension settings
+   (Should be: http://localhost:8000)
+
+3. Make sure no firewall is blocking port 8000
+
+**Quick check:** Visit http://localhost:8000/health in your browser
+If it shows an error, the backend is not running.`;
+    } else {
+      // Other error
+      userMessage = `Error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    }
+    
     // Send error to all contexts
     chrome.runtime.sendMessage({
       type: 'CHAT_RESPONSE',
       response: '',
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: userMessage
     } as ExtensionMessage);
     
     // Also send to content script if tab exists
@@ -221,7 +272,7 @@ Note: Could not extract full page content. Error: ${e}`;
       chrome.tabs.sendMessage(targetTab.id, {
         type: 'CHAT_RESPONSE',
         response: '',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: userMessage
       } as ExtensionMessage).catch(() => {});
     }
   }
@@ -269,11 +320,20 @@ async function handleSummarizePage(
     
   } catch (error) {
     console.error('Error summarizing page:', error);
+    
+    let errorMessage = '';
+    
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      errorMessage = 'Backend server not running. Start it with: python -m uvicorn app.main:app --reload --port 8000';
+    } else {
+      errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    }
+    
     if (sender.tab?.id) {
       chrome.tabs.sendMessage(sender.tab.id, {
         type: 'SUMMARIZE_PAGE_RESULT',
         summary: '',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: errorMessage
       } as ExtensionMessage);
     }
   }

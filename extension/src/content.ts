@@ -1623,15 +1623,26 @@ function initializeSidePanelHandlers(panel: HTMLElement) {
 
 function closeSidePanel(force: boolean = false) {
   const panel = document.getElementById('ai-assistant-sidepanel');
-  if (!panel) return;
+  if (!panel) {
+    console.log('📍 closeSidePanel called but panel not found');
+    return;
+  }
+  
+  console.log('📍 closeSidePanel called, force:', force);
   
   // Check if chat is processing
   const chatSend = panel.querySelector('#ai-chat-send') as HTMLButtonElement;
+  console.log('   Chat send button:', chatSend ? 'found' : 'not found');
+  console.log('   Chat send disabled:', chatSend?.disabled);
+  
   if (!force && chatSend && chatSend.disabled) {
     // AI is thinking, confirm before closing
+    console.log('   ⚠️ AI is thinking, asking for confirmation...');
     if (!confirm('⏳ AI is processing your message...\n\nClose anyway? You\'ll lose the response.')) {
+      console.log('   ❌ User cancelled close');
       return; // User cancelled
     }
+    console.log('   ✅ User confirmed close');
   }
   
   console.log('📍 Closing side panel');

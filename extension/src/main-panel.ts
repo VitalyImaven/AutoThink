@@ -48,10 +48,29 @@ autoSuggestToggle.addEventListener('change', () => {
 
 // Quick action buttons
 document.getElementById('highlightBtn')?.addEventListener('click', async () => {
-  const tabs = await chrome.tabs.query({});
-  const targetTab = tabs.filter(t => t.url && !t.url.startsWith('chrome://'))[0];
-  if (targetTab?.id) {
-    chrome.tabs.sendMessage(targetTab.id, {
+  console.log('✨ Highlight button clicked');
+  
+  // Get current window and find regular tabs
+  const currentWindow = await chrome.windows.getCurrent();
+  const allWindows = await chrome.windows.getAll({ populate: true, windowTypes: ['normal'] });
+  
+  const browserWindows = allWindows.filter(w => 
+    w.id !== currentWindow.id && 
+    w.tabs && 
+    w.tabs.length > 0
+  );
+  
+  if (browserWindows.length === 0) {
+    alert('⚠️ No browser window found.\n\nPlease open a webpage first.');
+    return;
+  }
+  
+  const browserWindow = browserWindows.find(w => w.focused) || browserWindows[0];
+  const activeTab = browserWindow.tabs?.find(t => t.active);
+  
+  if (activeTab?.id) {
+    console.log('   Sending HIGHLIGHT_ELEMENTS to tab', activeTab.id);
+    chrome.tabs.sendMessage(activeTab.id, {
       type: 'HIGHLIGHT_ELEMENTS',
       query: 'important interactive elements like buttons, links, and form inputs'
     });
@@ -59,10 +78,70 @@ document.getElementById('highlightBtn')?.addEventListener('click', async () => {
 });
 
 document.getElementById('autoFillBtn')?.addEventListener('click', async () => {
-  const tabs = await chrome.tabs.query({});
-  const targetTab = tabs.filter(t => t.url && !t.url.startsWith('chrome://'))[0];
-  if (targetTab?.id) {
-    chrome.tabs.sendMessage(targetTab.id, { type: 'AUTO_FILL_PAGE' });
+  console.log('🤖 Auto-Fill button clicked');
+  
+  try {
+    // Get current window and find regular tabs
+    const currentWindow = await chrome.windows.getCurrent();
+    const allWindows = await chrome.windows.getAll({ populate: true, windowTypes: ['normal'] });
+    
+    const browserWindows = allWindows.filter(w => 
+      w.id !== currentWindow.id && 
+      w.tabs && 
+      w.tabs.length > 0
+    );
+    
+    if (browserWindows.length === 0) {
+      alert('⚠️ No browser window found.\n\nPlease open a webpage first.');
+      return;
+    }
+    
+    const browserWindow = browserWindows.find(w => w.focused) || browserWindows[0];
+    const activeTab = browserWindow.tabs?.find(t => t.active);
+    
+    console.log('   Target tab:', activeTab?.title);
+    
+    if (!activeTab?.id || !activeTab.url) {
+      alert('⚠️ No active tab found.');
+      return;
+    }
+    
+    if (activeTab.url.startsWith('chrome://') || activeTab.url.startsWith('chrome-extension://')) {
+      alert('⚠️ Cannot auto-fill Chrome system pages.\n\nPlease navigate to a regular website first.');
+      return;
+    }
+    
+    console.log('   Sending AUTO_FILL_PAGE to tab', activeTab.id);
+    
+    try {
+      await chrome.tabs.sendMessage(activeTab.id, { type: 'AUTO_FILL_PAGE' });
+      console.log('   ✅ Message sent successfully');
+    } catch (error) {
+      console.error('   ❌ Content script not ready:', error);
+      
+      // Try to inject content script
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: activeTab.id },
+          files: ['content.js']
+        });
+        
+        // Wait and retry
+        setTimeout(async () => {
+          try {
+            await chrome.tabs.sendMessage(activeTab.id!, { type: 'AUTO_FILL_PAGE' });
+            console.log('   ✅ Message sent after injection');
+          } catch (retryError) {
+            alert('⚠️ Could not start auto-fill.\n\nPlease refresh the page and try again.');
+          }
+        }, 500);
+      } catch (injectError) {
+        alert('⚠️ Cannot inject on this page.\n\nSome pages block extensions. Try refreshing the page.');
+      }
+    }
+  } catch (error) {
+    console.error('Error in auto-fill:', error);
+    alert('⚠️ An error occurred. Please try again.');
   }
 });
 

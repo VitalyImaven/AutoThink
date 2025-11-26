@@ -62,17 +62,38 @@ const createMinimalPng = () => {
   return Buffer.concat(chunks);
 };
 
-console.log('Creating placeholder icon files...\n');
+console.log('Checking icon files...\n');
 
 const iconData = createMinimalPng();
 const sizes = [16, 48, 128];
+let createdCount = 0;
+let skippedCount = 0;
 
 sizes.forEach(size => {
   const iconPath = path.join(publicDir, `icon${size}.png`);
+  
+  // Only create if it doesn't exist
+  if (fs.existsSync(iconPath)) {
+    const stats = fs.statSync(iconPath);
+    if (stats.size > 100) {
+      // Real icon exists (more than 100 bytes), don't overwrite!
+      console.log(`✓ Using existing ${iconPath}`);
+      skippedCount++;
+      return;
+    }
+  }
+  
+  // Create placeholder
   fs.writeFileSync(iconPath, iconData);
-  console.log(`✓ Created ${iconPath}`);
+  console.log(`✓ Created placeholder ${iconPath}`);
+  createdCount++;
 });
 
-console.log('\n✅ Placeholder icons created successfully!');
-console.log('Note: These are minimal placeholders. For production, use proper icon images.\n');
+if (createdCount > 0) {
+  console.log('\n✅ Placeholder icons created successfully!');
+  console.log('Note: These are minimal placeholders. Replace with your own PNG icons.\n');
+} else {
+  console.log('\n✅ Using existing custom icons!');
+  console.log(`Found ${skippedCount} custom icon(s). No placeholders created.\n`);
+}
 

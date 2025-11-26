@@ -340,12 +340,10 @@ Now extract and format the information for this field:"""
         # Use fast model for suggestion
         suggest_model = getattr(settings, 'OPENAI_SUGGEST_MODEL', settings.OPENAI_MODEL)
         
-        # Calculate appropriate token limit
-        # GPT-5 needs higher limits for longer responses
-        if max_length and max_length < 2000:
-            token_limit = max_length
-        else:
-            token_limit = 1000  # Generous default for longer fields
+        # GPT-5 uses tokens for BOTH reasoning AND content
+        # Set high enough limit so it ALWAYS has enough for both
+        # We can tune this down later if needed, but for now: ensure it works!
+        token_limit = 4000  # High enough for any field + GPT-5 reasoning
         
         response = await client.chat.completions.create(
             model=suggest_model,
