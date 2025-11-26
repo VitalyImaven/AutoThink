@@ -90,3 +90,4 @@ chrome.runtime.sendMessage({type: 'GET_LAST_RESPONSE'}, (response) => {
 
 Try the browser console test and tell me what you see!
 
+
