@@ -6,6 +6,9 @@
 const enabledToggle = document.getElementById('enabledToggle') as HTMLInputElement;
 const autoSuggestToggle = document.getElementById('autoSuggestToggle') as HTMLInputElement;
 const statusDiv = document.getElementById('status') as HTMLDivElement;
+const openChatBtn = document.getElementById('openChat') as HTMLButtonElement;
+const summarizePageBtn = document.getElementById('summarizePage') as HTMLButtonElement;
+const highlightElementsBtn = document.getElementById('highlightElements') as HTMLButtonElement;
 const openOptionsBtn = document.getElementById('openOptions') as HTMLButtonElement;
 const autoFillPageBtn = document.getElementById('autoFillPage') as HTMLButtonElement;
 const testSuggestionBtn = document.getElementById('testSuggestion') as HTMLButtonElement;
@@ -50,6 +53,48 @@ autoSuggestToggle.addEventListener('change', () => {
     updateStatus(enabledToggle.checked, autoSuggest);
     console.log('Auto-suggest', autoSuggest ? 'enabled' : 'disabled');
   });
+});
+
+// Open chat window
+openChatBtn.addEventListener('click', () => {
+  chrome.windows.create({
+    url: chrome.runtime.getURL('src/chat.html'),
+    type: 'popup',
+    width: 400,
+    height: 600
+  });
+});
+
+// Summarize page
+summarizePageBtn.addEventListener('click', async () => {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  
+  if (tab.id) {
+    chrome.tabs.sendMessage(tab.id, { type: 'SUMMARIZE_PAGE' });
+    
+    // Show loading state
+    summarizePageBtn.textContent = '⏳ Summarizing...';
+    summarizePageBtn.disabled = true;
+    
+    // Reset after 30 seconds (in case of error)
+    setTimeout(() => {
+      summarizePageBtn.textContent = '📄 Summarize This Page';
+      summarizePageBtn.disabled = false;
+    }, 30000);
+  }
+});
+
+// Highlight elements
+highlightElementsBtn.addEventListener('click', async () => {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  
+  if (tab.id) {
+    chrome.tabs.sendMessage(tab.id, { 
+      type: 'HIGHLIGHT_ELEMENTS',
+      query: 'important interactive elements like buttons, links, and form inputs'
+    });
+    window.close();
+  }
 });
 
 // Open options page

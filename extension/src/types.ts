@@ -92,12 +92,56 @@ export interface SuggestionErrorMessage {
   error: string;
 }
 
+// New message types for chat, highlighting, and summarization
+export interface ChatMessage {
+  type: "CHAT_MESSAGE";
+  message: string;
+  conversationHistory?: Array<{role: string, content: string}>;
+}
+
+export interface ChatResponseMessage {
+  type: "CHAT_RESPONSE";
+  response: string;
+  error?: string;
+}
+
+export interface HighlightElementsMessage {
+  type: "HIGHLIGHT_ELEMENTS";
+  query: string;
+}
+
+export interface HighlightElementsResultMessage {
+  type: "HIGHLIGHT_ELEMENTS_RESULT";
+  elements: Array<{selector: string, description: string}>;
+}
+
+export interface SummarizePageMessage {
+  type: "SUMMARIZE_PAGE";
+}
+
+export interface SummarizePageResultMessage {
+  type: "SUMMARIZE_PAGE_RESULT";
+  summary: string;
+  error?: string;
+}
+
+export interface ClearHighlightsMessage {
+  type: "CLEAR_HIGHLIGHTS";
+}
+
 export type ExtensionMessage =
   | FieldFocusedMessage
   | ManualSuggestMessage
   | AutoFillPageMessage
   | SuggestionAvailableMessage
-  | SuggestionErrorMessage;
+  | SuggestionErrorMessage
+  | ChatMessage
+  | ChatResponseMessage
+  | HighlightElementsMessage
+  | HighlightElementsResultMessage
+  | SummarizePageMessage
+  | SummarizePageResultMessage
+  | ClearHighlightsMessage;
 
 // Configuration
 export interface ExtensionConfig {

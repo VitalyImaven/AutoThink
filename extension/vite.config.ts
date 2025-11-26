@@ -42,8 +42,10 @@ export default defineConfig({
         background: resolve(__dirname, 'src/background.ts'),
         content: resolve(__dirname, 'src/content.ts'),
         popup: resolve(__dirname, 'src/popup.ts'),
+        chat: resolve(__dirname, 'src/chat.ts'),
         options: resolve(__dirname, 'src/options/index.html'),
         'popup-page': resolve(__dirname, 'src/popup.html'),
+        'chat-page': resolve(__dirname, 'src/chat.html'),
       },
       output: {
         entryFileNames: '[name].js',
@@ -51,6 +53,9 @@ export default defineConfig({
         assetFileNames: (assetInfo) => {
           if (assetInfo.name === 'popup-page.html') {
             return 'popup.html';
+          }
+          if (assetInfo.name === 'chat-page.html') {
+            return 'chat.html';
           }
           if (assetInfo.name === 'index.html') {
             return 'options/index.html';

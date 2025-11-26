@@ -11,12 +11,20 @@ A professional, extensible AI-powered autofill assistant for web forms in Chrome
 
 ### Key Features
 
+#### Core Form Autofill Features
 - 🧠 **Smart Field Detection** - Automatically understands what each form field is asking for
 - 📄 **Document Ingestion** - Upload `.txt` or `.md` files to build your knowledge base
 - 💡 **AI-Powered Suggestions** - GPT-powered contextual responses based on your documents
 - 💾 **Local Storage** - All knowledge stored locally in your browser (IndexedDB)
 - 🔄 **Incremental Updates** - Add new documents anytime without rebuilding
+
+#### 🆕 New Interactive Features
+- 💬 **AI Chat Assistant** - Ask questions and get answers about any webpage
+- ✨ **Element Highlighting** - Automatically highlight important clickable elements
+- 📄 **Page Summarization** - Get AI-generated summaries of webpage content
 - 🎨 **Clean Architecture** - Modular, extensible design for easy feature additions
+
+> **📖 See [CHROME_EXTENSION_SETUP.md](CHROME_EXTENSION_SETUP.md) for detailed setup instructions and [extension/NEW_FEATURES.md](extension/NEW_FEATURES.md) for comprehensive feature documentation.**
 
 ## 🏗️ Architecture
 
@@ -113,8 +121,9 @@ The AI will automatically:
 - Categorize information
 - Store it locally in your browser
 
-### Step 2: Fill Forms Automatically
+### Step 2: Use Extension Features
 
+#### 🤖 Form Autofill
 1. Visit any webpage with a form
 2. Click on a form field
 3. The extension will:
@@ -122,6 +131,26 @@ The AI will automatically:
    - Find relevant information from your knowledge base
    - Generate an AI-powered suggestion
 4. Click the suggestion to accept it
+
+#### 💬 AI Chat Assistant (NEW)
+1. Click the extension icon
+2. Click "Open AI Chat Assistant"
+3. Ask questions like:
+   - "What does this page do?"
+   - "How do I navigate to checkout?"
+   - "Explain the pricing options"
+
+#### ✨ Element Highlighting (NEW)
+1. Click the extension icon
+2. Click "Highlight Important Elements"
+3. All buttons, links, and form inputs will be highlighted with numbers
+4. Click "Clear Highlights" when done
+
+#### 📄 Page Summarization (NEW)
+1. Navigate to any webpage
+2. Click the extension icon
+3. Click "Summarize This Page"
+4. View the AI-generated summary in the top-right corner
 
 ## 🎨 Knowledge Categories
 
@@ -184,7 +213,9 @@ After code changes, go to `chrome://extensions/` and click the refresh icon on y
 
 ## 📋 API Endpoints
 
-### POST /ingest/text
+### Form Autofill Endpoints
+
+#### POST /ingest/text
 Process document and extract knowledge chunks
 
 **Request:**
@@ -197,19 +228,62 @@ Process document and extract knowledge chunks
 
 **Response:** Array of `KnowledgeChunk` objects
 
-### POST /classify-field
+#### POST /classify-field
 Classify a form field
 
 **Request:** `FieldContext` object
 
 **Response:** `ClassificationResult` with category and metadata
 
-### POST /suggest
+#### POST /suggest
 Generate field suggestion
 
 **Request:** `SuggestionRequest` with field, classification, and chunks
 
 **Response:** `SuggestionResult` with suggested text
+
+### 🆕 Interactive Features Endpoints
+
+#### POST /chat
+Chat with AI about webpage content
+
+**Request:**
+```json
+{
+  "message": "What does this page do?",
+  "conversation_history": [...],
+  "page_context": "..."
+}
+```
+
+**Response:** `ChatResponse` with AI-generated answer
+
+#### POST /summarize
+Get AI-generated page summary
+
+**Request:**
+```json
+{
+  "page_content": "...",
+  "page_title": "...",
+  "page_url": "..."
+}
+```
+
+**Response:** `SummarizeResponse` with structured summary
+
+#### POST /analyze-elements
+Analyze page elements for navigation guidance
+
+**Request:**
+```json
+{
+  "query": "important buttons",
+  "elements": [...]
+}
+```
+
+**Response:** Element analysis and recommendations
 
 ## 🔒 Privacy & Security
 

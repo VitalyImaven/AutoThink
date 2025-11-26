@@ -226,10 +226,11 @@ async def fast_match_chunks(
     """
     
     # Create field description for embedding
+    # Handle None values explicitly (field_context values can be None)
     field_desc = " ".join([
-        field_context.get('label_text', ''),
-        field_context.get('placeholder', ''),
-        field_context.get('name_attr', ''),
+        field_context.get('label_text') or '',
+        field_context.get('placeholder') or '',
+        field_context.get('name_attr') or '',
     ]).strip()
     
     if not field_desc:

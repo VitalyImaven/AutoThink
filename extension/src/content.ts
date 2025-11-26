@@ -516,9 +516,501 @@ async function processAllFields() {
 }
 
 /**
+ * Page Summarization Feature
+ */
+function extractPageContent(): string {
+  // Extract main content from page
+  const mainContent = document.querySelector('main') || 
+                     document.querySelector('article') || 
+                     document.querySelector('[role="main"]') ||
+                     document.body;
+  
+  // Get text content, removing scripts and styles
+  const clone = mainContent.cloneNode(true) as HTMLElement;
+  
+  // Remove unwanted elements
+  clone.querySelectorAll('script, style, nav, header, footer, aside, .ad, .advertisement').forEach(el => el.remove());
+  
+  const text = clone.textContent || '';
+  
+  // Clean up whitespace
+  return text.replace(/\s+/g, ' ').trim().substring(0, 5000); // Limit to 5000 chars
+}
+
+async function summarizePage() {
+  try {
+    // Show loading indicator
+    const loadingDiv = document.createElement('div');
+    loadingDiv.id = 'ai-summary-loading';
+    loadingDiv.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: white;
+      padding: 16px 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 999999;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 14px;
+    `;
+    loadingDiv.innerHTML = '⏳ Analyzing page...';
+    document.body.appendChild(loadingDiv);
+    
+    // Extract page content
+    const pageContent = extractPageContent();
+    const pageTitle = document.title;
+    const pageUrl = window.location.href;
+    
+    // Send to background for AI processing
+    chrome.runtime.sendMessage({
+      type: 'SUMMARIZE_PAGE',
+      pageContent,
+      pageTitle,
+      pageUrl
+    });
+    
+  } catch (error) {
+    console.error('Error summarizing page:', error);
+    showSummaryResult('Error: Could not summarize this page', true);
+  }
+}
+
+function showSummaryResult(summary: string, isError: boolean = false) {
+  // Remove loading indicator
+  const loading = document.getElementById('ai-summary-loading');
+  if (loading) loading.remove();
+  
+  // Create summary display
+  const summaryDiv = document.createElement('div');
+  summaryDiv.id = 'ai-summary-result';
+  summaryDiv.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    max-width: 400px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 999999;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    animation: slideInRight 0.3s ease-out;
+  `;
+  
+  const headerColor = isError ? '#dc3545' : '#667eea';
+  const headerText = isError ? '❌ Error' : '📄 Page Summary';
+  
+  summaryDiv.innerHTML = `
+    <style>
+      @keyframes slideInRight {
+        from {
+          opacity: 0;
+          transform: translateX(100px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(0);
+        }
+      }
+    </style>
+    <div style="background: ${headerColor}; color: white; padding: 12px 16px; border-radius: 12px 12px 0 0; font-weight: 600; font-size: 14px; display: flex; justify-content: space-between; align-items: center;">
+      <span>${headerText}</span>
+      <button id="closeSummary" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer; padding: 0; width: 24px; height: 24px;">×</button>
+    </div>
+    <div style="padding: 16px; color: #333; font-size: 14px; line-height: 1.6; max-height: 400px; overflow-y: auto;">
+      ${escapeHtml(summary).replace(/\n/g, '<br>')}
+    </div>
+  `;
+  
+  document.body.appendChild(summaryDiv);
+  
+  // Close button
+  document.getElementById('closeSummary')?.addEventListener('click', () => {
+    summaryDiv.remove();
+  });
+  
+  // Auto-close after 30 seconds
+  setTimeout(() => {
+    if (document.getElementById('ai-summary-result')) {
+      summaryDiv.remove();
+    }
+  }, 30000);
+}
+
+/**
+ * Element Highlighting Feature
+ */
+let highlightedElements: HTMLElement[] = [];
+
+function getElementInfo(element: HTMLElement) {
+  return {
+    tag: element.tagName.toLowerCase(),
+    text: element.textContent?.trim() || '',
+    attributes: {
+      'class': element.className,
+      'id': element.id,
+      'aria-label': element.getAttribute('aria-label'),
+      'title': element.getAttribute('title'),
+      'name': element.getAttribute('name'),
+      'href': element.getAttribute('href'),
+    }
+  };
+}
+
+async function highlightElements(query: string) {
+  console.log(`\n${'='.repeat(60)}`);
+  console.log(`🔍 HIGHLIGHT REQUEST RECEIVED`);
+  console.log(`${'='.repeat(60)}`);
+  console.log(`Query: "${query}"`);
+  
+  // Clear previous highlights
+  clearHighlights();
+  
+  // Find interactive elements
+  const selectors = [
+    'button:not([hidden]):not([disabled])',
+    'a[href]:not([hidden])',
+    'input:not([type="hidden"]):not([hidden])',
+    'textarea:not([hidden])',
+    'select:not([hidden])',
+    '[role="button"]',
+    '[onclick]',
+    '.btn',
+    '.button',
+    '[role="menuitem"]',
+    '[role="link"]',
+    'nav a',
+    'header a',
+    'footer a'
+  ];
+  
+  console.log(`Searching for elements with ${selectors.length} selectors...`);
+  const elements = document.querySelectorAll(selectors.join(','));
+  console.log(`Found ${elements.length} total elements`);
+  
+  // Filter visible elements
+  const visibleElements = Array.from(elements).filter(el => {
+    const element = el as HTMLElement;
+    const rect = element.getBoundingClientRect();
+    const style = window.getComputedStyle(element);
+    
+    return rect.width > 0 && 
+           rect.height > 0 && 
+           style.display !== 'none' && 
+           style.visibility !== 'hidden' &&
+           style.opacity !== '0';
+  }) as HTMLElement[];
+  
+  console.log(`Found ${visibleElements.length} visible interactive elements`);
+  
+  if (visibleElements.length === 0) {
+    console.log('❌ No interactive elements found on page!');
+    return;
+  }
+  
+  // Check if query is intelligent (contains action words)
+  const intelligentKeywords = ['how', 'where', 'find', 'change', 'update', 'edit', 'settings', 'profile', 'account', 'contact', 'help', 'click', 'need'];
+  const isIntelligentQuery = intelligentKeywords.some(keyword => query.toLowerCase().includes(keyword));
+  
+  console.log(`Intelligent query: ${isIntelligentQuery}`);
+  
+  if (isIntelligentQuery && visibleElements.length > 0) {
+    // Send to backend for AI analysis
+    console.log('   🤖 Using AI to identify relevant elements...');
+    await highlightIntelligent(query, visibleElements);
+  } else {
+    // Highlight all elements (default behavior)
+    console.log('   ✨ Highlighting all elements (basic mode)');
+    highlightAllElements(visibleElements);
+  }
+}
+
+async function highlightIntelligent(query: string, elements: HTMLElement[]) {
+  try {
+    console.log(`   📤 Sending ${elements.length} elements to backend for analysis...`);
+    
+    // Show loading
+    const loading = document.createElement('div');
+    loading.id = 'ai-highlight-loading';
+    loading.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: white;
+      padding: 16px 24px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      z-index: 999999;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 14px;
+    `;
+    loading.innerHTML = '🤖 Analyzing page...';
+    document.body.appendChild(loading);
+    
+    // Extract element info
+    const elementsData = elements.map(el => getElementInfo(el));
+    console.log(`   📊 Extracted info for ${elementsData.length} elements`);
+    console.log(`   First 3 elements:`, elementsData.slice(0, 3));
+    
+    // Call backend
+    console.log(`   🌐 Calling backend: http://localhost:8000/analyze-elements`);
+    const response = await fetch('http://localhost:8000/analyze-elements', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query: query,
+        elements: elementsData
+      })
+    });
+    
+    console.log(`   📥 Backend response status: ${response.status}`);
+    
+    loading.remove();
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`   ❌ Backend error: ${errorText}`);
+      throw new Error(`Failed to analyze elements: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    console.log(`   📦 Backend result:`, result);
+    
+    const elementIndices = result.element_indices || [];
+    const guidance = result.guidance || 'Follow the highlighted elements.';
+    
+    console.log(`   ✅ AI identified ${elementIndices.length} relevant elements: ${elementIndices}`);
+    console.log(`   💬 Guidance: "${guidance}"`);
+    
+    if (elementIndices.length === 0) {
+      console.log(`   ⚠️ No specific elements found, falling back to all`);
+      // Fall back to highlighting all
+      highlightAllElements(elements);
+      showIntelligentGuidance('No specific elements found. Showing all interactive elements.', []);
+    } else {
+      // Highlight only specific elements
+      const relevantElements = elementIndices
+        .filter((idx: number) => idx >= 0 && idx < elements.length)
+        .map((idx: number) => elements[idx]);
+      
+      console.log(`   🎯 Highlighting ${relevantElements.length} specific elements`);
+      highlightSpecificElements(relevantElements, elementIndices);
+      showIntelligentGuidance(guidance, elementIndices);
+    }
+    
+  } catch (error) {
+    console.error('❌ Error in intelligent highlighting:', error);
+    console.error('   Stack trace:', error);
+    // Fall back to highlighting all
+    console.log('   ⚠️ Falling back to highlight all elements');
+    highlightAllElements(elements);
+  }
+}
+
+function highlightAllElements(elements: HTMLElement[]) {
+  elements.forEach((element, index) => {
+    applyHighlight(element, index + 1, false);
+  });
+  
+  showHighlightNotification(elements.length, null);
+}
+
+function highlightSpecificElements(elements: HTMLElement[], originalIndices: number[]) {
+  elements.forEach((element, idx) => {
+    const originalIndex = originalIndices[idx];
+    applyHighlight(element, originalIndex, true);
+  });
+  
+  showHighlightNotification(elements.length, null);
+}
+
+function applyHighlight(element: HTMLElement, labelNumber: number, isImportant: boolean) {
+  // Store original style
+  const originalOutline = element.style.outline;
+  const originalPosition = element.style.position;
+  const originalZIndex = element.style.zIndex;
+  
+  // Apply highlight (more prominent if important)
+  const color = isImportant ? '#f59e0b' : '#667eea';  // Orange for important, blue for all
+  const width = isImportant ? '4px' : '3px';
+  
+  element.style.outline = `${width} solid ${color}`;
+  element.style.outlineOffset = '2px';
+  element.style.position = 'relative';
+  element.style.zIndex = '9999';
+  
+  // Add label
+  const label = document.createElement('div');
+  label.className = 'ai-highlight-label';
+  label.textContent = `${labelNumber}`;
+  label.style.cssText = `
+    position: absolute;
+    top: -12px;
+    left: -12px;
+    background: ${isImportant ? 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'};
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    z-index: 10000;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  `;
+  
+  element.style.position = 'relative';
+  element.appendChild(label);
+  
+  // Store for cleanup
+  highlightedElements.push(element);
+  
+  // Store original styles for restoration
+  element.dataset.originalOutline = originalOutline;
+  element.dataset.originalPosition = originalPosition;
+  element.dataset.originalZIndex = originalZIndex;
+  
+  // Scroll to first important element
+  if (isImportant && highlightedElements.length === 1) {
+    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+}
+
+function showIntelligentGuidance(guidance: string, elementIndices: number[]) {
+  const notification = document.createElement('div');
+  notification.id = 'highlight-notification';
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    max-width: 400px;
+    background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+    color: white;
+    padding: 16px 24px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 999999;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    animation: slideInRight 0.3s ease-out;
+  `;
+  
+  notification.innerHTML = `
+    <div style="font-weight: 600; margin-bottom: 8px;">🎯 ${elementIndices.length} Relevant Elements Found</div>
+    <div style="font-size: 13px; opacity: 0.95; margin-bottom: 12px; line-height: 1.4;">${escapeHtml(guidance)}</div>
+    <button id="clearHighlightsBtn" style="
+      width: 100%;
+      padding: 8px;
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+    ">Clear Highlights</button>
+  `;
+  
+  document.body.appendChild(notification);
+  
+  document.getElementById('clearHighlightsBtn')?.addEventListener('click', () => {
+    clearHighlights();
+    notification.remove();
+  });
+  
+  // Auto-remove after 20 seconds (longer for guidance)
+  setTimeout(() => {
+    if (document.getElementById('highlight-notification')) {
+      notification.remove();
+    }
+  }, 20000);
+}
+
+function showHighlightNotification(count: number, guidance: string | null) {
+  if (guidance) {
+    // Already shown by showIntelligentGuidance
+    return;
+  }
+  
+  const notification = document.createElement('div');
+  notification.id = 'highlight-notification';
+  notification.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 16px 24px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 999999;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    animation: slideInRight 0.3s ease-out;
+  `;
+  
+  notification.innerHTML = `
+    <div style="font-weight: 600; margin-bottom: 8px;">✨ Highlighted ${count} elements</div>
+    <div style="font-size: 12px; opacity: 0.9; margin-bottom: 12px;">Important interactive elements are now highlighted</div>
+    <button id="clearHighlightsBtn" style="
+      width: 100%;
+      padding: 8px;
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+    ">Clear Highlights</button>
+  `;
+  
+  document.body.appendChild(notification);
+  
+  document.getElementById('clearHighlightsBtn')?.addEventListener('click', () => {
+    clearHighlights();
+    notification.remove();
+  });
+  
+  // Auto-remove after 10 seconds
+  setTimeout(() => {
+    if (document.getElementById('highlight-notification')) {
+      notification.remove();
+    }
+  }, 10000);
+}
+
+function clearHighlights() {
+  highlightedElements.forEach(element => {
+    // Remove label
+    const label = element.querySelector('.ai-highlight-label');
+    if (label) label.remove();
+    
+    // Restore original styles
+    element.style.outline = element.dataset.originalOutline || '';
+    element.style.position = element.dataset.originalPosition || '';
+    element.style.zIndex = element.dataset.originalZIndex || '';
+    
+    // Clean up dataset
+    delete element.dataset.originalOutline;
+    delete element.dataset.originalPosition;
+    delete element.dataset.originalZIndex;
+  });
+  
+  highlightedElements = [];
+  
+  // Remove notification if exists
+  const notification = document.getElementById('highlight-notification');
+  if (notification) notification.remove();
+}
+
+/**
  * Listen for messages from background script
  */
 chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
+  console.log('📨 Content script received message:', message.type);
+  
   if (message.type === 'SUGGESTION_AVAILABLE') {
     showSuggestionPopup(message.fieldId, message.suggestionText);
   } else if (message.type === 'SUGGESTION_ERROR') {
@@ -527,6 +1019,15 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
     triggerManualSuggestion();
   } else if (message.type === 'AUTO_FILL_PAGE') {
     processAllFields();
+  } else if (message.type === 'HIGHLIGHT_ELEMENTS') {
+    console.log('   🎯 Triggering highlight for query:', message.query);
+    highlightElements(message.query);
+  } else if (message.type === 'CLEAR_HIGHLIGHTS') {
+    clearHighlights();
+  } else if (message.type === 'SUMMARIZE_PAGE') {
+    summarizePage();
+  } else if (message.type === 'SUMMARIZE_PAGE_RESULT') {
+    showSummaryResult(message.summary, !!message.error);
   }
 });
 
