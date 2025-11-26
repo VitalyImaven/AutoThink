@@ -132,3 +132,22 @@ export async function getAllTags(): Promise<string[]> {
   return Array.from(allTags).sort();
 }
 
+// Delete a specific document and its chunks
+export async function deleteDocument(documentId: string, sourceFile: string): Promise<void> {
+  const db = await initDB();
+  
+  // Delete the document
+  await db.delete('documents', documentId);
+  
+  // Delete all chunks from this source file
+  const allChunks = await db.getAllFromIndex('semantic_chunks', 'by-source', sourceFile);
+  const tx = db.transaction('semantic_chunks', 'readwrite');
+  
+  await Promise.all([
+    ...allChunks.map(chunk => tx.store.delete(chunk.id)),
+    tx.done
+  ]);
+  
+  console.log(`✅ Deleted document ${sourceFile} and ${allChunks.length} associated chunks`);
+}
+

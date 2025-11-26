@@ -114,6 +114,13 @@ function handleFieldFocus(event: FocusEvent) {
   if (!isFillableField(element)) {
     return;
   }
+  
+  // IMPORTANT: Ignore fields in our own side panel!
+  const isInSidePanel = (element as HTMLElement).closest('#ai-assistant-sidepanel');
+  if (isInSidePanel) {
+    console.log('Field is in AI panel, ignoring');
+    return;
+  }
 
   // Store the current field for manual suggestions
   currentField = element;
@@ -1034,21 +1041,8 @@ function openSidePanel() {
   
   console.log('📍 Opening side panel...');
   
-  // Create overlay
-  const overlay = document.createElement('div');
-  overlay.id = 'ai-assistant-overlay';
-  overlay.style.cssText = `
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.3);
-    z-index: 2147483646;
-    transition: opacity 0.3s;
-  `;
-  
-  overlay.addEventListener('click', () => closeSidePanel());
+  // NO overlay - it was blocking page interaction!
+  // Panel stays open until user explicitly closes it (X button)
   
   // Inject CSS for toggles and animations
   const style = document.createElement('style');
@@ -1247,7 +1241,6 @@ function openSidePanel() {
   `;
   
   // Append to DOM FIRST
-  document.body.appendChild(overlay);
   document.body.appendChild(panel);
   sidePanelIframe = panel as any;
   sidePanelOpen = true;
@@ -1355,19 +1348,49 @@ function initializeSidePanelHandlers(panel: HTMLElement) {
   let conversationHistory: Array<{role: string, content: string}> = [];
   let isProcessing = false;
   
+  function formatMessage(content: string): string {
+    // Format assistant messages with nice HTML formatting
+    let formatted = content;
+    
+    // Handle numbered lists (1. 2. 3.)
+    formatted = formatted.replace(/^(\d+)\.\s+(.+)$/gm, '<div style="margin-left: 12px; margin-bottom: 6px;"><strong style="color: #667eea;">$1.</strong> $2</div>');
+    
+    // Handle bullet points (- or •)
+    formatted = formatted.replace(/^[-•]\s+(.+)$/gm, '<div style="margin-left: 12px; margin-bottom: 4px;">• $1</div>');
+    
+    // Handle bold text (**text**)
+    formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong style="color: #667eea;">$1</strong>');
+    
+    // Handle section headers (lines ending with :)
+    formatted = formatted.replace(/^([A-Z][^:]+):$/gm, '<div style="font-weight: 600; margin-top: 10px; margin-bottom: 6px; color: #667eea;">$1:</div>');
+    
+    // Convert paragraphs (double line breaks)
+    const paragraphs = formatted.split('\n\n');
+    formatted = paragraphs.map(para => {
+      if (para.includes('<div')) {
+        return para; // Already formatted
+      }
+      return `<p style="margin-bottom: 10px; line-height: 1.6;">${para.replace(/\n/g, '<br>')}</p>`;
+    }).join('');
+    
+    return formatted;
+  }
+  
   function addMessage(content: string, type: 'user' | 'assistant' | 'system') {
     console.log(`   📝 Adding ${type} message: ${content.substring(0, 50)}...`);
     const msg = document.createElement('div');
     
     if (type === 'user') {
       msg.style.cssText = 'max-width: 85%; align-self: flex-end; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.5;';
+      msg.textContent = content;
     } else if (type === 'assistant') {
-      msg.style.cssText = 'max-width: 85%; align-self: flex-start; background: white; color: #333; padding: 10px 14px; border-radius: 12px; font-size: 13px; box-shadow: 0 2px 4px rgba(0,0,0,0.08); line-height: 1.5;';
+      msg.style.cssText = 'max-width: 85%; align-self: flex-start; background: white; color: #333; padding: 10px 14px; border-radius: 12px; font-size: 13px; box-shadow: 0 2px 4px rgba(0,0,0,0.08); line-height: 1.6;';
+      msg.innerHTML = formatMessage(content); // Use HTML formatting!
     } else {
       msg.style.cssText = 'max-width: 90%; align-self: center; background: #fff3cd; color: #856404; padding: 8px 12px; border-radius: 12px; font-size: 12px; text-align: center;';
+      msg.textContent = content;
     }
     
-    msg.textContent = content;
     chatMessages.appendChild(msg);
     chatMessages.scrollTop = chatMessages.scrollHeight;
     console.log(`   ✅ Message added to DOM`);
@@ -1656,7 +1679,6 @@ function closeSidePanel(force: boolean = false) {
   
   setTimeout(() => {
     panel.remove();
-    document.getElementById('ai-assistant-overlay')?.remove();
     sidePanelIframe = null;
     sidePanelOpen = false;
   }, 300);

@@ -415,7 +415,7 @@ chrome.action.onClicked.addListener(async () => {
     type: 'popup',
     width: 440,
     height: 650,
-    focused: true
+    focused: true  // Focus the window when opened
   });
   
   panelWindowId = window.id || null;

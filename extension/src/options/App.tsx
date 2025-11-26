@@ -1,10 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { config } from '../config';
-import { saveDocumentIndex, getAllChunks, getAllDocuments, clearAllChunks, getChunkCount, getDocumentCount, getAllTags } from '../db';
+import { saveDocumentIndex, getAllChunks, getAllDocuments, clearAllChunks, deleteDocument, getChunkCount, getDocumentCount, getAllTags } from '../db';
 
 interface StatusMessage {
   type: 'success' | 'error' | 'info';
   text: string;
+}
+
+interface ProcessingLog {
+  timestamp: Date;
+  message: string;
+  type: 'info' | 'success' | 'error';
 }
 
 const App: React.FC = () => {
@@ -17,34 +23,29 @@ const App: React.FC = () => {
   const [uploading, setUploading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<StatusMessage | null>(null);
   const [dragging, setDragging] = useState(false);
-  const [enabled, setEnabled] = useState(true);
-  const [autoSuggest, setAutoSuggest] = useState(false);
+  const [processingLogs, setProcessingLogs] = useState<ProcessingLog[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const logsEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadKnowledgeBase();
-    loadSettings();
   }, []);
+  
+  useEffect(() => {
+    // Auto-scroll logs to bottom
+    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [processingLogs]);
 
-  const loadSettings = () => {
-    chrome.storage.sync.get(['enabled', 'autoSuggest'], (result) => {
-      setEnabled(result.enabled !== false);
-      setAutoSuggest(result.autoSuggest === true);
-    });
+  const addLog = (message: string, type: 'info' | 'success' | 'error' = 'info') => {
+    setProcessingLogs(prev => [...prev, {
+      timestamp: new Date(),
+      message,
+      type
+    }]);
   };
 
-  const handleEnabledToggle = () => {
-    const newEnabled = !enabled;
-    setEnabled(newEnabled);
-    chrome.storage.sync.set({ enabled: newEnabled });
-    showStatus('info', `Extension ${newEnabled ? 'enabled' : 'disabled'}`);
-  };
-
-  const handleAutoSuggestToggle = () => {
-    const newAutoSuggest = !autoSuggest;
-    setAutoSuggest(newAutoSuggest);
-    chrome.storage.sync.set({ autoSuggest: newAutoSuggest });
-    showStatus('info', `Auto-suggest ${newAutoSuggest ? 'enabled' : 'disabled'}`);
+  const clearLogs = () => {
+    setProcessingLogs([]);
   };
 
   const loadKnowledgeBase = async () => {
@@ -79,6 +80,7 @@ const App: React.FC = () => {
     if (!files || files.length === 0) return;
 
     setUploading(true);
+    clearLogs();
     let successCount = 0;
     let errorCount = 0;
 
@@ -87,21 +89,28 @@ const App: React.FC = () => {
       '.xlsx', '.xls', '.json', '.xml', '.pptx', '.ppt'
     ];
 
+    addLog(`📤 Starting upload of ${files.length} file(s)...`, 'info');
+
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const fileName = file.name.toLowerCase();
 
+      addLog(`\n[${i + 1}/${files.length}] Processing: ${file.name}`, 'info');
+
       // Check file type
       const isSupported = supportedTypes.some(ext => fileName.endsWith(ext));
       if (!isSupported) {
-        showStatus('error', `Skipped ${file.name}: Unsupported file type. Supported: ${supportedTypes.join(', ')}`);
+        addLog(`  ❌ Unsupported file type. Skipping.`, 'error');
         errorCount++;
         continue;
       }
 
       try {
-        // Show progress
+        addLog(`  📤 Uploading to backend...`, 'info');
         showStatus('info', `📤 Uploading ${file.name} (${i + 1}/${files.length})...`);
+        
+        // Small delay to ensure UI updates
+        await new Promise(resolve => setTimeout(resolve, 50));
 
         // Create form data for file upload
         const formData = new FormData();
@@ -118,26 +127,53 @@ const App: React.FC = () => {
           throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
 
-        showStatus('info', `⚙️ Processing ${file.name}...`);
+        addLog(`  ⚙️ Analyzing document with AI...`, 'info');
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
+        addLog(`  ⏳ This may take 30-60 seconds for semantic analysis...`, 'info');
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
+        showStatus('info', `⚙️ AI processing ${file.name}...`);
+
+        // Add progress dots during long wait
+        const progressInterval = setInterval(() => {
+          addLog(`     Still processing... (AI analyzing content)`, 'info');
+        }, 5000); // Every 5 seconds
 
         const result = await response.json();
+        
+        clearInterval(progressInterval);
+
+        addLog(`  🧠 Discovered ${result.document_index.discovered_topics.length} topics`, 'success');
+        await new Promise(resolve => setTimeout(resolve, 30));
+        
+        addLog(`  🏷️ Generated ${result.document_index.all_tags.length} semantic tags`, 'success');
+        await new Promise(resolve => setTimeout(resolve, 30));
+        
+        addLog(`  📦 Created ${result.document_index.chunk_count} knowledge chunks`, 'success');
+        await new Promise(resolve => setTimeout(resolve, 30));
+        
+        addLog(`  💾 Saving to local IndexedDB...`, 'info');
+        await new Promise(resolve => setTimeout(resolve, 30));
 
         // Save document index to IndexedDB (with discovered topics and chunks!)
         await saveDocumentIndex(result.document_index);
 
         successCount++;
-        const summary = `✓ ${file.name}: ${result.document_index.discovered_topics.length} topics, ${result.document_index.all_tags.length} tags, ${result.document_index.chunk_count} chunks`;
-        showStatus('success', summary);
+        addLog(`  ✅ Successfully processed ${file.name}!`, 'success');
+        showStatus('success', `✓ ${file.name} processed!`);
         
         // Small delay to show progress
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 300));
       } catch (error) {
         errorCount++;
-        showStatus('error', `Failed to process ${file.name}: ${(error as Error).message}`);
+        addLog(`  ❌ Error: ${(error as Error).message}`, 'error');
+        showStatus('error', `Failed: ${file.name}`);
       }
     }
 
     setUploading(false);
+    addLog(`\n📊 Upload Complete: ${successCount} succeeded, ${errorCount} failed`, successCount > 0 ? 'success' : 'error');
 
     // Reload knowledge base
     await loadKnowledgeBase();
@@ -154,16 +190,36 @@ const App: React.FC = () => {
   };
 
 
-  const handleClearKnowledgeBase = async () => {
-    if (!confirm('Are you sure you want to clear all knowledge? This cannot be undone.')) {
+  const handleDeleteDocument = async (documentId: string, sourceFile: string) => {
+    if (!confirm(`Delete "${sourceFile}"?\n\nThis will remove the document and all its chunks. This cannot be undone.`)) {
       return;
     }
 
     try {
+      addLog(`🗑️ Deleting document: ${sourceFile}`, 'info');
+      await deleteDocument(documentId, sourceFile);
+      await loadKnowledgeBase();
+      addLog(`✅ Successfully deleted ${sourceFile}`, 'success');
+      showStatus('success', `Deleted ${sourceFile}`);
+    } catch (error) {
+      addLog(`❌ Failed to delete ${sourceFile}: ${(error as Error).message}`, 'error');
+      showStatus('error', 'Failed to delete document: ' + (error as Error).message);
+    }
+  };
+
+  const handleClearKnowledgeBase = async () => {
+    if (!confirm('Are you sure you want to clear ALL documents? This cannot be undone.')) {
+      return;
+    }
+
+    try {
+      addLog('🗑️ Clearing entire knowledge base...', 'info');
       await clearAllChunks();
       await loadKnowledgeBase();
+      addLog('✅ Knowledge base cleared', 'success');
       showStatus('info', 'Knowledge base cleared');
     } catch (error) {
+      addLog(`❌ Error clearing knowledge base: ${(error as Error).message}`, 'error');
       showStatus('error', 'Failed to clear knowledge base: ' + (error as Error).message);
     }
   };
@@ -189,7 +245,7 @@ const App: React.FC = () => {
 
   return (
     <div>
-      <h1>🤖 AI Smart Autofill</h1>
+      <h1>🤖 AI Smart Autofill - Knowledge Base</h1>
       <p className="subtitle">
         Upload your personal and business documents to build your AI-powered knowledge base
       </p>
@@ -199,63 +255,6 @@ const App: React.FC = () => {
           {statusMessage.text}
         </div>
       )}
-
-      {/* Extension Settings */}
-      <div className="section">
-        <h2>⚙️ Extension Settings</h2>
-        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-          <div className="setting-card">
-            <div className="setting-header">
-              <span style={{ fontSize: '20px' }}>{enabled ? '✅' : '❌'}</span>
-              <div>
-                <div style={{ fontWeight: '600', marginBottom: '4px' }}>Extension Enabled</div>
-                <div style={{ fontSize: '13px', color: '#666' }}>
-                  {enabled ? 'Extension is active' : 'Extension is disabled'}
-                </div>
-              </div>
-            </div>
-            <button
-              className={`btn ${enabled ? 'btn-danger' : 'btn-primary'}`}
-              onClick={handleEnabledToggle}
-              style={{ marginTop: '12px', width: '100%' }}
-            >
-              {enabled ? 'Disable Extension' : 'Enable Extension'}
-            </button>
-          </div>
-
-          <div className="setting-card">
-            <div className="setting-header">
-              <span style={{ fontSize: '20px' }}>{autoSuggest ? '⚡' : '👆'}</span>
-              <div>
-                <div style={{ fontWeight: '600', marginBottom: '4px' }}>Suggestion Mode</div>
-                <div style={{ fontSize: '13px', color: '#666' }}>
-                  {autoSuggest ? 'Auto-suggest on focus' : 'Manual (right-click)'}
-                </div>
-              </div>
-            </div>
-            <button
-              className="btn btn-primary"
-              onClick={handleAutoSuggestToggle}
-              style={{ marginTop: '12px', width: '100%' }}
-            >
-              {autoSuggest ? 'Switch to Manual' : 'Enable Auto-Suggest'}
-            </button>
-          </div>
-        </div>
-        
-        <div style={{ 
-          marginTop: '16px', 
-          padding: '12px', 
-          background: '#f8f9fa', 
-          borderRadius: '8px',
-          fontSize: '14px',
-          color: '#666'
-        }}>
-          💡 <strong>Tip:</strong> {autoSuggest 
-            ? 'Auto-suggest will show suggestions automatically when you click on a field.' 
-            : 'Right-click on any field and select "✨ AI Autofill Suggest" to get suggestions on demand.'}
-        </div>
-      </div>
 
       {/* Upload Section */}
       <div className="section">
@@ -283,6 +282,41 @@ const App: React.FC = () => {
           onChange={(e) => handleFileSelect(e.target.files)}
         />
       </div>
+
+      {/* Processing Log */}
+      {processingLogs.length > 0 && (
+        <div className="section">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <h2>📋 Processing Log</h2>
+            <button className="btn btn-secondary" onClick={clearLogs} style={{ padding: '6px 12px', fontSize: '13px' }}>
+              Clear Log
+            </button>
+          </div>
+          <div style={{
+            background: '#1e1e1e',
+            color: '#d4d4d4',
+            padding: '16px',
+            borderRadius: '8px',
+            fontFamily: 'Monaco, Consolas, monospace',
+            fontSize: '12px',
+            maxHeight: '400px',
+            overflowY: 'auto',
+            lineHeight: '1.6'
+          }}>
+            {processingLogs.map((log, index) => (
+              <div key={index} style={{
+                color: log.type === 'success' ? '#4ec9b0' : log.type === 'error' ? '#f48771' : '#d4d4d4',
+                marginBottom: '4px'
+              }}>
+                <span style={{ color: '#808080' }}>
+                  [{log.timestamp.toLocaleTimeString()}]
+                </span> {log.message}
+              </div>
+            ))}
+            <div ref={logsEndRef} />
+          </div>
+        </div>
+      )}
 
       {/* Knowledge Base Stats */}
       <div className="section">
@@ -336,8 +370,18 @@ const App: React.FC = () => {
               marginBottom: '16px',
               border: '1px solid #dee2e6'
             }}>
-              <div style={{ fontWeight: '600', fontSize: '16px', marginBottom: '8px', color: '#333' }}>
-                📄 {doc.source_file}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                <div style={{ fontWeight: '600', fontSize: '16px', color: '#333', flex: 1 }}>
+                  📄 {doc.source_file}
+                </div>
+                <button
+                  className="btn btn-danger"
+                  onClick={() => handleDeleteDocument(doc.document_id, doc.source_file)}
+                  style={{ padding: '6px 12px', fontSize: '12px' }}
+                  title="Delete this document"
+                >
+                  🗑️ Delete
+                </button>
               </div>
               <div style={{ fontSize: '13px', color: '#666', marginBottom: '12px' }}>
                 Uploaded: {new Date(doc.uploaded_at).toLocaleString()} • {doc.chunk_count} chunks • {doc.all_tags.length} semantic tags
