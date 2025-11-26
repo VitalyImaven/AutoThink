@@ -60,12 +60,16 @@ async function handleFieldFocused(
     // Call backend to generate suggestion (DYNAMIC - backend has all documents!)
     console.log('Generating suggestion with dynamic AI...');
     const result = await generateSuggestion(fieldContext);
-    console.log('Suggestion generated:', result.suggestion_text);
-    if (result.field_intent) {
-      console.log('Field intent:', result.field_intent);
-    }
-    if (result.top_tags) {
-      console.log('Matched tags:', result.top_tags);
+    
+    // Log full response for debugging
+    console.log('📥 Full response:', JSON.stringify(result, null, 2));
+    console.log(`📝 Suggestion text (${result.suggestion_text?.length || 0} chars):`, 
+                result.suggestion_text?.substring(0, 100));
+    
+    // Check if we got a valid suggestion
+    if (!result.suggestion_text || result.suggestion_text === 'N/A' || result.suggestion_text.trim() === '') {
+      console.warn('⚠️ Empty or N/A suggestion received!');
+      throw new Error('No relevant information found for this field');
     }
 
     // Send suggestion back to content script

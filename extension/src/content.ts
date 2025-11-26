@@ -392,11 +392,13 @@ async function autoFillSingleField(field: HTMLInputElement | HTMLTextAreaElement
   return new Promise((resolve) => {
     const fieldContext = extractFieldContext(field);
     const tempFieldId = fieldContext.field_id;
+    let timeoutId: number;
     
     // Set up one-time listener for this field's suggestion
     const messageHandler = (message: ExtensionMessage) => {
       if (message.type === 'SUGGESTION_AVAILABLE' && message.fieldId === tempFieldId) {
-        console.log(`✅ Received suggestion for: ${fieldContext.label_text || 'unknown'}`);
+        clearTimeout(timeoutId);  // Clear timeout since we got response
+        console.log(`✅ Got: "${message.suggestionText.substring(0, 50)}${message.suggestionText.length > 50 ? '...' : ''}"`);
         
         // Fill the field
         field.value = message.suggestionText;
@@ -413,7 +415,8 @@ async function autoFillSingleField(field: HTMLInputElement | HTMLTextAreaElement
         chrome.runtime.onMessage.removeListener(messageHandler);
         resolve(true);
       } else if (message.type === 'SUGGESTION_ERROR' && message.fieldId === tempFieldId) {
-        console.log(`❌ Skipping field ${fieldContext.label_text || 'unknown'}: ${message.error}`);
+        clearTimeout(timeoutId);  // Clear timeout
+        console.log(`❌ Error: ${message.error}`);
         chrome.runtime.onMessage.removeListener(messageHandler);
         resolve(false);
       }
@@ -423,15 +426,14 @@ async function autoFillSingleField(field: HTMLInputElement | HTMLTextAreaElement
     
     // Send request to background
     try {
-      console.log(`📤 Requesting suggestion for: ${fieldContext.label_text || 'unknown'}`);
+      console.log(`📤 ${fieldContext.label_text || 'unknown'}`);
       chrome.runtime.sendMessage({
         type: 'FIELD_FOCUSED',
         fieldContext,
       } as ExtensionMessage);
       
-      // Timeout after 30 seconds (dynamic AI processing takes longer)
-      setTimeout(() => {
-        console.log(`⏱️ Timeout for field: ${fieldContext.label_text || 'unknown'}`);
+      // Timeout after 30 seconds (cleanup only - no log spam)
+      timeoutId = window.setTimeout(() => {
         chrome.runtime.onMessage.removeListener(messageHandler);
         resolve(false);
       }, 30000);

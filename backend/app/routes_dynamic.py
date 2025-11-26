@@ -16,6 +16,7 @@ from app.openai_fast import (
 )
 from app.utils.file_extractors import extract_text_from_file
 import traceback
+import json
 
 router = APIRouter()
 
@@ -130,13 +131,19 @@ async def suggest_dynamic(request_data: Dict):
         # Get tags from top match for debugging
         top_tags = matched_chunks[0].get('semantic_tags', []) if matched_chunks else []
         
-        print(f"   ✅ Suggestion ready: {suggestion[:50]}...")
+        # Log the full response
+        print(f"   ✅ Suggestion ready ({len(suggestion)} chars)")
+        print(f"   📝 Content: {suggestion[:150]}{'...' if len(suggestion) > 150 else ''}")
         
-        return {
+        response_data = {
             "suggestion_text": suggestion,
             "matched_chunks": len(matched_chunks),
             "top_tags": top_tags[:3]
         }
+        
+        print(f"   📤 Returning response: {json.dumps(response_data, ensure_ascii=False)[:200]}...")
+        
+        return response_data
     
     except Exception as e:
         error_details = traceback.format_exc()

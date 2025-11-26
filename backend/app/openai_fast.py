@@ -83,8 +83,7 @@ Return ONLY JSON."""
                     "content": "You are an expert at analyzing documents and discovering semantic structure."
                 },
                 {"role": "user", "content": prompt}
-            ],
-            temperature=0.3
+            ]
         )
         
         content = response.choices[0].message.content.strip()
@@ -305,27 +304,47 @@ async def fast_generate_suggestion(
     field_placeholder = field_context.get('placeholder', '')
     max_length = field_context.get('max_length')
     
+    # Build length instruction based on field constraints
+    if max_length and max_length <= 300:
+        length_instruction = f"This field allows up to {max_length} characters. Use AS MUCH of this space as possible! Aim for {int(max_length * 0.9)}-{max_length} characters."
+    elif max_length:
+        length_instruction = f"Maximum {max_length} characters."
+    else:
+        length_instruction = "No length limit - provide comprehensive, detailed information."
+    
     # Single optimized AI call
-    prompt = f"""Generate a response for this form field.
+    prompt = f"""You are filling out a form field. Extract relevant information from the provided context.
 
-Field: {field_label}
-{f'Hint: {field_placeholder}' if field_placeholder else ''}
-{f'Max length: {max_length} characters' if max_length else ''}
+FIELD TO FILL:
+- Label: {field_label}
+{f'- Hint: {field_placeholder}' if field_placeholder else ''}
+- {length_instruction}
 
-Relevant information (pre-matched by AI):
+RELEVANT INFORMATION (already matched to this field):
 {chr(10).join(chunks_context)}
 
-Instructions:
-- Extract the EXACT information this field needs
-- Be concise and accurate
-- Respect max length if specified
-- Return ONLY the field value, no explanations
+CRITICAL RULES:
+1. Extract information from the context above that answers what the field is asking for
+2. Write a complete, well-formatted response using the information provided
+3. NEVER return empty string or just "N/A" if you have any relevant information
+4. For long fields: Write detailed, comprehensive responses
+5. For short fields (name, email, phone): Extract just the specific value
+6. If the field asks "How does X work?" or "What is X?" → Provide a full explanation from the context
+7. Use most/all of the available character space
+8. Return ONLY the text to put in the field (no labels, no "Answer:", no explanations)
 
-Generate response:"""
+Now extract and format the information for this field:"""
 
     try:
         # Use fast model for suggestion
         suggest_model = getattr(settings, 'OPENAI_SUGGEST_MODEL', settings.OPENAI_MODEL)
+        
+        # Calculate appropriate token limit
+        # GPT-5 needs higher limits for longer responses
+        if max_length and max_length < 2000:
+            token_limit = max_length
+        else:
+            token_limit = 1000  # Generous default for longer fields
         
         response = await client.chat.completions.create(
             model=suggest_model,
@@ -336,15 +355,32 @@ Generate response:"""
                 },
                 {"role": "user", "content": prompt}
             ],
-            max_tokens=max_length if max_length and max_length < 500 else 200,
-            temperature=0.3
+            max_completion_tokens=token_limit
         )
         
-        suggestion = response.choices[0].message.content.strip()
+        suggestion = response.choices[0].message.content
+        
+        if not suggestion:
+            print(f"   ⚠️ WARNING: AI returned None/null!")
+            return "N/A"
+        
+        suggestion = suggestion.strip()
+        
+        if not suggestion:
+            print(f"   ⚠️ WARNING: AI returned empty string after strip!")
+            return "N/A"
         
         # Remove quotes if wrapped
         if suggestion.startswith('"') and suggestion.endswith('"'):
             suggestion = suggestion[1:-1]
+        
+        # Final check
+        if not suggestion or suggestion.lower() == 'n/a':
+            print(f"   ⚠️ WARNING: Final suggestion is empty or N/A!")
+            return "No relevant information found in your documents for this field."
+        
+        # Log the actual suggestion for debugging
+        print(f"   📝 Full suggestion ({len(suggestion)} chars): {suggestion[:150]}{'...' if len(suggestion) > 150 else ''}")
         
         return suggestion
     
