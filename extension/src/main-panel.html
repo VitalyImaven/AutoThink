@@ -477,10 +477,6 @@
             <span class="tab-icon">💬</span>
             <span>Chat</span>
         </button>
-        <button class="tab-button" data-tab="summary">
-            <span class="tab-icon">📄</span>
-            <span>Summary</span>
-        </button>
     </nav>
     
     <div class="tab-content">
@@ -513,7 +509,6 @@
                 
                 <div class="control-group">
                     <h3>Quick Actions</h3>
-                    <button class="action-btn" id="summarizeBtn">📄 Summarize This Page</button>
                     <button class="action-btn" id="highlightBtn">✨ Highlight Important Elements</button>
                     <button class="action-btn secondary" id="autoFillBtn">🤖 Auto-Fill Entire Page</button>
                     <button class="action-btn secondary" id="openOptionsBtn">⚙️ Manage Knowledge Base</button>
@@ -534,8 +529,25 @@
                 <button class="quick-action-btn" data-action="clear">🗑️ Clear</button>
             </div>
             <div class="chat-container" id="chatMessages">
-                <div class="chat-message system">
-                    👋 Hello! I can help you navigate this page, answer questions, and find information. What would you like to know?
+                <div class="chat-message system" style="max-width: 95%; background: linear-gradient(135deg, #fff3cd 0%, #ffe8a1 100%); box-shadow: 0 2px 4px rgba(0,0,0,0.08); line-height: 1.6;">
+                    <div style="font-weight: 600; margin-bottom: 8px; font-size: 13px;">👋 Welcome to AI Smart Autofill!</div>
+                    
+                    <div style="margin-bottom: 8px;"><strong>I can help you with:</strong></div>
+                    <div style="margin-left: 8px; margin-bottom: 6px;">
+                      • <strong>This page:</strong> Ask "where to click for X?" or "how do I do Y?"<br>
+                      • <strong>Auto-fill forms:</strong> I'll suggest content from your documents<br>
+                      • <strong>Highlighting:</strong> Find important buttons/links easily<br>
+                      • <strong>Summaries:</strong> Get quick page overviews
+                    </div>
+                    
+                    <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(133, 100, 4, 0.2);">
+                      <strong>First time?</strong> Upload your documents first:<br>
+                      <span style="font-size: 11px;">Controls tab → "⚙️ Manage Knowledge Base" → Upload .txt/.md files</span>
+                    </div>
+                    
+                    <div style="margin-top: 8px; font-size: 11px; opacity: 0.9; text-align: center;">
+                      💡 Ask me anything about this page or how to use the extension!
+                    </div>
                 </div>
             </div>
             <div class="chat-input-container">
@@ -547,18 +559,6 @@
                     autocomplete="off"
                 >
                 <button class="send-btn" id="sendBtn">Send</button>
-            </div>
-        </div>
-        
-        <!-- Summary Tab -->
-        <div class="tab-pane" id="summary-pane">
-            <div class="summary-container">
-                <div class="summary-placeholder" id="summaryPlaceholder">
-                    <div class="icon">📄</div>
-                    <p>No summary yet</p>
-                    <button class="action-btn" id="generateSummaryBtn">Generate Page Summary</button>
-                </div>
-                <div class="summary-content" id="summaryContent" style="display: none;"></div>
             </div>
         </div>
     </div>

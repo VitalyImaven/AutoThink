@@ -47,11 +47,6 @@ autoSuggestToggle.addEventListener('change', () => {
 });
 
 // Quick action buttons
-document.getElementById('summarizeBtn')?.addEventListener('click', () => {
-  switchTab('summary');
-  generateSummary();
-});
-
 document.getElementById('highlightBtn')?.addEventListener('click', async () => {
   const tabs = await chrome.tabs.query({});
   const targetTab = tabs.filter(t => t.url && !t.url.startsWith('chrome://'))[0];
@@ -281,75 +276,7 @@ function handleQuickAction(action: string | undefined) {
   }
 }
 
-// Summary functionality
-async function generateSummary() {
-  const summaryPlaceholder = document.getElementById('summaryPlaceholder')!;
-  
-  // Show loading
-  summaryPlaceholder.innerHTML = `
-    <div class="summary-loading">
-      <div class="spinner"></div>
-      <p>Analyzing page...</p>
-    </div>
-  `;
-  
-  const tabs = await chrome.tabs.query({});
-  const targetTab = tabs.filter(t => t.url && !t.url.startsWith('chrome://'))[0];
-  
-  if (!targetTab?.id) {
-    summaryPlaceholder.innerHTML = `
-      <div class="icon">❌</div>
-      <p>No webpage found to summarize</p>
-    `;
-    return;
-  }
-  
-  try {
-    // Send summarize message
-    chrome.tabs.sendMessage(targetTab.id, { type: 'SUMMARIZE_PAGE' });
-    
-    // Wait for response (handled in message listener)
-  } catch (error) {
-    summaryPlaceholder.innerHTML = `
-      <div class="icon">❌</div>
-      <p>Error: ${error instanceof Error ? error.message : 'Unknown error'}</p>
-      <button class="action-btn" onclick="generateSummary()">Try Again</button>
-    `;
-  }
-}
-
-// Listen for summary results (add to existing listener)
-const existingListener = chrome.runtime.onMessage.hasListener;
-if (!existingListener) {
-  chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
-    if (message.type === 'SUMMARIZE_PAGE_RESULT') {
-      const summaryPlaceholder = document.getElementById('summaryPlaceholder')!;
-      const summaryContent = document.getElementById('summaryContent')!;
-      
-      if (message.error) {
-        summaryPlaceholder.style.display = 'block';
-        summaryContent.style.display = 'none';
-        summaryPlaceholder.innerHTML = `
-          <div class="icon">❌</div>
-          <p>Error: ${message.error}</p>
-          <button class="action-btn" id="retrySummaryBtn">Try Again</button>
-        `;
-        document.getElementById('retrySummaryBtn')?.addEventListener('click', generateSummary);
-      } else {
-        summaryPlaceholder.style.display = 'none';
-        summaryContent.style.display = 'block';
-        summaryContent.innerHTML = `
-          <h3>📄 Page Summary</h3>
-          <p style="white-space: pre-wrap;">${message.summary}</p>
-          <button class="action-btn" style="margin-top: 16px;" id="refreshSummaryBtn">Refresh Summary</button>
-        `;
-        document.getElementById('refreshSummaryBtn')?.addEventListener('click', generateSummary);
-      }
-    }
-  });
-}
-
-document.getElementById('generateSummaryBtn')?.addEventListener('click', generateSummary);
+// Summary functionality removed - users can ask for summaries in chat!
 
 // Update page info
 async function updatePageInfo() {

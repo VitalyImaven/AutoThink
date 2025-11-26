@@ -1143,9 +1143,6 @@ function openSidePanel() {
       <button class="ai-tab-btn" data-tab="chat" style="flex: 1; padding: 14px 8px; border: none; background: white; cursor: pointer; font-size: 13px; font-weight: 500; color: #666; border-bottom: 3px solid transparent; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 6px;">
         <span style="font-size: 16px;">💬</span><span>Chat</span>
       </button>
-      <button class="ai-tab-btn" data-tab="summary" style="flex: 1; padding: 14px 8px; border: none; background: white; cursor: pointer; font-size: 13px; font-weight: 500; color: #666; border-bottom: 3px solid transparent; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 6px;">
-        <span style="font-size: 16px;">📄</span><span>Summary</span>
-      </button>
     </div>
     
     <div style="flex: 1; overflow-y: auto; overflow-x: hidden;">
@@ -1177,9 +1174,9 @@ function openSidePanel() {
         
         <div style="background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
           <h3 style="font-size: 14px; margin: 0 0 12px 0; color: #333;">Quick Actions</h3>
-          <button id="ai-summarize-btn" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; margin-bottom: 8px; transition: all 0.2s;">📄 Summarize This Page</button>
           <button id="ai-highlight-btn" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; margin-bottom: 8px; transition: all 0.2s;">✨ Highlight Important Elements</button>
-          <button id="ai-autofill-btn" style="width: 100%; padding: 12px; background: white; color: #667eea; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;">🤖 Auto-Fill Entire Page</button>
+          <button id="ai-autofill-btn" style="width: 100%; padding: 12px; background: white; color: #667eea; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; margin-bottom: 8px; transition: all 0.2s;">🤖 Auto-Fill Entire Page</button>
+          <button id="ai-manage-kb-btn" style="width: 100%; padding: 12px; background: white; color: #667eea; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;">⚙️ Manage Knowledge Base</button>
         </div>
         
         <div style="background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
@@ -1201,8 +1198,25 @@ function openSidePanel() {
           <button class="ai-quick-btn" data-action="clear" style="padding: 6px 12px; background: #f0f0f0; border: 1px solid #e0e0e0; border-radius: 16px; font-size: 11px; cursor: pointer; transition: all 0.2s; white-space: nowrap;">🗑️ Clear</button>
         </div>
         <div style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background: #f5f5f5;" id="ai-chat-messages">
-          <div style="max-width: 90%; padding: 10px 14px; border-radius: 12px; background: #fff3cd; color: #856404; font-size: 12px; align-self: center; text-align: center;">
-            👋 Hello! I can help you navigate this page, answer questions, and find information. What would you like to know?
+          <div style="max-width: 95%; padding: 12px 16px; border-radius: 12px; background: linear-gradient(135deg, #fff3cd 0%, #ffe8a1 100%); color: #856404; font-size: 12px; align-self: center; line-height: 1.6; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+            <div style="font-weight: 600; margin-bottom: 8px; font-size: 13px;">👋 Welcome to AI Smart Autofill!</div>
+            
+            <div style="margin-bottom: 8px;"><strong>I can help you with:</strong></div>
+            <div style="margin-left: 8px; margin-bottom: 6px;">
+              • <strong>This page:</strong> Ask "where to click for X?" or "how do I do Y?"<br>
+              • <strong>Auto-fill forms:</strong> I'll suggest content from your documents<br>
+              • <strong>Highlighting:</strong> Find important buttons/links easily<br>
+              • <strong>Summaries:</strong> Get quick page overviews
+            </div>
+            
+            <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(133, 100, 4, 0.2);">
+              <strong>First time?</strong> Upload your documents first:<br>
+              <span style="font-size: 11px;">Controls tab → "⚙️ Manage Knowledge Base" → Upload .txt/.md files</span>
+            </div>
+            
+            <div style="margin-top: 8px; font-size: 11px; opacity: 0.9; text-align: center;">
+              💡 Ask me anything about this page or how to use the extension!
+            </div>
           </div>
         </div>
         <div style="padding: 12px 16px; background: white; border-top: 1px solid #e0e0e0; display: flex; gap: 8px;">
@@ -1211,18 +1225,9 @@ function openSidePanel() {
         </div>
       </div>
       
-      <!-- Summary Tab -->
-      <div class="ai-tab-content" data-tab="summary" style="display: none; padding: 16px;">
-        <div id="ai-summary-display">
-          <div style="text-align: center; padding: 40px 20px;">
-            <div style="font-size: 48px; margin-bottom: 16px;">📄</div>
-            <p style="color: #666; margin-bottom: 16px; font-size: 14px;">No summary yet</p>
-            <button id="ai-gen-summary-btn" style="padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;">Generate Page Summary</button>
-          </div>
-        </div>
-      </div>
+      <!-- No more separate Summary tab - users can ask for summaries in chat! -->
       
-      <!-- Actions Tab -->
+      <!-- Removed Actions Tab (merged into Controls) -->
       <div class="ai-tab-content" data-tab="actions" style="display: none; padding: 16px;">
         <div style="background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
           <h3 style="font-size: 14px; margin: 0 0 12px 0; color: #333;">Quick Actions</h3>
@@ -1512,7 +1517,28 @@ function initializeSidePanelHandlers(panel: HTMLElement) {
         chatInput.value = 'What does this page do and how do I use it?';
         sendMessage();
       } else if (action === 'clear') {
-        chatMessages.innerHTML = '<div style="max-width: 90%; padding: 10px 14px; border-radius: 12px; background: #fff3cd; color: #856404; font-size: 12px; align-self: center; text-align: center;">👋 Hello! I can help you navigate this page, answer questions, and find information. What would you like to know?</div>';
+        chatMessages.innerHTML = `
+          <div style="max-width: 95%; padding: 12px 16px; border-radius: 12px; background: linear-gradient(135deg, #fff3cd 0%, #ffe8a1 100%); color: #856404; font-size: 12px; align-self: center; line-height: 1.6; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+            <div style="font-weight: 600; margin-bottom: 8px; font-size: 13px;">👋 Welcome to AI Smart Autofill!</div>
+            
+            <div style="margin-bottom: 8px;"><strong>I can help you with:</strong></div>
+            <div style="margin-left: 8px; margin-bottom: 6px;">
+              • <strong>This page:</strong> Ask "where to click for X?" or "how do I do Y?"<br>
+              • <strong>Auto-fill forms:</strong> I'll suggest content from your documents<br>
+              • <strong>Highlighting:</strong> Find important buttons/links easily<br>
+              • <strong>Summaries:</strong> Get quick page overviews
+            </div>
+            
+            <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(133, 100, 4, 0.2);">
+              <strong>First time?</strong> Upload your documents first:<br>
+              <span style="font-size: 11px;">Controls tab → "⚙️ Manage Knowledge Base" → Upload .txt/.md files</span>
+            </div>
+            
+            <div style="margin-top: 8px; font-size: 11px; opacity: 0.9; text-align: center;">
+              💡 Ask me anything about this page or how to use the extension!
+            </div>
+          </div>
+        `;
         conversationHistory = [];
       }
     });
@@ -1532,49 +1558,17 @@ function initializeSidePanelHandlers(panel: HTMLElement) {
   
   // Action buttons with hover effects
   const actionButtons = [
-    { id: '#ai-summarize-btn', handler: () => {
-      console.log('📄 Summarize button clicked - switching to summary tab');
-      // Switch to summary tab
-      const summaryTabBtn = panel.querySelector('.ai-tab-btn[data-tab="summary"]') as HTMLButtonElement;
-      if (summaryTabBtn) {
-        summaryTabBtn.click();
-        // Wait for tab to switch, then generate
-        setTimeout(() => {
-          const genBtn = panel.querySelector('#ai-gen-summary-btn') as HTMLButtonElement;
-          if (genBtn) {
-            console.log('   🔘 Clicking generate summary button');
-            genBtn.click();
-          } else {
-            console.error('   ❌ Generate summary button not found!');
-          }
-        }, 150);
-      }
-    }},
     { id: '#ai-highlight-btn', handler: () => {
       console.log('✨ Highlight button clicked');
       highlightElements('important interactive elements');
-    }},
-    { id: '#ai-clear-btn', handler: () => {
-      console.log('🧹 Clear highlights clicked');
-      clearHighlights();
     }},
     { id: '#ai-autofill-btn', handler: () => {
       console.log('🤖 Auto-fill clicked');
       processAllFields();
     }},
-    { id: '#ai-gen-summary-btn', handler: () => {
-      console.log('📝 Generate summary clicked');
-      const summaryDiv = panel.querySelector('#ai-summary-display') as HTMLElement;
-      if (summaryDiv) {
-        summaryDiv.innerHTML = '<div style="text-align: center; padding: 40px 20px;"><div style="width: 40px; height: 40px; border: 3px solid #f3f3f3; border-top: 3px solid #667eea; border-radius: 50%; margin: 0 auto 16px;"></div><p style="color: #666; font-size: 14px;">Analyzing page...</p></div>';
-        const content = document.body.innerText.substring(0, 5000);
-        chrome.runtime.sendMessage({
-          type: 'SUMMARIZE_PAGE',
-          pageContent: content,
-          pageTitle: document.title,
-          pageUrl: window.location.href
-        });
-      }
+    { id: '#ai-manage-kb-btn', handler: () => {
+      console.log('⚙️ Manage knowledge base clicked');
+      chrome.runtime.openOptionsPage();
     }},
     { id: '#ai-float-btn', handler: () => {
       console.log('🪟 Undock clicked - switching to floating window');

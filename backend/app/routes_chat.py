@@ -50,45 +50,161 @@ async def chat(request: ChatRequest):
         print(f"Page context: {'Yes' if request.page_context else 'No'}")
         print(f"History: {len(request.conversation_history)} messages")
         
+        # Check if this is a greeting/first-time interaction
+        greetings = ['hi', 'hello', 'hey', 'greetings', 'help', 'what can you do', 'how to use']
+        is_greeting = any(greeting in request.message.lower() for greeting in greetings)
+        is_first_message = len(request.conversation_history) == 0
+        
+        # Build extension knowledge base
+        extension_info = """
+=== AI SMART AUTOFILL CHROME EXTENSION - COMPLETE GUIDE ===
+
+WHAT THIS EXTENSION DOES:
+1. AI-Powered Form Autofill - Automatically fills web forms using your personal documents
+2. AI Chat Assistant - Ask questions about any webpage and get intelligent answers
+3. Element Highlighting - Highlights important buttons/links to guide navigation
+4. Page Summarization - Get AI-generated summaries of any webpage content
+
+HOW TO GET STARTED:
+Step 1: Upload Your Documents
+- Click the extension icon → Go to "Controls" tab → Click "⚙️ Manage Knowledge Base"
+- Upload .txt or .md files with your information (resume, bio, company info, etc.)
+- The AI will analyze and store this information locally in your browser
+
+Step 2: Use Auto-Fill
+- Navigate to any form on the web
+- Click on a form field
+- Extension automatically suggests relevant content from your documents
+- Click the suggestion to accept it
+- Or use "Auto-Fill Entire Page" button to fill all fields at once
+
+MAIN FEATURES:
+
+📝 FORM AUTOFILL:
+- Intelligent field detection (understands what each field asks for)
+- AI-powered suggestions from your uploaded documents
+- Manual or automatic suggestions (toggle in Controls)
+- Right-click any field → "AI Autofill Suggest"
+
+💬 CHAT ASSISTANT (What you're using now!):
+- Ask questions about the current webpage
+- Get specific guidance (e.g., "where to click to...", "how do I...")
+- AI analyzes the actual page content and gives specific answers
+- Available in both floating window and docked panel modes
+
+✨ ELEMENT HIGHLIGHTING:
+- Automatically highlights important buttons, links, and form fields
+- Intelligent highlighting: Ask "where do I click to X?" and relevant elements get highlighted in orange
+- General highlighting: Click "Highlight Important Elements" to see all interactive elements in blue
+- Click "Clear Highlights" to remove
+
+📄 PAGE SUMMARIZATION:
+- Get AI-generated summaries of any webpage
+- Useful for long articles, documentation, product pages
+- Summary stays visible in the Summary tab until you close the page
+- Click "Refresh Summary" to update
+
+⚙️ SETTINGS & CONTROLS:
+- Extension Enabled: Master on/off switch
+- Auto-Suggest: Toggle automatic suggestions when you focus on fields
+- Access via Controls tab or right-click extension icon → Options
+
+🪟 PANEL MODES:
+- Floating Window: Click extension icon (movable, resizable)
+- Docked Panel: Click the ⛶ dock icon to pin to page side (like Gmail extensions)
+- Switch between modes anytime
+
+QUICK TIPS:
+- All your data is stored locally in your browser (private and secure)
+- Chat history persists per tab until you close it
+- Use quick action buttons for common tasks
+- Ask natural questions like "How do I..." or "Where is..."
+
+WHERE TO FIND THINGS:
+- Upload Documents: Controls tab → "Manage Knowledge Base"
+- Chat with AI: Switch to Chat tab
+- Get Summary: Switch to Summary tab → "Generate Summary"
+- Highlight Elements: Controls tab → "Highlight Important Elements"
+- Settings: Controls tab → Toggle switches at top
+
+EXAMPLE QUESTIONS TO ASK:
+- "How do I upload my documents?"
+- "Where can I change settings?"
+- "Show me how to use auto-fill"
+- "What's the difference between docked and floating mode?"
+- "How do I fill a form automatically?"
+
+=== END EXTENSION GUIDE ===
+"""
+
         # Build messages for OpenAI
         has_page_context = request.page_context and len(request.page_context.strip()) > 0
         
         if has_page_context:
             # User is asking about the CURRENT PAGE
             context = request.page_context[:3000]  # Limit to 3000 chars
+            
+            # If greeting or first message, include extension guide
+            if is_greeting or is_first_message:
+                messages = [
+                    {
+                        "role": "system",
+                        "content": """You are a helpful AI assistant integrated into the AI Smart Autofill Chrome Extension.
+
+WHEN USER GREETS YOU (hi, hello, help, etc.):
+1. Greet them warmly
+2. Briefly explain what this extension does (auto-fill, chat, highlighting, summarization)
+3. Guide them on getting started (upload documents first!)
+4. Offer to help with the current page or explain extension features
+5. Keep it friendly and not too long (2-3 short paragraphs)
+
+WHEN USER ASKS ABOUT THE EXTENSION:
+Use the extension guide below to answer questions about features, how to use them, where to find things.
+
+WHEN USER ASKS ABOUT THE CURRENT PAGE:
+Analyze the page content and give specific answers about THIS page."""
+                    },
+                    {
+                        "role": "system",
+                        "content": extension_info
+                    },
+                    {
+                        "role": "system",
+                        "content": f"=== CURRENT PAGE INFORMATION ===\n{context}\n=== END PAGE INFO ==="
+                    }
+                ]
+            else:
+                # Regular page question
+                messages = [
+                    {
+                        "role": "system",
+                        "content": """You are a helpful AI assistant integrated into a Chrome extension.
+
+The user is asking about THE CURRENT WEBPAGE they are viewing RIGHT NOW.
+Give specific, actionable answers based on THIS PAGE.
+Reference specific elements, buttons, or sections you see on THIS PAGE."""
+                    },
+                    {
+                        "role": "system",
+                        "content": f"=== CURRENT PAGE INFORMATION ===\n{context}\n=== END PAGE INFO ==="
+                    }
+                ]
+            print(f"Added page context: {len(context)} chars (CURRENT PAGE MODE)")
+        else:
+            # Generic mode or extension questions
             messages = [
                 {
                     "role": "system",
-                    "content": """You are a helpful AI assistant integrated into a Chrome extension.
-
-CRITICAL: The user is asking about THE CURRENT WEBPAGE they are viewing RIGHT NOW.
-When they ask "where to click", "how to do X", "where is Y" - they mean ON THIS SPECIFIC PAGE.
-
-Your job:
-1. Analyze the CURRENT PAGE content provided below
-2. Give specific, actionable answers based on THIS PAGE
-3. Reference specific elements, buttons, or sections you see on THIS PAGE
-4. If you can't find something on this page, say so clearly
-
-Be concise, helpful, and specific to THIS PAGE."""
+                    "content": """You are a helpful AI assistant integrated into the AI Smart Autofill Chrome extension. 
+Help users understand the extension features and how to use them.
+Be concise, helpful, and friendly."""
                 },
                 {
                     "role": "system",
-                    "content": f"=== CURRENT PAGE INFORMATION ===\n{context}\n=== END PAGE INFO ==="
+                    "content": extension_info
                 }
             ]
-            print(f"Added page context: {len(context)} chars (CURRENT PAGE MODE)")
-        else:
-            # Generic mode
-            messages = [
-                {
-                    "role": "system",
-                    "content": """You are a helpful AI assistant integrated into a Chrome extension. 
-You help users understand web pages, answer questions, and navigate websites.
-Be concise, helpful, and friendly."""
-                }
-            ]
-            print(f"No page context - generic mode")
+            print(f"No page context - extension guide mode")
         
         # Add conversation history
         for msg in request.conversation_history[-5:]:  # Last 5 messages only
