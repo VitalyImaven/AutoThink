@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Smart Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            width: 420px;
+            height: 600px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+        
+        .header .subtitle {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+        
+        /* Tab Navigation */
+        .tab-nav {
+            display: flex;
+            background: white;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .tab-button {
+            flex: 1;
+            padding: 14px 8px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            color: #666;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        
+        .tab-button:hover {
+            background: #f5f5f5;
+            color: #667eea;
+        }
+        
+        .tab-button.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            background: #f9f9ff;
+        }
+        
+        .tab-icon {
+            font-size: 16px;
+        }
+        
+        /* Tab Content */
+        .tab-content {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        
+        .tab-pane {
+            display: none;
+            height: 100%;
+            animation: fadeIn 0.3s;
+        }
+        
+        .tab-pane.active {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Controls Tab */
+        .controls-container {
+            padding: 16px;
+        }
+        
+        .control-group {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .control-group h3 {
+            font-size: 14px;
+            margin-bottom: 12px;
+            color: #333;
+        }
+        
+        .control-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .control-item:last-child {
+            border-bottom: none;
+        }
+        
+        .control-label {
+            font-size: 13px;
+            color: #333;
+        }
+        
+        .control-description {
+            font-size: 11px;
+            color: #666;
+            margin-top: 3px;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .3s;
+            border-radius: 24px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: #667eea;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+        
+        .action-btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transition: all 0.2s;
+            margin-bottom: 8px;
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+        }
+        
+        .action-btn.secondary {
+            background: white;
+            color: #667eea;
+            border: 1px solid #e0e0e0;
+        }
+        
+        /* Chat Tab */
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: #f5f5f5;
+        }
+        
+        .chat-message {
+            max-width: 85%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            word-wrap: break-word;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        
+        .chat-message.user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .chat-message.assistant {
+            align-self: flex-start;
+            background: white;
+            color: #333;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            border-bottom-left-radius: 4px;
+        }
+        
+        .chat-message.system {
+            align-self: center;
+            background: #fff3cd;
+            color: #856404;
+            font-size: 12px;
+            max-width: 90%;
+        }
+        
+        .typing-indicator {
+            align-self: flex-start;
+            padding: 10px 14px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        }
+        
+        .typing-indicator span {
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #667eea;
+            margin: 0 2px;
+            animation: typing 1.4s infinite;
+        }
+        
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.7; }
+            30% { transform: translateY(-8px); opacity: 1; }
+        }
+        
+        .chat-input-container {
+            padding: 12px 16px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 8px;
+        }
+        
+        .chat-input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 20px;
+            font-size: 13px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        
+        .chat-input:focus {
+            border-color: #667eea;
+        }
+        
+        .send-btn {
+            padding: 10px 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .send-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* Summary Tab */
+        .summary-container {
+            padding: 16px;
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .summary-content {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .summary-content h3 {
+            font-size: 15px;
+            margin-bottom: 12px;
+            color: #667eea;
+        }
+        
+        .summary-content p {
+            font-size: 13px;
+            line-height: 1.6;
+            color: #333;
+            margin-bottom: 12px;
+        }
+        
+        .summary-placeholder {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+        
+        .summary-placeholder .icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        
+        .summary-loading {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Quick Actions in Chat */
+        .quick-actions {
+            padding: 12px 16px;
+            background: white;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        
+        .quick-action-btn {
+            padding: 6px 12px;
+            background: #f0f0f0;
+            border: 1px solid #e0e0e0;
+            border-radius: 16px;
+            font-size: 11px;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        
+        .quick-action-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🤖 AI Smart Assistant</h1>
+        <div class="subtitle" id="pageInfo">Connected to current page</div>
+    </div>
+    
+    <nav class="tab-nav">
+        <button class="tab-button active" data-tab="controls">
+            <span class="tab-icon">⚙️</span>
+            <span>Controls</span>
+        </button>
+        <button class="tab-button" data-tab="chat">
+            <span class="tab-icon">💬</span>
+            <span>Chat</span>
+        </button>
+        <button class="tab-button" data-tab="summary">
+            <span class="tab-icon">📄</span>
+            <span>Summary</span>
+        </button>
+    </nav>
+    
+    <div class="tab-content">
+        <!-- Controls Tab -->
+        <div class="tab-pane active" id="controls-pane">
+            <div class="controls-container">
+                <div class="control-group">
+                    <h3>Extension Settings</h3>
+                    <div class="control-item">
+                        <div>
+                            <div class="control-label">Extension Enabled</div>
+                            <div class="control-description">Master on/off switch</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="enabledToggle" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="control-item">
+                        <div>
+                            <div class="control-label">Auto-Suggest</div>
+                            <div class="control-description">Suggest on field focus</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="autoSuggestToggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <h3>Quick Actions</h3>
+                    <button class="action-btn" id="summarizeBtn">📄 Summarize This Page</button>
+                    <button class="action-btn" id="highlightBtn">✨ Highlight Important Elements</button>
+                    <button class="action-btn secondary" id="autoFillBtn">🤖 Auto-Fill Entire Page</button>
+                    <button class="action-btn secondary" id="openOptionsBtn">⚙️ Manage Knowledge Base</button>
+                </div>
+                
+                <div style="padding: 12px; text-align: center; font-size: 11px; color: #999;">
+                    💡 Switch to Chat tab to ask questions about this page
+                </div>
+            </div>
+        </div>
+        
+        <!-- Chat Tab -->
+        <div class="tab-pane" id="chat-pane">
+            <div class="quick-actions">
+                <button class="quick-action-btn" data-action="summarize">📄 Summarize</button>
+                <button class="quick-action-btn" data-action="highlight">✨ Highlight</button>
+                <button class="quick-action-btn" data-action="explain">💡 Explain page</button>
+                <button class="quick-action-btn" data-action="clear">🗑️ Clear</button>
+            </div>
+            <div class="chat-container" id="chatMessages">
+                <div class="chat-message system">
+                    👋 Hello! I can help you navigate this page, answer questions, and find information. What would you like to know?
+                </div>
+            </div>
+            <div class="chat-input-container">
+                <input 
+                    type="text" 
+                    class="chat-input" 
+                    id="chatInput"
+                    placeholder="Ask me anything about this page..."
+                    autocomplete="off"
+                >
+                <button class="send-btn" id="sendBtn">Send</button>
+            </div>
+        </div>
+        
+        <!-- Summary Tab -->
+        <div class="tab-pane" id="summary-pane">
+            <div class="summary-container">
+                <div class="summary-placeholder" id="summaryPlaceholder">
+                    <div class="icon">📄</div>
+                    <p>No summary yet</p>
+                    <button class="action-btn" id="generateSummaryBtn">Generate Page Summary</button>
+                </div>
+                <div class="summary-content" id="summaryContent" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script type="module" src="./main-panel.ts"></script>
+</body>
+</html>
+

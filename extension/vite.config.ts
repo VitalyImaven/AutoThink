@@ -41,21 +41,16 @@ export default defineConfig({
       input: {
         background: resolve(__dirname, 'src/background.ts'),
         content: resolve(__dirname, 'src/content.ts'),
-        popup: resolve(__dirname, 'src/popup.ts'),
-        chat: resolve(__dirname, 'src/chat.ts'),
+        'main-panel': resolve(__dirname, 'src/main-panel.ts'),
         options: resolve(__dirname, 'src/options/index.html'),
-        'popup-page': resolve(__dirname, 'src/popup.html'),
-        'chat-page': resolve(__dirname, 'src/chat.html'),
+        'main-panel-page': resolve(__dirname, 'src/main-panel.html'),
       },
       output: {
         entryFileNames: '[name].js',
         chunkFileNames: '[name].js',
         assetFileNames: (assetInfo) => {
-          if (assetInfo.name === 'popup-page.html') {
-            return 'popup.html';
-          }
-          if (assetInfo.name === 'chat-page.html') {
-            return 'chat.html';
+          if (assetInfo.name === 'main-panel-page.html') {
+            return 'main-panel.html';
           }
           if (assetInfo.name === 'index.html') {
             return 'options/index.html';
