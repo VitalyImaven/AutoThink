@@ -23,17 +23,34 @@ async def call_llm_ingest(text: str, source_file_name: str) -> List[KnowledgeChu
         List of KnowledgeChunk objects
     """
     categories_info = """
-Available categories:
-- personal_basic: Basic personal info (name, age, nationality, etc.)
-- personal_contact: Contact information (email, phone, address)
-- startup_one_liner: Brief company/startup description
-- startup_problem: Problem the startup is solving
-- startup_solution: How the startup solves the problem
-- startup_traction: Metrics, growth, achievements
-- startup_team: Team members, backgrounds, roles
-- startup_use_of_funds: How funding will be used
+Available categories (BE SPECIFIC - choose the BEST match):
+
+PERSONAL INFORMATION (about the individual):
+- personal_basic: Name, age, marital status, nationality, gender
+- personal_contact: Email, phone, address, location, city, country, websites
+- personal_bio: Personal background, career summary, "about me", professional narrative
+- personal_skills: Technical skills, competencies, expertise, tools/technologies
+- personal_education: Degrees, certifications, universities, academic credentials
+- personal_work_history: Past employment, companies worked at, job titles, career progression
+- personal_achievements: Personal awards, recognitions, accomplishments
+- personal_interests: Professional interests, areas of focus, passions
+
+COMPANY/STARTUP INFORMATION (about the business):
+- startup_one_liner: Brief company description (1-2 sentences)
+- startup_problem: Problem the startup/company is solving
+- startup_solution: How the solution works, approach, technology
+- startup_traction: Metrics, users, revenue, growth rates, customers
+- startup_team: Team members info, founders, employees (NOT personal bio)
+- startup_use_of_funds: How funding will be used, financial plans
+
+OTHER:
 - insurance_profile: Insurance-related information
-- generic_other: Other general information
+- generic_other: Information that doesn't fit other categories
+
+IMPORTANT: 
+- "personal_bio" = individual's background and experience
+- "startup_team" = information about OTHER team members
+- "personal_work_history" = individual's career path and roles
 """
     
     prompt = f"""Analyze the following document and extract knowledge chunks.
@@ -62,17 +79,15 @@ Return a JSON array of chunks. Each chunk should have:
 Return ONLY the JSON array, no other text."""
 
     try:
+        # Use more powerful model for ingestion - better semantic understanding
+        ingest_model = getattr(settings, 'OPENAI_INGEST_MODEL', settings.OPENAI_MODEL)
+        
         response = await client.chat.completions.create(
-            model=settings.OPENAI_MODEL,
+            model=ingest_model,
             messages=[
-                {"role": "system", "content": "You are a document analysis expert. Extract structured knowledge chunks from documents."},
+                {"role": "system", "content": "You are a document analysis expert. Extract structured knowledge chunks from documents with deep semantic understanding."},
                 {"role": "user", "content": prompt}
-            ],
-            # GPT-5 parameters for structured data extraction
-            extra_body={
-                "verbosity": "low",  # Concise for JSON output
-                "reasoning_effort": "low"  # Fast categorization
-            }
+            ]
         )
         
         content = response.choices[0].message.content.strip()
@@ -134,16 +149,34 @@ async def call_llm_classify(field: FieldContext) -> ClassificationResult:
     """
     categories_info = """
 Available categories:
-- personal_basic: Name, age, date of birth, nationality, gender, etc.
-- personal_contact: Email, phone, address, social media
+
+PERSONAL (about the individual filling the form):
+- personal_basic: Name, age, marital status, nationality, gender
+- personal_contact: Email, phone, address, location, city, websites
+- personal_bio: "About you", "Tell us about yourself", background, career summary
+- personal_skills: "Your skills", technical competencies, expertise
+- personal_education: Degrees, certifications, university, "where did you study"
+- personal_work_history: Work experience, past jobs, career history, previous roles
+- personal_achievements: Awards, accomplishments, recognitions
+- personal_interests: Professional interests, focus areas, passions
+
+COMPANY (about the business):
 - startup_one_liner: Brief company description (1-2 sentences)
-- startup_problem: What problem does your startup solve?
-- startup_solution: How does your startup solve it?
-- startup_traction: Metrics, users, revenue, growth
-- startup_team: Team information, backgrounds
-- startup_use_of_funds: How will you use funding?
-- insurance_profile: Insurance needs, coverage, history
-- generic_other: Other types of information
+- startup_problem: "What problem are you solving?", pain point
+- startup_solution: "How does it work?", approach, technology
+- startup_traction: Metrics, users, revenue, growth, customers, KPIs
+- startup_team: "About your team", team members, founders (NOT personal bio)
+- startup_use_of_funds: "How will you use funding?", financial plans
+
+OTHER:
+- insurance_profile: Insurance-related
+- generic_other: Anything else
+
+CRITICAL DISTINCTIONS:
+- "Tell us about yourself" → personal_bio (NOT startup_team)
+- "Your background" → personal_bio (NOT startup_team)
+- "Work experience" → personal_work_history (NOT startup_team)
+- "About your team" → startup_team
 """
     
     field_info = f"""
@@ -173,17 +206,15 @@ Return a JSON object with:
 Return ONLY the JSON object, no other text."""
 
     try:
+        # Use faster model for classification - simpler task
+        suggest_model = getattr(settings, 'OPENAI_SUGGEST_MODEL', settings.OPENAI_MODEL)
+        
         response = await client.chat.completions.create(
-            model=settings.OPENAI_MODEL,
+            model=suggest_model,
             messages=[
                 {"role": "system", "content": "You are a form field classification expert. Analyze field context and determine what information is being requested."},
                 {"role": "user", "content": prompt}
-            ],
-            # GPT-5 parameters for fast classification
-            extra_body={
-                "verbosity": "low",  # Concise JSON response
-                "reasoning_effort": "low"  # Fast field classification
-            }
+            ]
         )
         
         content = response.choices[0].message.content.strip()
@@ -247,29 +278,34 @@ Field information:
 Available knowledge:
 {chunks_text}
 
-Rules:
-1. Use ONLY facts from the provided knowledge
-2. Do NOT invent information
-3. Respect the max length constraint
-4. Use {classification.tone} tone
-5. Return ONLY the text to fill in the field, no explanations
-6. If information is not available, return a brief placeholder or "N/A"
+INSTRUCTIONS:
+1. **Use ONLY facts from the provided knowledge** - never invent information
+2. **Match the field category exactly**:
+   - If category is "personal_bio", extract info about the INDIVIDUAL'S background
+   - If category is "startup_team", extract info about TEAM MEMBERS
+   - If category is "personal_work_history", extract the individual's JOB HISTORY
+   - If category is "personal_contact", extract email/phone/location
+3. **Respect the max length**: {classification.max_length or "No limit"}
+4. **Use {classification.tone} tone**
+5. **Format appropriately**: 
+   - Short fields (name, email): Just the value
+   - Long fields (bio, description): Well-formatted paragraph
+6. **If no relevant information found**: Return "N/A"
+7. **Return ONLY the field text** - no explanations, no labels
 
 Generate the field response:"""
 
     try:
+        # Use faster model for suggestions - simpler task with pre-categorized chunks
+        suggest_model = getattr(settings, 'OPENAI_SUGGEST_MODEL', settings.OPENAI_MODEL)
+        
         response = await client.chat.completions.create(
-            model=settings.OPENAI_MODEL,
+            model=suggest_model,
             messages=[
                 {"role": "system", "content": "You are an expert form-filling assistant. Generate concise, accurate responses based strictly on provided information."},
                 {"role": "user", "content": prompt}
             ],
-            max_completion_tokens=classification.max_length if classification.max_length and classification.max_length < 4000 else 500,
-            # GPT-5 parameters for quality suggestions
-            extra_body={
-                "verbosity": "medium",  # Normal detail for user-facing content
-                "reasoning_effort": "medium"  # Better quality suggestions
-            }
+            max_completion_tokens=classification.max_length if classification.max_length and classification.max_length < 4000 else 500
         )
         
         suggestion_text = response.choices[0].message.content.strip()

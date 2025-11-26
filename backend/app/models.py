@@ -5,14 +5,25 @@ from enum import Enum
 
 class KnowledgeCategory(str, Enum):
     """Predefined categories for knowledge classification"""
-    personal_basic = "personal_basic"
-    personal_contact = "personal_contact"
+    # Personal Information (more granular)
+    personal_basic = "personal_basic"              # Name, age, marital status
+    personal_contact = "personal_contact"          # Email, phone, address, location
+    personal_bio = "personal_bio"                  # Background, experience, about me
+    personal_skills = "personal_skills"            # Technical skills, competencies
+    personal_education = "personal_education"      # Degrees, certifications, universities
+    personal_work_history = "personal_work_history"  # Past jobs, companies, roles
+    personal_achievements = "personal_achievements"  # Awards, accomplishments
+    personal_interests = "personal_interests"      # Professional interests, focus areas
+    
+    # Startup/Company Information
     startup_one_liner = "startup_one_liner"
     startup_problem = "startup_problem"
     startup_solution = "startup_solution"
     startup_traction = "startup_traction"
-    startup_team = "startup_team"
+    startup_team = "startup_team"                  # Team members (not personal)
     startup_use_of_funds = "startup_use_of_funds"
+    
+    # Other
     insurance_profile = "insurance_profile"
     generic_other = "generic_other"
 

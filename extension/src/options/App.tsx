@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { config } from '../config';
-import { KnowledgeChunk } from '../types';
-import { saveChunks, getAllChunks, clearAllChunks, getChunkCount } from '../db';
+import { saveDocumentIndex, getAllChunks, getAllDocuments, clearAllChunks, getChunkCount, getDocumentCount, getAllTags } from '../db';
 
 interface StatusMessage {
   type: 'success' | 'error' | 'info';
@@ -9,8 +8,11 @@ interface StatusMessage {
 }
 
 const App: React.FC = () => {
-  const [chunks, setChunks] = useState<KnowledgeChunk[]>([]);
+  const [chunks, setChunks] = useState<any[]>([]);
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [allTags, setAllTags] = useState<string[]>([]);
   const [chunkCount, setChunkCount] = useState(0);
+  const [documentCount, setDocumentCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<StatusMessage | null>(null);
@@ -49,9 +51,18 @@ const App: React.FC = () => {
     setLoading(true);
     try {
       const allChunks = await getAllChunks();
-      const count = await getChunkCount();
+      const allDocs = await getAllDocuments();
+      const tags = await getAllTags();
+      const chunkCnt = await getChunkCount();
+      const docCnt = await getDocumentCount();
+      
       setChunks(allChunks);
-      setChunkCount(count);
+      setDocuments(allDocs);
+      setAllTags(tags);
+      setChunkCount(chunkCnt);
+      setDocumentCount(docCnt);
+      
+      console.log(`Loaded: ${docCnt} documents, ${chunkCnt} chunks, ${tags.length} unique tags`);
     } catch (error) {
       showStatus('error', 'Failed to load knowledge base: ' + (error as Error).message);
     } finally {
@@ -109,13 +120,14 @@ const App: React.FC = () => {
 
         showStatus('info', `⚙️ Processing ${file.name}...`);
 
-        const newChunks: KnowledgeChunk[] = await response.json();
+        const result = await response.json();
 
-        // Save chunks to IndexedDB
-        await saveChunks(newChunks);
+        // Save document index to IndexedDB (with discovered topics and chunks!)
+        await saveDocumentIndex(result.document_index);
 
         successCount++;
-        showStatus('success', `✓ Processed ${file.name}: ${newChunks.length} chunks extracted (${i + 1}/${files.length})`);
+        const summary = `✓ ${file.name}: ${result.document_index.discovered_topics.length} topics, ${result.document_index.all_tags.length} tags, ${result.document_index.chunk_count} chunks`;
+        showStatus('success', summary);
         
         // Small delay to show progress
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -173,22 +185,6 @@ const App: React.FC = () => {
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
-  };
-
-  const getCategoryColor = (category: string): string => {
-    const colors: Record<string, string> = {
-      personal_basic: '#e8f0fe',
-      personal_contact: '#fce8e6',
-      startup_one_liner: '#e6f4ea',
-      startup_problem: '#fef7e0',
-      startup_solution: '#f3e8fd',
-      startup_traction: '#e8f5e9',
-      startup_team: '#fff3e0',
-      startup_use_of_funds: '#fce4ec',
-      insurance_profile: '#e0f2f1',
-      generic_other: '#f5f5f5',
-    };
-    return colors[category] || '#f5f5f5';
   };
 
   return (
@@ -290,23 +286,19 @@ const App: React.FC = () => {
 
       {/* Knowledge Base Stats */}
       <div className="section">
-        <h2>📊 Knowledge Base</h2>
+        <h2>📊 Knowledge Base (Dynamic AI System)</h2>
         <div className="kb-stats">
           <div className="stat-card">
             <div className="stat-value">{chunkCount}</div>
             <div className="stat-label">Total Chunks</div>
           </div>
           <div className="stat-card">
-            <div className="stat-value">
-              {new Set(chunks.map((c) => c.meta.source_file)).size}
-            </div>
-            <div className="stat-label">Source Files</div>
+            <div className="stat-value">{documentCount}</div>
+            <div className="stat-label">Documents</div>
           </div>
           <div className="stat-card">
-            <div className="stat-value">
-              {new Set(chunks.map((c) => c.meta.category)).size}
-            </div>
-            <div className="stat-label">Categories</div>
+            <div className="stat-value">{allTags.length}</div>
+            <div className="stat-label">Semantic Tags</div>
           </div>
         </div>
 
@@ -324,57 +316,118 @@ const App: React.FC = () => {
         </div>
       </div>
 
-      {/* Chunks Table */}
+      {/* Documents Section */}
       <div className="section">
-        <h2>📚 Knowledge Chunks</h2>
+        <h2>📚 Uploaded Documents</h2>
 
         {loading ? (
           <div className="loading">Loading...</div>
-        ) : chunks.length === 0 ? (
+        ) : documents.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-icon">📭</div>
-            <div>No knowledge chunks yet. Upload some documents to get started!</div>
+            <div>No documents yet. Upload some to get started!</div>
           </div>
         ) : (
+          documents.map((doc) => (
+            <div key={doc.document_id} style={{
+              background: '#f8f9fa',
+              padding: '16px',
+              borderRadius: '8px',
+              marginBottom: '16px',
+              border: '1px solid #dee2e6'
+            }}>
+              <div style={{ fontWeight: '600', fontSize: '16px', marginBottom: '8px', color: '#333' }}>
+                📄 {doc.source_file}
+              </div>
+              <div style={{ fontSize: '13px', color: '#666', marginBottom: '12px' }}>
+                Uploaded: {new Date(doc.uploaded_at).toLocaleString()} • {doc.chunk_count} chunks • {doc.all_tags.length} semantic tags
+              </div>
+              
+              {doc.discovered_topics && doc.discovered_topics.length > 0 && (
+                <div style={{ marginBottom: '12px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: '#555' }}>
+                    🎯 Discovered Topics:
+                  </div>
+                  {doc.discovered_topics.map((topic: any, i: number) => (
+                    <div key={i} style={{ marginLeft: '12px', marginBottom: '6px' }}>
+                      <div style={{ fontSize: '13px', fontWeight: '500', color: '#667eea' }}>
+                        • {topic.topic}
+                      </div>
+                      {topic.subtopics && topic.subtopics.length > 0 && (
+                        <div style={{ fontSize: '12px', color: '#999', marginLeft: '12px' }}>
+                          {topic.subtopics.join(', ')}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              
+              <details style={{ fontSize: '13px' }}>
+                <summary style={{ cursor: 'pointer', color: '#667eea', fontWeight: '500' }}>
+                  View All Tags ({doc.all_tags.length})
+                </summary>
+                <div style={{ 
+                  marginTop: '8px', 
+                  padding: '8px', 
+                  background: 'white', 
+                  borderRadius: '4px',
+                  maxHeight: '200px',
+                  overflowY: 'auto'
+                }}>
+                  {doc.all_tags.map((tag: string, i: number) => (
+                    <span key={i} className="tag" style={{ margin: '2px' }}>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </details>
+            </div>
+          ))
+        )}
+      </div>
+      
+      {/* Chunks Preview */}
+      {chunks.length > 0 && (
+        <div className="section">
+          <h2>🔍 Chunk Preview ({chunks.length} total)</h2>
+          <div style={{ fontSize: '13px', color: '#666', marginBottom: '12px' }}>
+            Showing first 10 chunks
+          </div>
           <table className="chunks-table">
             <thead>
               <tr>
                 <th>Source</th>
-                <th>Category</th>
-                <th>Section</th>
-                <th>Tags</th>
-                <th>Length</th>
-                <th>Priority</th>
+                <th>Semantic Tags</th>
+                <th>Content Preview</th>
               </tr>
             </thead>
             <tbody>
-              {chunks.map((chunk) => (
-                <tr key={chunk.meta.id}>
-                  <td>{chunk.meta.source_file}</td>
+              {chunks.slice(0, 10).map((chunk) => (
+                <tr key={chunk.id}>
+                  <td>{chunk.source_file}</td>
                   <td>
-                    <span
-                      className="category-badge"
-                      style={{ background: getCategoryColor(chunk.meta.category) }}
-                    >
-                      {chunk.meta.category}
-                    </span>
-                  </td>
-                  <td>{chunk.meta.section || '-'}</td>
-                  <td>
-                    {chunk.meta.tags.map((tag, i) => (
+                    {chunk.semantic_tags && chunk.semantic_tags.slice(0, 3).map((tag: string, i: number) => (
                       <span key={i} className="tag">
                         {tag}
                       </span>
                     ))}
+                    {chunk.semantic_tags && chunk.semantic_tags.length > 3 && (
+                      <span style={{ fontSize: '12px', color: '#999' }}>
+                        +{chunk.semantic_tags.length - 3} more
+                      </span>
+                    )}
                   </td>
-                  <td>{chunk.meta.length_hint || '-'}</td>
-                  <td>{chunk.meta.priority?.toFixed(2) || '-'}</td>
+                  <td style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {chunk.body.substring(0, 100)}
+                    {chunk.body.length > 100 && '...'}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

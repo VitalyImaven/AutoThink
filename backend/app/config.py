@@ -8,6 +8,12 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str
     OPENAI_MODEL: str = "gpt-5-mini"
     
+    # Model Selection Strategy:
+    # Use powerful model for ingestion (one-time, heavy semantic analysis)
+    # Use faster/cheaper model for suggestions (frequent, lighter task)
+    OPENAI_INGEST_MODEL: str = "gpt-5"  # Best understanding for document parsing
+    OPENAI_SUGGEST_MODEL: str = "gpt-5-mini"  # Faster/cheaper for suggestions
+    
     # GPT-5 specific parameters
     OPENAI_VERBOSITY: Literal["low", "medium", "high"] = "medium"  # low=concise, medium=normal, high=detailed
     OPENAI_REASONING_EFFORT: Literal["none", "low", "medium", "high"] = "medium"

@@ -7,57 +7,30 @@ import { config } from './config';
 import {
   ExtensionMessage,
   FieldContext,
-  ClassificationResult,
-  SuggestionRequest,
 } from './types';
-import { getChunksByCategory } from './db';
-
-// In-memory cache for field classifications
-interface ClassificationCache {
-  [key: string]: ClassificationResult;
-}
-
-const classificationCache: ClassificationCache = {};
+import { getAllChunks } from './db';
 
 /**
- * Generate cache key for field classification
- */
-function getCacheKey(field: FieldContext, hostname: string, pathname: string): string {
-  return `${hostname}:${pathname}:${field.label_text}:${field.name_attr}:${field.id_attr}`;
-}
-
-/**
- * Call backend API to classify a field
- */
-async function classifyField(field: FieldContext): Promise<ClassificationResult> {
-  const response = await fetch(`${config.backendUrl}/classify-field`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(field),
-  });
-
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Classification failed: ${error}`);
-  }
-
-  return response.json();
-}
-
-/**
- * Call backend API to generate suggestion
+ * Call backend API to generate suggestion (DYNAMIC SYSTEM)
+ * Backend is STATELESS - we send all chunks from IndexedDB
  */
 async function generateSuggestion(
-  request: SuggestionRequest
-): Promise<{ suggestion_text: string }> {
+  fieldContext: FieldContext
+): Promise<{ suggestion_text: string; field_intent?: string; top_tags?: string[] }> {
+  // Get all chunks from local IndexedDB
+  const all_chunks = await getAllChunks();
+  
+  console.log(`Sending ${all_chunks.length} chunks from IndexedDB to backend`);
+  
   const response = await fetch(`${config.backendUrl}/suggest`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(request),
+    body: JSON.stringify({
+      field_context: fieldContext,
+      all_chunks: all_chunks,
+    }),
   });
 
   if (!response.ok) {
@@ -70,6 +43,7 @@ async function generateSuggestion(
 
 /**
  * Handle field focus event from content script
+ * DYNAMIC SYSTEM: No classification needed, direct suggestion!
  */
 async function handleFieldFocused(
   fieldContext: FieldContext,
@@ -81,54 +55,18 @@ async function handleFieldFocused(
       throw new Error('No tab ID available');
     }
 
-    const url = new URL(sender.url || 'about:blank');
-    const hostname = url.hostname;
-    const pathname = url.pathname;
+    console.log('Getting suggestion for field:', fieldContext.label_text || fieldContext.placeholder);
 
-    // Check classification cache
-    const cacheKey = getCacheKey(fieldContext, hostname, pathname);
-    let classification = classificationCache[cacheKey];
-
-    if (!classification) {
-      // Call backend to classify field
-      console.log('Classifying field:', fieldContext);
-      classification = await classifyField(fieldContext);
-      classificationCache[cacheKey] = classification;
-      console.log('Classification result:', classification);
-    } else {
-      console.log('Using cached classification:', classification);
-    }
-
-    // Get relevant knowledge chunks from IndexedDB
-    const chunks = await getChunksByCategory(classification.category);
-    console.log(`Found ${chunks.length} chunks for category ${classification.category}`);
-
-    if (chunks.length === 0) {
-      // No knowledge available for this category
-      chrome.tabs.sendMessage(tabId, {
-        type: 'SUGGESTION_ERROR',
-        fieldId: fieldContext.field_id,
-        error: 'No knowledge available for this field type. Please upload relevant documents.',
-      });
-      return;
-    }
-
-    // Limit chunks to keep payload reasonable (top 10 by priority)
-    const sortedChunks = chunks
-      .sort((a, b) => (b.meta.priority || 0) - (a.meta.priority || 0))
-      .slice(0, 10);
-
-    // Build suggestion request
-    const suggestionRequest: SuggestionRequest = {
-      field: fieldContext,
-      classification: classification,
-      chunks: sortedChunks,
-    };
-
-    // Call backend to generate suggestion
-    console.log('Generating suggestion...');
-    const result = await generateSuggestion(suggestionRequest);
+    // Call backend to generate suggestion (DYNAMIC - backend has all documents!)
+    console.log('Generating suggestion with dynamic AI...');
+    const result = await generateSuggestion(fieldContext);
     console.log('Suggestion generated:', result.suggestion_text);
+    if (result.field_intent) {
+      console.log('Field intent:', result.field_intent);
+    }
+    if (result.top_tags) {
+      console.log('Matched tags:', result.top_tags);
+    }
 
     // Send suggestion back to content script
     chrome.tabs.sendMessage(tabId, {

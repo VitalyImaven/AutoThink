@@ -396,6 +396,8 @@ async function autoFillSingleField(field: HTMLInputElement | HTMLTextAreaElement
     // Set up one-time listener for this field's suggestion
     const messageHandler = (message: ExtensionMessage) => {
       if (message.type === 'SUGGESTION_AVAILABLE' && message.fieldId === tempFieldId) {
+        console.log(`✅ Received suggestion for: ${fieldContext.label_text || 'unknown'}`);
+        
         // Fill the field
         field.value = message.suggestionText;
         field.dispatchEvent(new Event('input', { bubbles: true }));
@@ -411,7 +413,7 @@ async function autoFillSingleField(field: HTMLInputElement | HTMLTextAreaElement
         chrome.runtime.onMessage.removeListener(messageHandler);
         resolve(true);
       } else if (message.type === 'SUGGESTION_ERROR' && message.fieldId === tempFieldId) {
-        console.log(`Skipping field ${fieldContext.label_text || 'unknown'}: ${message.error}`);
+        console.log(`❌ Skipping field ${fieldContext.label_text || 'unknown'}: ${message.error}`);
         chrome.runtime.onMessage.removeListener(messageHandler);
         resolve(false);
       }
@@ -421,16 +423,18 @@ async function autoFillSingleField(field: HTMLInputElement | HTMLTextAreaElement
     
     // Send request to background
     try {
+      console.log(`📤 Requesting suggestion for: ${fieldContext.label_text || 'unknown'}`);
       chrome.runtime.sendMessage({
         type: 'FIELD_FOCUSED',
         fieldContext,
       } as ExtensionMessage);
       
-      // Timeout after 10 seconds
+      // Timeout after 30 seconds (dynamic AI processing takes longer)
       setTimeout(() => {
+        console.log(`⏱️ Timeout for field: ${fieldContext.label_text || 'unknown'}`);
         chrome.runtime.onMessage.removeListener(messageHandler);
         resolve(false);
-      }, 10000);
+      }, 30000);
     } catch (error) {
       console.error('Error requesting suggestion:', error);
       chrome.runtime.onMessage.removeListener(messageHandler);
@@ -490,8 +494,9 @@ async function processAllFields() {
       skipped++;
     }
     
-    // Small delay between fields to avoid overwhelming the API
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Delay between fields - dynamic AI processing takes time!
+    // Wait 2 seconds between fields to ensure backend finishes processing
+    await new Promise(resolve => setTimeout(resolve, 2000));
   }
   
   // Show completion message
