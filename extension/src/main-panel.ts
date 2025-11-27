@@ -153,6 +153,8 @@ document.getElementById('openOptionsBtn')?.addEventListener('click', () => {
 let conversationHistory: Array<{role: string, content: string}> = [];
 let isProcessing = false;
 let currentTabId: number | null = null;
+let isRecording = false;
+let mediaRecorder: MediaRecorder | null = null;
 
 const chatMessages = document.getElementById('chatMessages')!;
 const chatInput = document.getElementById('chatInput') as HTMLInputElement;
@@ -304,9 +306,24 @@ async function sendMessage(message?: string) {
   }
 }
 
-sendBtn.addEventListener('click', () => sendMessage());
+// Smart button - mic or send depending on state
+sendBtn.addEventListener('click', () => {
+  if (isRecording) {
+    stopRecording();
+  } else if (chatInput.value.trim()) {
+    sendMessage();
+  } else {
+    startRecording();
+  }
+});
+
+// Update button on input
+chatInput.addEventListener('input', () => {
+  updateSendButton();
+});
+
 chatInput.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') {
+  if (e.key === 'Enter' && chatInput.value.trim() && !isRecording) {
     e.preventDefault();
     sendMessage();
   }
@@ -484,9 +501,97 @@ document.getElementById('toggleSidePanelBtn')?.addEventListener('click', async (
   }
 });
 
+// Voice recording functions
+function updateSendButton() {
+  if (isRecording) {
+    sendBtn.textContent = '⏹️';
+    sendBtn.style.background = '#dc3545';
+    sendBtn.style.animation = 'pulse 1.5s infinite';
+  } else if (chatInput.value.trim()) {
+    sendBtn.textContent = 'Send';
+    sendBtn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+    sendBtn.style.animation = 'none';
+  } else {
+    sendBtn.textContent = '🎤';
+    sendBtn.style.background = '#667eea';
+    sendBtn.style.animation = 'none';
+  }
+}
+
+async function startRecording() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    
+    const recorder = new MediaRecorder(stream);
+    const chunks: Blob[] = [];
+    
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) {
+        chunks.push(e.data);
+      }
+    };
+    
+    recorder.onstop = async () => {
+      stream.getTracks().forEach(track => track.stop());
+      
+      const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+      await transcribeAudio(audioBlob);
+      
+      isRecording = false;
+      updateSendButton();
+    };
+    
+    recorder.start();
+    mediaRecorder = recorder;
+    isRecording = true;
+    chatInput.placeholder = 'Recording... Click button to stop';
+    chatInput.disabled = true;
+    updateSendButton();
+    
+  } catch (error) {
+    console.error('Microphone error:', error);
+    alert('Could not access microphone. Please grant permission.');
+  }
+}
+
+function stopRecording() {
+  if (mediaRecorder && isRecording) {
+    mediaRecorder.stop();
+    chatInput.disabled = false;
+    chatInput.placeholder = 'Ask me anything about this page...';
+  }
+}
+
+async function transcribeAudio(audioBlob: Blob) {
+  try {
+    const formData = new FormData();
+    formData.append('audio', audioBlob, 'recording.webm');
+    
+    const response = await fetch('http://localhost:8000/interview/transcribe', {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!response.ok) {
+      throw new Error('Transcription failed');
+    }
+    
+    const result = await response.json();
+    
+    chatInput.value = result.text;
+    updateSendButton();
+    chatInput.focus();
+    
+  } catch (error) {
+    console.error('Transcription error:', error);
+    alert('Transcription failed: ' + (error as Error).message);
+  }
+}
+
 // Initialize
 loadConversationHistory();
 updatePageInfo();
+updateSendButton();
 
 console.log('Main panel loaded');
 

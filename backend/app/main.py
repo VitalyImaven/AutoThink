@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app import routes_dynamic, routes_chat
+from app import routes_dynamic, routes_chat, routes_interview
 
 app = FastAPI(
     title="AI Smart Autofill Backend - Dynamic Categorization",
@@ -23,6 +23,9 @@ app.include_router(routes_dynamic.router, tags=["Dynamic AI Categorization"])
 
 # Include chat and summarization routes
 app.include_router(routes_chat.router, tags=["Chat & Summarization"])
+
+# Include interview routes (voice + interactive knowledge gathering)
+app.include_router(routes_interview.router, tags=["Interactive Interview"])
 
 
 @app.get("/health")

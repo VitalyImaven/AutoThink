@@ -1214,8 +1214,8 @@ function openSidePanel() {
           </div>
         </div>
         <div style="padding: 12px 16px; background: white; border-top: 1px solid #e0e0e0; display: flex; gap: 8px;">
-          <input type="text" id="ai-chat-input" placeholder="Ask me anything about this page..." style="flex: 1; padding: 10px 12px; border: 1px solid #e0e0e0; border-radius: 20px; font-size: 13px; outline: none; font-family: inherit; transition: border-color 0.2s;">
-          <button id="ai-chat-send" style="padding: 10px 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 20px; font-size: 13px; font-weight: 500; cursor: pointer; transition: transform 0.2s;">Send</button>
+          <input type="text" id="ai-chat-input" placeholder="Type or click 🎤 to speak..." style="flex: 1; padding: 10px 12px; border: 1px solid #e0e0e0; border-radius: 20px; font-size: 13px; outline: none; font-family: inherit; transition: border-color 0.2s;">
+          <button id="ai-chat-send" style="padding: 10px 16px; background: #667eea; color: white; border: none; border-radius: 20px; font-size: 16px; font-weight: 500; cursor: pointer; transition: all 0.3s; min-width: 48px;">🎤</button>
         </div>
       </div>
       
@@ -1347,6 +1347,8 @@ function initializeSidePanelHandlers(panel: HTMLElement) {
   
   let conversationHistory: Array<{role: string, content: string}> = [];
   let isProcessing = false;
+  let isRecording = false;
+  let panelMediaRecorder: MediaRecorder | null = null;
   
   function formatMessage(content: string): string {
     // Format assistant messages with nice HTML formatting
@@ -1512,18 +1514,123 @@ function initializeSidePanelHandlers(panel: HTMLElement) {
     }
   };
   
+  // Voice recording functions for docked panel
+  function updatePanelSendButton() {
+    if (isRecording) {
+      chatSend.textContent = '⏹️';
+      chatSend.style.background = '#dc3545';
+      chatSend.style.fontSize = '16px';
+    } else if (chatInput.value.trim()) {
+      chatSend.textContent = 'Send';
+      chatSend.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+      chatSend.style.fontSize = '13px';
+    } else {
+      chatSend.textContent = '🎤';
+      chatSend.style.background = '#667eea';
+      chatSend.style.fontSize = '16px';
+    }
+  }
+  
+  async function startPanelRecording() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      const recorder = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+      
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+      
+      recorder.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop());
+        
+        const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+        await transcribePanelAudio(audioBlob);
+        
+        isRecording = false;
+        chatInput.disabled = false;
+        chatInput.placeholder = 'Type or click 🎤 to speak...';
+        updatePanelSendButton();
+      };
+      
+      recorder.start();
+      panelMediaRecorder = recorder;
+      isRecording = true;
+      chatInput.placeholder = 'Recording... Click ⏹️ to stop';
+      chatInput.disabled = true;
+      updatePanelSendButton();
+      
+    } catch (error) {
+      console.error('Microphone error:', error);
+      addMessage('❌ Could not access microphone. Please grant permission.', 'system');
+    }
+  }
+  
+  function stopPanelRecording() {
+    if (panelMediaRecorder && isRecording) {
+      panelMediaRecorder.stop();
+    }
+  }
+  
+  async function transcribePanelAudio(audioBlob: Blob) {
+    try {
+      addMessage('🎤 Transcribing...', 'system');
+      
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'recording.webm');
+      
+      const response = await fetch('http://localhost:8000/interview/transcribe', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        throw new Error('Transcription failed');
+      }
+      
+      const result = await response.json();
+      
+      chatInput.value = result.text;
+      updatePanelSendButton();
+      addMessage('✅ Transcribed! Click Send to ask.', 'system');
+      
+    } catch (error) {
+      console.error('Transcription error:', error);
+      addMessage('❌ Transcription failed: ' + (error as Error).message, 'system');
+    }
+  }
+  
   console.log('🔧 Attaching chat event listeners...');
+  
+  // Smart button click
   chatSend.addEventListener('click', () => {
-    console.log('🖱️ Send button clicked!');
-    sendMessage();
+    console.log('🖱️ Chat button clicked!');
+    if (isRecording) {
+      stopPanelRecording();
+    } else if (chatInput.value.trim()) {
+      sendMessage();
+    } else {
+      startPanelRecording();
+    }
   });
+  
+  // Update button on input
+  chatInput.addEventListener('input', () => {
+    updatePanelSendButton();
+  });
+  
   chatInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && chatInput.value.trim() && !isRecording) {
       console.log('⌨️ Enter key pressed!');
       e.preventDefault();
       sendMessage();
     }
   });
+  
+  // Initialize button
+  updatePanelSendButton();
+  
   console.log('✅ Chat handlers attached');
   
   // Quick action buttons in chat tab
