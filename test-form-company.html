@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏢 Business/Company Application Form - AI Autofill Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+        }
+        
+        h1 {
+            font-size: 32px;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 32px;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        
+        .tip {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 16px;
+            margin-bottom: 32px;
+            border-radius: 8px;
+            color: #856404;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+        }
+        
+        .section-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .form-group {
+            margin-bottom: 24px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        .label-hint {
+            font-weight: normal;
+            color: #999;
+            font-size: 12px;
+            margin-left: 4px;
+        }
+        
+        input, textarea, select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s;
+            background: white;
+        }
+        
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+            line-height: 1.6;
+        }
+        
+        textarea.large {
+            min-height: 150px;
+        }
+        
+        .char-limit {
+            font-size: 12px;
+            color: #999;
+            margin-top: 4px;
+        }
+        
+        button[type="submit"] {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+            margin-top: 20px;
+        }
+        
+        button[type="submit"]:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏢 Business Application Form</h1>
+        <p class="subtitle">
+            Test the AI autofill extension with company/business information. 
+            Click on any field and watch the AI suggest relevant content from your uploaded documents!
+        </p>
+        
+        <div class="tip">
+            💡 <strong>Tip:</strong> Make sure you've uploaded your company profile document (like knowledgebase.txt) 
+            via the extension's "Manage Knowledge Base" option first!
+        </div>
+
+        <form id="companyForm">
+            <!-- Company Basics -->
+            <div class="section">
+                <h2 class="section-title">🏢 Company Information</h2>
+                
+                <div class="form-group">
+                    <label for="company-name">Company Name</label>
+                    <input type="text" id="company-name" name="company-name" placeholder="Your company name">
+                </div>
+                
+                <div class="grid">
+                    <div class="form-group">
+                        <label for="website">Website</label>
+                        <input type="url" id="website" name="website" placeholder="https://yourcompany.com">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="stage">Company Stage</label>
+                        <select id="stage" name="stage">
+                            <option value="">Select stage</option>
+                            <option value="idea">Idea</option>
+                            <option value="pre-seed">Pre-Seed</option>
+                            <option value="seed">Seed</option>
+                            <option value="series-a">Series A</option>
+                            <option value="series-b">Series B+</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="grid">
+                    <div class="form-group">
+                        <label for="email">Company Email</label>
+                        <input type="email" id="email" name="email" placeholder="contact@company.com">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="phone">Phone Number</label>
+                        <input type="tel" id="phone" name="phone" placeholder="+1 (555) 123-4567">
+                    </div>
+                </div>
+                
+                <div class="grid">
+                    <div class="form-group">
+                        <label for="headquarters">Headquarters Location</label>
+                        <input type="text" id="headquarters" name="headquarters" placeholder="City, Country">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="founded">Year Founded</label>
+                        <input type="text" id="founded" name="founded" placeholder="2023">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pitch & Description -->
+            <div class="section">
+                <h2 class="section-title">💡 Company Description</h2>
+                
+                <div class="form-group">
+                    <label for="one-liner">
+                        One-Line Pitch
+                        <span class="label-hint">Maximum 150 characters</span>
+                    </label>
+                    <input type="text" id="one-liner" name="one-liner" maxlength="150" 
+                           placeholder="Describe your company in one compelling sentence">
+                    <div class="char-limit">Keep it concise and impactful</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="short-summary">
+                        Short Summary
+                        <span class="label-hint">80-100 words</span>
+                    </label>
+                    <textarea id="short-summary" name="short-summary" 
+                              placeholder="Brief overview of what your company does, who it serves, and what makes it unique"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="company-description">Full Company Description</label>
+                    <textarea id="company-description" name="company-description" class="large"
+                              placeholder="Detailed description of your company, solution, market, and value proposition (200-250 words)"></textarea>
+                </div>
+            </div>
+
+            <!-- Problem & Solution -->
+            <div class="section">
+                <h2 class="section-title">🎯 Problem & Solution</h2>
+                
+                <div class="form-group">
+                    <label for="problem">What Problem Are You Solving?</label>
+                    <textarea id="problem" name="problem"
+                              placeholder="Describe the pain point or challenge your customers face"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="solution">How Does Your Solution Work?</label>
+                    <textarea id="solution" name="solution" class="large"
+                              placeholder="Explain how your product/service solves the problem"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="unique-value">What Makes You Different?</label>
+                    <textarea id="unique-value" name="unique-value"
+                              placeholder="Your competitive advantage and unique value proposition"></textarea>
+                </div>
+            </div>
+
+            <!-- Market & Competition -->
+            <div class="section">
+                <h2 class="section-title">📊 Market & Competition</h2>
+                
+                <div class="form-group">
+                    <label for="target-market">Target Market</label>
+                    <textarea id="target-market" name="target-market"
+                              placeholder="Who are your customers? What market segments are you targeting?"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="market-size">Market Size</label>
+                    <textarea id="market-size" name="market-size"
+                              placeholder="Total addressable market (TAM), market growth rate, market opportunity"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="competitors">Competitive Landscape</label>
+                    <textarea id="competitors" name="competitors" class="large"
+                              placeholder="Who are your main competitors? How is your solution different or better?"></textarea>
+                </div>
+            </div>
+
+            <!-- Traction & Metrics -->
+            <div class="section">
+                <h2 class="section-title">📈 Traction & Metrics</h2>
+                
+                <div class="form-group">
+                    <label for="traction">Current Traction</label>
+                    <textarea id="traction" name="traction" class="large"
+                              placeholder="Users, customers, revenue, growth metrics, key achievements"></textarea>
+                </div>
+                
+                <div class="grid">
+                    <div class="form-group">
+                        <label for="users">Number of Users</label>
+                        <input type="text" id="users" name="users" placeholder="e.g., 1,000 active users">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="revenue">Monthly Revenue (MRR)</label>
+                        <input type="text" id="revenue" name="revenue" placeholder="e.g., $10,000 MRR">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="key-metrics">Key Metrics & Achievements</label>
+                    <textarea id="key-metrics" name="key-metrics"
+                              placeholder="Important metrics: retention rate, conversion rate, growth rate, milestones achieved"></textarea>
+                </div>
+            </div>
+
+            <!-- Business Model -->
+            <div class="section">
+                <h2 class="section-title">💰 Business Model & Financials</h2>
+                
+                <div class="form-group">
+                    <label for="business-model">Business Model</label>
+                    <textarea id="business-model" name="business-model"
+                              placeholder="How do you make money? Pricing model, revenue streams, unit economics"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="gtm-strategy">Go-to-Market Strategy</label>
+                    <textarea id="gtm-strategy" name="gtm-strategy"
+                              placeholder="How do you acquire customers? Distribution channels, marketing strategy"></textarea>
+                </div>
+                
+                <div class="grid">
+                    <div class="form-group">
+                        <label for="raising-amount">Fundraising Amount</label>
+                        <input type="text" id="raising-amount" name="raising-amount" placeholder="e.g., $2M">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="round-type">Funding Round</label>
+                        <select id="round-type" name="round-type">
+                            <option value="">Select round</option>
+                            <option value="pre-seed">Pre-Seed</option>
+                            <option value="seed">Seed</option>
+                            <option value="series-a">Series A</option>
+                            <option value="series-b">Series B</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="use-of-funds">Use of Funds</label>
+                    <textarea id="use-of-funds" name="use-of-funds"
+                              placeholder="How will you allocate the investment? Breakdown by category"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="milestones">Key Milestones & Goals</label>
+                    <textarea id="milestones" name="milestones"
+                              placeholder="What are your 12-18 month goals? Revenue targets, user targets, product milestones"></textarea>
+                </div>
+            </div>
+
+            <!-- Team -->
+            <div class="section">
+                <h2 class="section-title">👥 Team</h2>
+                
+                <div class="form-group">
+                    <label for="founder-name">Founder / CEO Name</label>
+                    <input type="text" id="founder-name" name="founder-name" placeholder="Full name">
+                </div>
+                
+                <div class="form-group">
+                    <label for="founder-background">Founder Background</label>
+                    <textarea id="founder-background" name="founder-background" class="large"
+                              placeholder="Founder's experience, expertise, previous roles, relevant achievements"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="team-description">Team Description</label>
+                    <textarea id="team-description" name="team-description"
+                              placeholder="Describe your core team members, their roles, and backgrounds"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="team-size">Current Team Size</label>
+                    <input type="text" id="team-size" name="team-size" placeholder="e.g., 5 full-time, 2 part-time">
+                </div>
+            </div>
+
+            <!-- Vision & Strategy -->
+            <div class="section">
+                <h2 class="section-title">🚀 Vision & Strategy</h2>
+                
+                <div class="form-group">
+                    <label for="vision">Company Vision</label>
+                    <textarea id="vision" name="vision"
+                              placeholder="What is your long-term vision? What impact do you want to make?"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="mission">Mission Statement</label>
+                    <textarea id="mission" name="mission"
+                              placeholder="Your company's core mission and purpose"></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="exit-strategy">Exit Strategy / Long-term Plan</label>
+                    <textarea id="exit-strategy" name="exit-strategy"
+                              placeholder="IPO, acquisition, build to last? What's your long-term plan?"></textarea>
+                </div>
+            </div>
+
+            <!-- Additional Information -->
+            <div class="section">
+                <h2 class="section-title">📝 Additional Details</h2>
+                
+                <div class="form-group">
+                    <label for="tags">Industry Tags</label>
+                    <input type="text" id="tags" name="tags" placeholder="e.g., AI, SaaS, B2B, AdTech">
+                </div>
+                
+                <div class="form-group">
+                    <label for="pitch-deck">Pitch Deck URL</label>
+                    <input type="url" id="pitch-deck" name="pitch-deck" placeholder="https://docs.google.com/...">
+                </div>
+                
+                <div class="form-group">
+                    <label for="demo-video">Demo Video URL</label>
+                    <input type="url" id="demo-video" name="demo-video" placeholder="https://youtube.com/...">
+                </div>
+                
+                <div class="form-group">
+                    <label for="additional-info">Any Other Information</label>
+                    <textarea id="additional-info" name="additional-info" class="large"
+                              placeholder="Partnerships, press mentions, awards, certifications, or any other relevant information"></textarea>
+                </div>
+            </div>
+
+            <button type="submit">Submit Application</button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('companyForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            alert('Form submitted! (This is just a test - no data is actually sent)');
+        });
+    </script>
+</body>
+</html>
+

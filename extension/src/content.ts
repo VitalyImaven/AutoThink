@@ -99,7 +99,7 @@ function isFillableField(element: Element): element is HTMLInputElement | HTMLTe
   if (element.tagName === 'INPUT') {
     const input = element as HTMLInputElement;
     const type = input.type.toLowerCase();
-    return ['text', 'email', 'search', 'url', 'tel', 'password'].includes(type);
+    return ['text', 'email', 'search', 'url', 'tel', 'password', 'number'].includes(type);
   }
 
   return false;
@@ -296,18 +296,72 @@ let progressBar: HTMLElement | null = null;
 function scanAllFields(): (HTMLInputElement | HTMLTextAreaElement)[] {
   const fields: (HTMLInputElement | HTMLTextAreaElement)[] = [];
   
-  // Get all input and textarea elements
-  const inputs = document.querySelectorAll('input, textarea');
+  console.log('\n' + '='.repeat(60));
+  console.log('🔍 COMPREHENSIVE FIELD SCAN');
+  console.log('='.repeat(60));
   
-  inputs.forEach((element) => {
-    if (isFillableField(element as Element)) {
-      const field = element as HTMLInputElement | HTMLTextAreaElement;
-      // Skip if field already has a value (unless it's empty or placeholder-like)
-      if (!field.value || field.value.trim() === '') {
-        fields.push(field);
-      }
+  // Detect framework
+  const isWix = !!(document.querySelector('[data-url*="wix"]') || document.querySelector('script[src*="parastorage"]'));
+  const isWebflow = !!document.querySelector('[data-wf-page]');
+  const isWordPress = !!document.querySelector('meta[name="generator"][content*="WordPress"]');
+  
+  if (isWix) console.log('⚠️ WIX SITE DETECTED');
+  if (isWebflow) console.log('⚠️ WEBFLOW SITE DETECTED');
+  if (isWordPress) console.log('ℹ️ WordPress site');
+  
+  // 1. Standard form fields
+  const standardInputs = document.querySelectorAll('input, textarea');
+  console.log(`📝 Standard fields: ${standardInputs.length} found`);
+  
+  let added = 0, skipped = 0;
+  
+  standardInputs.forEach((element) => {
+    // Skip our panel
+    if ((element as HTMLElement).closest('#ai-assistant-sidepanel')) {
+      return;
     }
+    
+    if (!isFillableField(element as Element)) {
+      return;
+    }
+    
+    const field = element as HTMLInputElement | HTMLTextAreaElement;
+    
+    // Check visibility
+    const rect = field.getBoundingClientRect();
+    const style = window.getComputedStyle(field);
+    const isVisible = rect.width > 0 && rect.height > 0 && 
+                     style.display !== 'none' && style.visibility !== 'hidden';
+    
+    if (!isVisible) {
+      skipped++;
+      return;
+    }
+    
+    // Skip if filled
+    if (field.value && field.value.trim() !== '') {
+      skipped++;
+      return;
+    }
+    
+    fields.push(field);
+    added++;
   });
+  
+  console.log(`  ✅ Added ${added} standard fields, skipped ${skipped}`);
+  
+  // 2. ContentEditable elements (Wix uses these!)
+  const contentEditables = document.querySelectorAll('[contenteditable="true"]');
+  console.log(`✏️ ContentEditable: ${contentEditables.length} found`);
+  
+  if (contentEditables.length > 0 && isWix) {
+    console.log(`  ⚠️ WIX USES CONTENTEDITABLE - This is a known limitation`);
+    console.log(`  💡 Extension currently only supports standard form fields`);
+    console.log(`  🔧 Wix forms require special handling (coming soon)`);
+  }
+  
+  console.log(`\n✅ TOTAL: ${fields.length} fillable fields detected`);
+  console.log('='.repeat(60) + '\n');
   
   return fields;
 }

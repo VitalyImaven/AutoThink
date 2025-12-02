@@ -5,6 +5,7 @@ AI discovers semantic topics from documents.
 
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from typing import List, Dict
+from pydantic import BaseModel
 from app.models_dynamic import (
     SemanticChunk, DocumentIndex, FieldIntent,
     SemanticMatch, DynamicSuggestionRequest, DynamicIngestResponse
@@ -23,6 +24,47 @@ router = APIRouter()
 # STATELESS BACKEND - No storage!
 # Backend only PROCESSES files and returns results
 # Extension stores everything in IndexedDB locally
+
+
+class TextUploadRequest(BaseModel):
+    source_file_name: str
+    text: str
+
+
+@router.post("/upload/text", response_model=DynamicIngestResponse)
+async def upload_text_content(request: TextUploadRequest):
+    """
+    Upload text content directly (from interviews, copy-paste, etc.)
+    """
+    try:
+        print(f"\n📝 TEXT UPLOAD: {request.source_file_name}")
+        print(f"   Content length: {len(request.text)} characters")
+        
+        if not request.text.strip():
+            raise HTTPException(status_code=400, detail="No text content provided")
+        
+        # Process with heavy preprocessing (same as file upload)
+        print(f"🚀 Heavy preprocessing started for {request.source_file_name}")
+        print("   Generating embeddings and optimizing for fast suggestions...")
+        
+        doc_index = await analyze_document_fast(request.text, request.source_file_name)
+        
+        summary = f"Discovered {len(doc_index.discovered_topics)} topics and {len(doc_index.all_tags)} unique semantic tags across {doc_index.chunk_count} chunks."
+        
+        print(f"✅ Heavy preprocessing complete for {request.source_file_name}")
+        print(f"   📊 {len(doc_index.discovered_topics)} topics, {len(doc_index.all_tags)} tags")
+        
+        return DynamicIngestResponse(
+            document_index=doc_index,
+            summary=summary,
+            suggested_improvements=[]
+        )
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Text upload error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/upload/file", response_model=DynamicIngestResponse)

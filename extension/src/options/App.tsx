@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { config } from '../config';
-import { saveDocumentIndex, getAllChunks, getAllDocuments, clearAllChunks, deleteDocument, getChunkCount, getDocumentCount, getAllTags } from '../db';
+import { saveDocumentIndex, getAllChunks, getAllDocuments, clearAllChunks, deleteDocument, getChunkCount, getDocumentCount, getAllTags, saveInterview, exportInterviewAsText } from '../db';
 
 interface StatusMessage {
   type: 'success' | 'error' | 'info';
@@ -38,15 +38,40 @@ const App: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [interviewProcessing, setInterviewProcessing] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [lastInterviewActivity, setLastInterviewActivity] = useState<Date>(new Date());
+  const [pendingIndexCount, setPendingIndexCount] = useState(0);
+  const inactivityTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     loadKnowledgeBase();
   }, []);
-
+  
   useEffect(() => {
     // Auto-scroll logs to bottom
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [processingLogs]);
+
+  useEffect(() => {
+    // Inactivity timer for auto-indexing
+    if (interviewMessages.length > 0 && pendingIndexCount > 0) {
+      // Clear existing timer
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+      }
+      
+      // Set new timer: 10 minutes of inactivity
+      inactivityTimerRef.current = setTimeout(() => {
+        console.log('⏰ 10 minutes of inactivity - auto-indexing interview...');
+        autoIndexInterview('inactivity');
+      }, 10 * 60 * 1000); // 10 minutes
+    }
+    
+    return () => {
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+      }
+    };
+  }, [lastInterviewActivity, pendingIndexCount]);
 
   const addLog = (message: string, type: 'info' | 'success' | 'error' = 'info') => {
     setProcessingLogs(prev => [...prev, {
@@ -102,6 +127,20 @@ const App: React.FC = () => {
         
         // Auto-save after each exchange
         setTimeout(() => autoSaveInterview(newMessages), 500);
+        
+        // Update activity timestamp
+        setLastInterviewActivity(new Date());
+        
+        // Increment pending count
+        const newPendingCount = pendingIndexCount + 1;
+        setPendingIndexCount(newPendingCount);
+        
+        // Auto-index after every 5 Q&A pairs (10 messages)
+        if (newPendingCount >= 5) {
+          console.log('✅ 5 Q&A pairs reached - auto-indexing...');
+          setTimeout(() => autoIndexInterview('count'), 1000);
+          setPendingIndexCount(0);
+        }
         
         return newMessages;
       });
@@ -206,21 +245,13 @@ const App: React.FC = () => {
 
   const autoSaveInterview = async (messages: Array<{role: string, content: string}>) => {
     try {
-      // Save to backend file
-      const response = await fetch(`${config.backendUrl}/interview/save`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          profile: interviewProfile,
-          conversation: messages.filter(m => m.role !== 'typing')
-        })
-      });
+      // Save to LOCAL IndexedDB (user's browser storage)
+      const cleanMessages = messages.filter(m => m.role !== 'typing');
+      await saveInterview(interviewProfile, cleanMessages);
       
-      if (response.ok) {
-        const result = await response.json();
-        console.log('💾 Auto-saved:', result);
-        addLog(`💾 Auto-saved ${result.total_qa_pairs} Q&A pairs to ${result.filename}`, 'success');
-      }
+      const qaCount = Math.floor(cleanMessages.length / 2);
+      console.log('💾 Auto-saved to IndexedDB:', qaCount, 'Q&A pairs');
+      addLog(`💾 Auto-saved ${qaCount} Q&A pairs locally (browser storage)`, 'success');
     } catch (error) {
       console.error('Auto-save error:', error);
     }
@@ -228,14 +259,11 @@ const App: React.FC = () => {
 
   const handleExportInterview = async () => {
     try {
-      const response = await fetch(`${config.backendUrl}/interview/export/${interviewProfile}`);
+      // Export from LOCAL IndexedDB
+      const text = await exportInterviewAsText(interviewProfile);
       
-      if (!response.ok) {
-        throw new Error('Export failed');
-      }
-      
-      // Download the file
-      const blob = await response.blob();
+      // Download as file to user's Downloads folder
+      const blob = new Blob([text], { type: 'text/plain' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -245,31 +273,30 @@ const App: React.FC = () => {
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
       
-      showStatus('success', `Exported ${interviewProfile} profile!`);
+      showStatus('success', `Exported ${interviewProfile} profile to Downloads folder!`);
+      addLog(`📥 Downloaded ${interviewProfile}_profile.txt to your Downloads folder`, 'success');
     } catch (error) {
       showStatus('error', 'Export failed: ' + (error as Error).message);
     }
   };
 
-  const handleUploadInterviewToKB = async () => {
+  const autoIndexInterview = async (trigger: 'count' | 'inactivity') => {
     try {
-      addLog(`📤 Uploading ${interviewProfile} interview to knowledge base...`, 'info');
+      const triggerText = trigger === 'count' ? '5 Q&A pairs completed' : '10 minutes of inactivity';
+      console.log(`🤖 Auto-indexing triggered by: ${triggerText}`);
       
-      // First, export the file content
-      const response = await fetch(`${config.backendUrl}/interview/export/${interviewProfile}`);
+      addLog(`🤖 Auto-indexing ${interviewProfile} profile (${triggerText})...`, 'info');
+      showStatus('info', `Auto-indexing ${interviewProfile} profile...`);
       
-      if (!response.ok) {
-        throw new Error('No interview data found');
-      }
+      // Get interview text from LOCAL IndexedDB
+      const text = await exportInterviewAsText(interviewProfile);
       
-      const text = await response.text();
-      
-      // Upload to knowledge base for indexing
+      // Upload to backend for AI processing and indexing
       const uploadResponse = await fetch(`${config.backendUrl}/upload/text`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          source_file_name: `${interviewProfile}_profile.txt`,
+          source_file_name: `${interviewProfile}_interview.txt`,
           text: text
         })
       });
@@ -280,19 +307,53 @@ const App: React.FC = () => {
       
       const result = await uploadResponse.json();
       
-      addLog(`✅ Indexed into knowledge base!`, 'success');
-      addLog(`  🧠 ${result.document_index.discovered_topics.length} topics discovered`, 'success');
-      addLog(`  🏷️ ${result.document_index.all_tags.length} tags generated`, 'success');
-      addLog(`  📦 ${result.document_index.chunk_count} chunks created`, 'success');
+      addLog(`  ✅ Auto-indexed! ${result.document_index.chunk_count} chunks created`, 'success');
       
-      // Save to IndexedDB
+      // Save to IndexedDB for auto-fill
       await saveDocumentIndex(result.document_index);
       await loadKnowledgeBase();
       
-      showStatus('success', `${interviewProfile} profile added to knowledge base!`);
+      showStatus('success', `✨ ${interviewProfile} profile auto-indexed and ready for auto-fill!`);
     } catch (error) {
-      addLog(`❌ Upload failed: ${(error as Error).message}`, 'error');
-      showStatus('error', 'Upload to KB failed: ' + (error as Error).message);
+      console.error('Auto-index error:', error);
+      addLog(`⚠️ Auto-index failed: ${(error as Error).message}`, 'error');
+    }
+  };
+
+  const handleUploadInterviewToKB = async () => {
+    // Manual upload - same as auto-index but with different messaging
+    try {
+      addLog(`📤 Manually indexing ${interviewProfile} interview...`, 'info');
+      
+      const text = await exportInterviewAsText(interviewProfile);
+      
+      const uploadResponse = await fetch(`${config.backendUrl}/upload/text`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source_file_name: `${interviewProfile}_interview.txt`,
+          text: text
+        })
+      });
+      
+      if (!uploadResponse.ok) {
+        throw new Error('Upload failed');
+      }
+      
+      const result = await uploadResponse.json();
+      
+      addLog(`  ✅ Indexed! ${result.document_index.chunk_count} chunks, ${result.document_index.all_tags.length} tags`, 'success');
+      
+      await saveDocumentIndex(result.document_index);
+      await loadKnowledgeBase();
+      
+      // Reset pending count since we just indexed
+      setPendingIndexCount(0);
+      
+      showStatus('success', `${interviewProfile} profile indexed!`);
+    } catch (error) {
+      addLog(`❌ Index failed: ${(error as Error).message}`, 'error');
+      showStatus('error', 'Indexing failed: ' + (error as Error).message);
     }
   };
 
@@ -1162,10 +1223,31 @@ const App: React.FC = () => {
               background: '#f8f9fa',
               borderRadius: '8px',
               fontSize: '12px',
-              color: '#666'
+              color: '#666',
+              lineHeight: '1.6'
             }}>
-              💡 <strong>Auto-Save:</strong> Conversation is automatically saved to <code>backend/interview_data/{interviewProfile}_profile.txt</code> after each exchange.
-              You can export it or upload to knowledge base anytime!
+              <div style={{ marginBottom: '8px' }}>
+                💡 <strong>Auto-Indexing:</strong> Your answers are automatically indexed for auto-fill:
+                <ul style={{ margin: '8px 0 0 20px' }}>
+                  <li>After every <strong>5 Q&A pairs</strong></li>
+                  <li>After <strong>10 minutes of inactivity</strong></li>
+                  <li>Or click "Upload to KB" to index immediately</li>
+                </ul>
+              </div>
+              {pendingIndexCount > 0 && (
+                <div style={{ 
+                  marginTop: '8px', 
+                  padding: '8px', 
+                  background: '#fff3cd', 
+                  borderRadius: '4px',
+                  color: '#856404'
+                }}>
+                  ⏳ <strong>{pendingIndexCount} Q&A pair(s)</strong> pending indexing (auto-indexes at 5)
+                </div>
+              )}
+              <div style={{ marginTop: '8px', fontSize: '11px', opacity: 0.8 }}>
+                📍 Stored locally in your browser • 📥 Export to backup • 🔒 Private & secure
+              </div>
             </div>
           )}
         </div>
