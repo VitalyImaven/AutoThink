@@ -1278,20 +1278,28 @@ function openSidePanel() {
   // NO overlay - it was blocking page interaction!
   // Panel stays open until user explicitly closes it (X button)
   
-  // Inject CSS for toggles and animations
+  // Inject CSS for toggles and animations - MODERN DESIGN
   const style = document.createElement('style');
   style.textContent = `
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+    
     .ai-toggle-container {
       position: relative;
       display: inline-block;
-      width: 44px;
-      height: 24px;
+      width: 48px;
+      height: 26px;
+      cursor: pointer;
     }
     
     .ai-toggle-input {
+      position: absolute;
       opacity: 0;
-      width: 0;
-      height: 0;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      cursor: pointer;
+      z-index: 2;
     }
     
     .ai-toggle-slider {
@@ -1301,39 +1309,98 @@ function openSidePanel() {
       left: 0;
       right: 0;
       bottom: 0;
-      background-color: #ccc;
-      transition: .3s;
-      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 26px;
+      pointer-events: none;
     }
     
     .ai-toggle-slider:before {
       position: absolute;
       content: "";
-      height: 18px;
-      width: 18px;
-      left: 3px;
-      bottom: 3px;
-      background-color: white;
-      transition: .3s;
+      height: 20px;
+      width: 20px;
+      left: 2px;
+      bottom: 2px;
+      background: rgba(255, 255, 255, 0.4);
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
       border-radius: 50%;
     }
     
     .ai-toggle-input:checked + .ai-toggle-slider {
-      background-color: #667eea;
+      background: linear-gradient(135deg, #00D4FF, #8B5CF6);
+      border-color: transparent;
+      box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
     }
     
     .ai-toggle-input:checked + .ai-toggle-slider:before {
-      transform: translateX(20px);
+      transform: translateX(22px);
+      background: white;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
     }
     
     @keyframes typing {
-      0%, 60%, 100% { transform: translateY(0); opacity: 0.7; }
-      30% { transform: translateY(-8px); opacity: 1; }
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+      30% { transform: translateY(-10px); opacity: 1; }
+    }
+    
+    @keyframes bgPulse {
+      0%, 100% { transform: translate(0, 0) rotate(0deg); }
+      33% { transform: translate(2%, 2%) rotate(1deg); }
+      66% { transform: translate(-1%, 1%) rotate(-1deg); }
+    }
+    
+    @keyframes messageIn {
+      from { opacity: 0; transform: translateY(10px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    
+    #ai-assistant-sidepanel .ai-quick-btn:hover {
+      background: rgba(0, 212, 255, 0.1) !important;
+      border-color: #00D4FF !important;
+      color: #00D4FF !important;
+      transform: translateY(-1px);
+    }
+    
+    /* Primary button - default and hover */
+    #ai-assistant-sidepanel .ai-btn-primary {
+      background: linear-gradient(135deg, #00D4FF, #8B5CF6) !important;
+      color: white !important;
+      border: none !important;
+      box-shadow: 0 4px 20px rgba(0, 212, 255, 0.3) !important;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    
+    #ai-assistant-sidepanel .ai-btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(0, 212, 255, 0.5) !important;
+    }
+    
+    /* Secondary button - default and hover */
+    #ai-assistant-sidepanel .ai-btn-secondary {
+      background: rgba(24, 24, 32, 0.9) !important;
+      color: rgba(255, 255, 255, 0.7) !important;
+      border: 1px solid rgba(255, 255, 255, 0.15) !important;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    
+    #ai-assistant-sidepanel .ai-btn-secondary:hover {
+      background: rgba(0, 212, 255, 0.15) !important;
+      border-color: #00D4FF !important;
+      color: #00D4FF !important;
+      transform: translateY(-1px);
+    }
+    
+    #ai-assistant-sidepanel #ai-close-panel-btn:hover {
+      background: rgba(255, 71, 87, 0.2) !important;
+      border-color: #FF4757 !important;
+      color: #FF4757 !important;
     }
   `;
   document.head.appendChild(style);
   
-  // Create side panel (inject HTML directly!)
+  // Create side panel (inject HTML directly!) - MODERN DESIGN
   const panel = document.createElement('div');
   panel.id = 'ai-assistant-sidepanel';
   panel.style.cssText = `
@@ -1342,46 +1409,59 @@ function openSidePanel() {
     right: -420px;
     width: 420px;
     height: 100%;
-    border-left: 2px solid #667eea;
-    box-shadow: -4px 0 12px rgba(0, 0, 0, 0.2);
+    border-left: 1px solid rgba(0, 212, 255, 0.3);
+    box-shadow: -8px 0 40px rgba(0, 0, 0, 0.5);
     z-index: 2147483647;
-    transition: right 0.3s ease-out;
-    background: #f5f5f5;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: #0A0A0F;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
   `;
   
-  // Build complete panel with exact same layout as floating window
+  // Build complete panel with exact same layout as floating window - MODERN DESIGN
   panel.innerHTML = `
-    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+    <div style="position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle at 20% 20%, rgba(0, 212, 255, 0.15) 0%, transparent 40%), radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.15) 0%, transparent 40%), radial-gradient(circle at 50% 50%, rgba(255, 0, 110, 0.08) 0%, transparent 50%); animation: bgPulse 15s ease-in-out infinite; z-index: -1; pointer-events: none;"></div>
+    
+    <div style="background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding: 16px 20px; position: relative;">
+      <div style="position: absolute; top: 0; left: 0; right: 0; height: 1px; background: linear-gradient(90deg, transparent, #00D4FF, transparent); opacity: 0.5;"></div>
       <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <h1 style="font-size: 18px; margin: 0 0 4px 0; font-weight: 600;">🤖 AI Smart Assistant</h1>
-          <div style="font-size: 12px; opacity: 0.9; margin: 0;">Docked to this page</div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="width: 36px; height: 36px; background: linear-gradient(135deg, #00D4FF, #8B5CF6); border-radius: 10px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(0, 212, 255, 0.4);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+          </div>
+          <div>
+            <h1 style="font-size: 16px; margin: 0; font-weight: 600; background: linear-gradient(135deg, #fff, #00D4FF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">AI Smart Assistant</h1>
+            <div style="font-size: 11px; color: rgba(255, 255, 255, 0.4); margin-top: 2px;">Docked to this page</div>
+          </div>
         </div>
-        <button id="ai-close-panel-btn" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 6px; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; font-size: 18px; font-weight: bold; transition: all 0.2s;">×</button>
+        <button id="ai-close-panel-btn" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.6); padding: 8px; width: 36px; height: 36px; border-radius: 10px; cursor: pointer; font-size: 18px; font-weight: bold; transition: all 0.3s; display: flex; align-items: center; justify-content: center;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
       </div>
     </div>
     
-    <div style="display: flex; background: white; border-bottom: 2px solid #e0e0e0;">
-      <button class="ai-tab-btn" data-tab="controls" style="flex: 1; padding: 14px 8px; border: none; background: #f9f9ff; cursor: pointer; font-size: 13px; font-weight: 500; color: #667eea; border-bottom: 3px solid #667eea; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 6px;">
-        <span style="font-size: 16px;">⚙️</span><span>Controls</span>
+    <div style="display: flex; background: rgba(255, 255, 255, 0.03); border-bottom: 1px solid rgba(255, 255, 255, 0.1); padding: 0 12px;">
+      <button class="ai-tab-btn" data-tab="controls" style="flex: 1; padding: 14px 8px; border: none; background: transparent; cursor: pointer; font-size: 13px; font-weight: 500; color: #00D4FF; border-bottom: 2px solid #00D4FF; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        <span>Controls</span>
       </button>
-      <button class="ai-tab-btn" data-tab="chat" style="flex: 1; padding: 14px 8px; border: none; background: white; cursor: pointer; font-size: 13px; font-weight: 500; color: #666; border-bottom: 3px solid transparent; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 6px;">
-        <span style="font-size: 16px;">💬</span><span>Chat</span>
+      <button class="ai-tab-btn" data-tab="chat" style="flex: 1; padding: 14px 8px; border: none; background: transparent; cursor: pointer; font-size: 13px; font-weight: 500; color: rgba(255, 255, 255, 0.4); border-bottom: 2px solid transparent; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+        <span>Chat</span>
       </button>
     </div>
     
     <div style="flex: 1; overflow-y: auto; overflow-x: hidden;">
-      <!-- Controls Tab (First - Same as floating) -->
+      <!-- Controls Tab -->
       <div class="ai-tab-content" data-tab="controls" style="display: flex; flex-direction: column; height: 100%; padding: 16px;">
-        <div style="background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-          <h3 style="font-size: 14px; margin: 0 0 12px 0; color: #333;">Extension Settings</h3>
-          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f0f0f0;">
+        <div style="background: rgba(24, 24, 32, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 16px; margin-bottom: 12px;">
+          <h3 style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 14px 0; color: rgba(255, 255, 255, 0.4); font-weight: 600;">Extension Settings</h3>
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
             <div>
-              <div style="font-size: 13px; color: #333;">Extension Enabled</div>
-              <div style="font-size: 11px; color: #666; margin-top: 3px;">Master on/off switch</div>
+              <div style="font-size: 14px; font-weight: 500; color: #fff;">Extension Enabled</div>
+              <div style="font-size: 11px; color: rgba(255, 255, 255, 0.4); margin-top: 3px;">Master on/off switch</div>
             </div>
             <div class="ai-toggle-container">
               <input type="checkbox" id="ai-enabled-toggle" class="ai-toggle-input" checked>
@@ -1390,8 +1470,8 @@ function openSidePanel() {
           </div>
           <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0;">
             <div>
-              <div style="font-size: 13px; color: #333;">Auto-Suggest</div>
-              <div style="font-size: 11px; color: #666; margin-top: 3px;">Suggest on field focus</div>
+              <div style="font-size: 14px; font-weight: 500; color: #fff;">Auto-Suggest</div>
+              <div style="font-size: 11px; color: rgba(255, 255, 255, 0.4); margin-top: 3px;">Suggest on field focus</div>
             </div>
             <div class="ai-toggle-container">
               <input type="checkbox" id="ai-autosuggest-toggle" class="ai-toggle-input">
@@ -1400,77 +1480,87 @@ function openSidePanel() {
           </div>
         </div>
         
-        <div style="background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-          <h3 style="font-size: 14px; margin: 0 0 12px 0; color: #333;">Quick Actions</h3>
-          <button id="ai-highlight-btn" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; margin-bottom: 8px; transition: all 0.2s;">✨ Highlight Important Elements</button>
-          <button id="ai-autofill-btn" style="width: 100%; padding: 12px; background: white; color: #667eea; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; margin-bottom: 8px; transition: all 0.2s;">🤖 Auto-Fill Entire Page</button>
-          <button id="ai-manage-kb-btn" style="width: 100%; padding: 12px; background: white; color: #667eea; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;">⚙️ Manage Knowledge Base</button>
+        <div style="background: rgba(24, 24, 32, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 16px; margin-bottom: 12px;">
+          <h3 style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 14px 0; color: rgba(255, 255, 255, 0.4); font-weight: 600;">Quick Actions</h3>
+          <button id="ai-highlight-btn" class="ai-btn-primary" style="width: 100%; padding: 14px 16px; background: linear-gradient(135deg, #00D4FF, #8B5CF6); color: white; border: none; border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 20px rgba(0, 212, 255, 0.3);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            Highlight Important Elements
+          </button>
+          <button id="ai-autofill-btn" class="ai-btn-secondary" style="width: 100%; padding: 14px 16px; background: rgba(24, 24, 32, 0.9); color: rgba(255, 255, 255, 0.7); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 10px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10H12V2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            Auto-Fill Entire Page
+          </button>
+          <button id="ai-manage-kb-btn" class="ai-btn-secondary" style="width: 100%; padding: 14px 16px; background: rgba(24, 24, 32, 0.9); color: rgba(255, 255, 255, 0.7); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+            Manage Knowledge Base
+          </button>
         </div>
         
-        <div style="background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-          <h3 style="font-size: 14px; margin: 0 0 12px 0; color: #333;">Panel Mode</h3>
-          <button id="ai-float-btn" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;">🪟 Undock (Floating Window)</button>
+        <div style="background: rgba(24, 24, 32, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 16px;">
+          <h3 style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 14px 0; color: rgba(255, 255, 255, 0.4); font-weight: 600;">Panel Mode</h3>
+          <button id="ai-float-btn" class="ai-btn-primary" style="width: 100%; padding: 14px 16px; background: linear-gradient(135deg, #00D4FF, #8B5CF6); color: white; border: none; border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 20px rgba(0, 212, 255, 0.3);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+            Undock (Floating Window)
+          </button>
         </div>
         
-        <div style="padding: 12px; text-align: center; font-size: 11px; color: #999; margin-top: 12px;">
-          💡 Switch to Chat tab to ask questions about this page
+        <div style="padding: 16px; text-align: center; font-size: 11px; color: rgba(255, 255, 255, 0.4); margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00D4FF" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+          Switch to Chat tab to ask questions about this page
         </div>
       </div>
       
       <!-- Chat Tab -->
       <div class="ai-tab-content" data-tab="chat" style="display: none; flex-direction: column; height: 100%;">
-        <div style="padding: 12px 16px; background: white; border-bottom: 1px solid #e0e0e0; display: flex; gap: 6px; flex-wrap: wrap;">
-          <button class="ai-quick-btn" data-action="summarize" style="padding: 6px 12px; background: #f0f0f0; border: 1px solid #e0e0e0; border-radius: 16px; font-size: 11px; cursor: pointer; transition: all 0.2s; white-space: nowrap;">📄 Summarize</button>
-          <button class="ai-quick-btn" data-action="highlight" style="padding: 6px 12px; background: #f0f0f0; border: 1px solid #e0e0e0; border-radius: 16px; font-size: 11px; cursor: pointer; transition: all 0.2s; white-space: nowrap;">✨ Highlight</button>
-          <button class="ai-quick-btn" data-action="explain" style="padding: 6px 12px; background: #f0f0f0; border: 1px solid #e0e0e0; border-radius: 16px; font-size: 11px; cursor: pointer; transition: all 0.2s; white-space: nowrap;">💡 Explain page</button>
-          <button class="ai-quick-btn" data-action="clear" style="padding: 6px 12px; background: #f0f0f0; border: 1px solid #e0e0e0; border-radius: 16px; font-size: 11px; cursor: pointer; transition: all 0.2s; white-space: nowrap;">🗑️ Clear</button>
+        <div style="padding: 10px 16px; background: rgba(255, 255, 255, 0.03); border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="ai-quick-btn" data-action="summarize" style="padding: 8px 14px; background: rgba(24, 24, 32, 0.9); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; font-size: 11px; cursor: pointer; transition: all 0.3s; white-space: nowrap; color: rgba(255, 255, 255, 0.6); display: flex; align-items: center; gap: 6px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+            Summarize
+          </button>
+          <button class="ai-quick-btn" data-action="highlight" style="padding: 8px 14px; background: rgba(24, 24, 32, 0.9); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; font-size: 11px; cursor: pointer; transition: all 0.3s; white-space: nowrap; color: rgba(255, 255, 255, 0.6); display: flex; align-items: center; gap: 6px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            Highlight
+          </button>
+          <button class="ai-quick-btn" data-action="explain" style="padding: 8px 14px; background: rgba(24, 24, 32, 0.9); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; font-size: 11px; cursor: pointer; transition: all 0.3s; white-space: nowrap; color: rgba(255, 255, 255, 0.6); display: flex; align-items: center; gap: 6px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            Explain
+          </button>
+          <button class="ai-quick-btn" data-action="clear" style="padding: 8px 14px; background: rgba(24, 24, 32, 0.9); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; font-size: 11px; cursor: pointer; transition: all 0.3s; white-space: nowrap; color: rgba(255, 255, 255, 0.6); display: flex; align-items: center; gap: 6px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            Clear
+          </button>
         </div>
-        <div style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background: #f5f5f5;" id="ai-chat-messages">
-          <div style="max-width: 95%; padding: 12px 16px; border-radius: 12px; background: linear-gradient(135deg, #fff3cd 0%, #ffe8a1 100%); color: #856404; font-size: 12px; align-self: center; line-height: 1.6; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
-            <div style="font-weight: 600; margin-bottom: 8px; font-size: 13px;">👋 Welcome to AI Smart Autofill!</div>
+        <div style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background: transparent;" id="ai-chat-messages">
+          <div style="max-width: 95%; padding: 16px; border-radius: 16px; background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(139, 92, 246, 0.1)); border: 1px solid rgba(0, 212, 255, 0.2); color: #fff; font-size: 12px; align-self: center; line-height: 1.6;">
+            <div style="font-weight: 700; font-size: 14px; margin-bottom: 12px; background: linear-gradient(135deg, #00D4FF, #8B5CF6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">👋 Welcome to AI Smart Autofill!</div>
             
-            <div style="margin-bottom: 8px;"><strong>I can help you with:</strong></div>
-            <div style="margin-left: 8px; margin-bottom: 6px;">
-              • <strong>This page:</strong> Ask "where to click for X?" or "how do I do Y?"<br>
-              • <strong>Auto-fill forms:</strong> I'll suggest content from your documents<br>
-              • <strong>Highlighting:</strong> Find important buttons/links easily<br>
-              • <strong>Summaries:</strong> Get quick page overviews
+            <div style="margin-bottom: 10px; color: #00D4FF;"><strong>I can help you with:</strong></div>
+            <ul style="margin: 8px 0 8px 12px; color: rgba(255, 255, 255, 0.7);">
+              <li style="margin-bottom: 4px;"><strong style="color: #fff;">Navigation:</strong> "Where do I click for X?"</li>
+              <li style="margin-bottom: 4px;"><strong style="color: #fff;">Auto-fill forms:</strong> Suggest content from docs</li>
+              <li style="margin-bottom: 4px;"><strong style="color: #fff;">Highlighting:</strong> Find important buttons</li>
+              <li><strong style="color: #fff;">Summaries:</strong> Quick page overviews</li>
+            </ul>
+            
+            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: 12px;">
+              <strong style="color: #8B5CF6;">First time?</strong> <span style="color: rgba(255, 255, 255, 0.5);">Upload your documents first: Controls → "Manage Knowledge Base"</span>
             </div>
             
-            <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(133, 100, 4, 0.2);">
-              <strong>First time?</strong> Upload your documents first:<br>
-              <span style="font-size: 11px;">Controls tab → "⚙️ Manage Knowledge Base" → Upload .txt/.md files</span>
-            </div>
-            
-            <div style="margin-top: 8px; font-size: 11px; opacity: 0.9; text-align: center;">
-              💡 Ask me anything about this page or how to use the extension!
+            <div style="margin-top: 10px; font-size: 11px; color: rgba(255, 255, 255, 0.4); text-align: center;">
+              💡 Ask me anything about this page!
             </div>
           </div>
         </div>
-        <div style="padding: 12px 16px; background: white; border-top: 1px solid #e0e0e0; display: flex; gap: 8px;">
-          <input type="text" id="ai-chat-input" placeholder="Type or click 🎤 to speak..." style="flex: 1; padding: 10px 12px; border: 1px solid #e0e0e0; border-radius: 20px; font-size: 13px; outline: none; font-family: inherit; transition: border-color 0.2s;">
-          <button id="ai-chat-send" style="padding: 10px 16px; background: #667eea; color: white; border: none; border-radius: 20px; font-size: 16px; font-weight: 500; cursor: pointer; transition: all 0.3s; min-width: 48px;">🎤</button>
+        <div style="padding: 12px 16px 16px; background: rgba(255, 255, 255, 0.03); border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; gap: 10px;">
+          <input type="text" id="ai-chat-input" placeholder="Ask me anything about this page..." style="flex: 1; padding: 12px 16px; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px; font-size: 13px; outline: none; font-family: inherit; transition: all 0.3s; background: rgba(24, 24, 32, 0.9); color: #fff;">
+          <button id="ai-chat-send" style="padding: 12px 20px; background: linear-gradient(135deg, #00D4FF, #8B5CF6); color: white; border: none; border-radius: 24px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.3s; min-width: 48px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+          </button>
         </div>
       </div>
       
-      <!-- No more separate Summary tab - users can ask for summaries in chat! -->
-      
-      <!-- Removed Actions Tab (merged into Controls) -->
-      <div class="ai-tab-content" data-tab="actions" style="display: none; padding: 16px;">
-        <div style="background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-          <h3 style="font-size: 14px; margin: 0 0 12px 0; color: #333;">Quick Actions</h3>
-          <button id="ai-highlight-btn" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; margin-bottom: 8px; transition: all 0.2s;">✨ Highlight Important Elements</button>
-          <button id="ai-autofill-btn" style="width: 100%; padding: 12px; background: white; color: #667eea; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; margin-bottom: 8px; transition: all 0.2s;">🤖 Auto-Fill Entire Page</button>
-          <button id="ai-clear-btn" style="width: 100%; padding: 12px; background: white; color: #667eea; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;">Clear Highlights</button>
-        </div>
-        <div style="background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-          <h3 style="font-size: 14px; margin: 0 0 12px 0; color: #333;">Window Mode</h3>
-          <button id="ai-float-btn" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s;">🪟 Switch to Floating Window</button>
-        </div>
-        <div style="padding: 12px; text-align: center; font-size: 11px; color: #999; margin-top: 12px;">
-          💡 Use Chat tab to ask questions with AI
-        </div>
-      </div>
+      <!-- Removed old Actions Tab -->
+      <div class="ai-tab-content" data-tab="actions" style="display: none;"></div>
     </div>
   `;
   
@@ -1517,36 +1607,34 @@ function initializeSidePanelHandlers(panel: HTMLElement) {
   const tabContents = panel.querySelectorAll('.ai-tab-content');
   
   tabBtns.forEach(btn => {
-    // Add hover effect
+    // Add hover effect - MODERN DESIGN
     btn.addEventListener('mouseenter', () => {
       if (!(btn as HTMLElement).classList.contains('active')) {
-        (btn as HTMLElement).style.background = '#f5f5f5';
-        (btn as HTMLElement).style.color = '#667eea';
+        (btn as HTMLElement).style.color = 'rgba(255, 255, 255, 0.7)';
       }
     });
     
     btn.addEventListener('mouseleave', () => {
       if (!(btn as HTMLElement).classList.contains('active')) {
-        (btn as HTMLElement).style.background = 'white';
-        (btn as HTMLElement).style.color = '#666';
+        (btn as HTMLElement).style.color = 'rgba(255, 255, 255, 0.4)';
       }
     });
     
     btn.addEventListener('click', () => {
       const tabName = (btn as HTMLElement).dataset.tab;
       
-      // Update tab buttons
+      // Update tab buttons - MODERN DESIGN
       tabBtns.forEach(b => {
         b.classList.remove('active');
-        (b as HTMLElement).style.background = 'white';
-        (b as HTMLElement).style.color = '#666';
-        (b as HTMLElement).style.borderBottom = '3px solid transparent';
+        (b as HTMLElement).style.background = 'transparent';
+        (b as HTMLElement).style.color = 'rgba(255, 255, 255, 0.4)';
+        (b as HTMLElement).style.borderBottom = '2px solid transparent';
       });
       
       btn.classList.add('active');
-      (btn as HTMLElement).style.background = '#f9f9ff';
-      (btn as HTMLElement).style.color = '#667eea';
-      (btn as HTMLElement).style.borderBottom = '3px solid #667eea';
+      (btn as HTMLElement).style.background = 'transparent';
+      (btn as HTMLElement).style.color = '#00D4FF';
+      (btn as HTMLElement).style.borderBottom = '2px solid #00D4FF';
       
       // Update tab contents
       tabContents.forEach(content => {
@@ -1585,20 +1673,20 @@ function initializeSidePanelHandlers(panel: HTMLElement) {
   let panelMediaRecorder: MediaRecorder | null = null;
   
   function formatMessage(content: string): string {
-    // Format assistant messages with nice HTML formatting
+    // Format assistant messages with nice HTML formatting - MODERN DESIGN
     let formatted = content;
     
     // Handle numbered lists (1. 2. 3.)
-    formatted = formatted.replace(/^(\d+)\.\s+(.+)$/gm, '<div style="margin-left: 12px; margin-bottom: 6px;"><strong style="color: #667eea;">$1.</strong> $2</div>');
+    formatted = formatted.replace(/^(\d+)\.\s+(.+)$/gm, '<div style="margin-left: 12px; margin-bottom: 6px;"><strong style="color: #00D4FF;">$1.</strong> $2</div>');
     
     // Handle bullet points (- or •)
     formatted = formatted.replace(/^[-•]\s+(.+)$/gm, '<div style="margin-left: 12px; margin-bottom: 4px;">• $1</div>');
     
     // Handle bold text (**text**)
-    formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong style="color: #667eea;">$1</strong>');
+    formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong style="color: #00D4FF;">$1</strong>');
     
     // Handle section headers (lines ending with :)
-    formatted = formatted.replace(/^([A-Z][^:]+):$/gm, '<div style="font-weight: 600; margin-top: 10px; margin-bottom: 6px; color: #667eea;">$1:</div>');
+    formatted = formatted.replace(/^([A-Z][^:]+):$/gm, '<div style="font-weight: 600; margin-top: 10px; margin-bottom: 6px; color: #00D4FF;">$1:</div>');
     
     // Convert paragraphs (double line breaks)
     const paragraphs = formatted.split('\n\n');
@@ -1615,15 +1703,16 @@ function initializeSidePanelHandlers(panel: HTMLElement) {
   function addMessage(content: string, type: 'user' | 'assistant' | 'system') {
     console.log(`   📝 Adding ${type} message: ${content.substring(0, 50)}...`);
     const msg = document.createElement('div');
+    msg.style.animation = 'messageIn 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
     
     if (type === 'user') {
-      msg.style.cssText = 'max-width: 85%; align-self: flex-end; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.5;';
+      msg.style.cssText = 'max-width: 85%; align-self: flex-end; background: linear-gradient(135deg, #00D4FF 0%, #8B5CF6 100%); color: white; padding: 12px 16px; border-radius: 16px; border-bottom-right-radius: 4px; font-size: 13px; line-height: 1.5; box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3); animation: messageIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);';
       msg.textContent = content;
     } else if (type === 'assistant') {
-      msg.style.cssText = 'max-width: 85%; align-self: flex-start; background: white; color: #333; padding: 10px 14px; border-radius: 12px; font-size: 13px; box-shadow: 0 2px 4px rgba(0,0,0,0.08); line-height: 1.6;';
+      msg.style.cssText = 'max-width: 85%; align-self: flex-start; background: rgba(24, 24, 32, 0.9); border: 1px solid rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.9); padding: 12px 16px; border-radius: 16px; border-bottom-left-radius: 4px; font-size: 13px; line-height: 1.6; animation: messageIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);';
       msg.innerHTML = formatMessage(content); // Use HTML formatting!
     } else {
-      msg.style.cssText = 'max-width: 90%; align-self: center; background: #fff3cd; color: #856404; padding: 8px 12px; border-radius: 12px; font-size: 12px; text-align: center;';
+      msg.style.cssText = 'max-width: 90%; align-self: center; background: linear-gradient(135deg, rgba(255, 184, 0, 0.15), rgba(255, 0, 110, 0.1)); border: 1px solid rgba(255, 184, 0, 0.3); color: #FFB800; padding: 10px 14px; border-radius: 12px; font-size: 12px; text-align: center; animation: messageIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);';
       msg.textContent = content;
     }
     
@@ -1652,11 +1741,11 @@ function initializeSidePanelHandlers(panel: HTMLElement) {
   function showTypingIndicator() {
     const typing = document.createElement('div');
     typing.id = 'ai-typing-indicator';
-    typing.style.cssText = 'max-width: 85%; align-self: flex-start; background: white; padding: 12px 16px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);';
+    typing.style.cssText = 'max-width: 85%; align-self: flex-start; background: rgba(24, 24, 32, 0.9); border: 1px solid rgba(255, 255, 255, 0.1); padding: 14px 18px; border-radius: 16px; display: flex; gap: 6px;';
     typing.innerHTML = `
-      <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #667eea; margin: 0 3px; animation: typing 1.4s infinite;"></span>
-      <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #667eea; margin: 0 3px; animation: typing 1.4s infinite 0.2s;"></span>
-      <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #667eea; margin: 0 3px; animation: typing 1.4s infinite 0.4s;"></span>
+      <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: linear-gradient(135deg, #00D4FF, #8B5CF6); animation: typing 1.4s infinite;"></span>
+      <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: linear-gradient(135deg, #00D4FF, #8B5CF6); animation: typing 1.4s infinite 0.2s;"></span>
+      <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: linear-gradient(135deg, #00D4FF, #8B5CF6); animation: typing 1.4s infinite 0.4s;"></span>
     `;
     chatMessages.appendChild(typing);
     chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -1748,20 +1837,20 @@ function initializeSidePanelHandlers(panel: HTMLElement) {
     }
   };
   
-  // Voice recording functions for docked panel
+  // Voice recording functions for docked panel - MODERN DESIGN
   function updatePanelSendButton() {
     if (isRecording) {
-      chatSend.textContent = '⏹️';
-      chatSend.style.background = '#dc3545';
-      chatSend.style.fontSize = '16px';
+      chatSend.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>';
+      chatSend.style.background = 'linear-gradient(135deg, #FF4757, #FF006E)';
+      chatSend.style.boxShadow = '0 0 20px rgba(255, 71, 87, 0.5)';
     } else if (chatInput.value.trim()) {
-      chatSend.textContent = 'Send';
-      chatSend.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-      chatSend.style.fontSize = '13px';
+      chatSend.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg> Send';
+      chatSend.style.background = 'linear-gradient(135deg, #00D4FF 0%, #8B5CF6 100%)';
+      chatSend.style.boxShadow = '0 4px 15px rgba(0, 212, 255, 0.3)';
     } else {
-      chatSend.textContent = '🎤';
-      chatSend.style.background = '#667eea';
-      chatSend.style.fontSize = '16px';
+      chatSend.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
+      chatSend.style.background = 'linear-gradient(135deg, #00D4FF, #8B5CF6)';
+      chatSend.style.boxShadow = '0 4px 15px rgba(0, 212, 255, 0.3)';
     }
   }
   
