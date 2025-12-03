@@ -181,6 +181,10 @@ export interface ClearWebMemoryMessage {
   type: "CLEAR_WEB_MEMORY";
 }
 
+export interface OpenOptionsPageMessage {
+  type: "OPEN_OPTIONS_PAGE";
+}
+
 export type ExtensionMessage =
   | FieldFocusedMessage
   | ManualSuggestMessage
@@ -200,7 +204,8 @@ export type ExtensionMessage =
   | WebMemoryResultMessage
   | GetWebMemoryStatsMessage
   | WebMemoryStatsResultMessage
-  | ClearWebMemoryMessage;
+  | ClearWebMemoryMessage
+  | OpenOptionsPageMessage;
 
 // Configuration
 export interface ExtensionConfig {

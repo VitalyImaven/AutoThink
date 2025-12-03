@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { config } from '../config';
-import { saveDocumentIndex, getAllChunks, getAllDocuments, clearAllChunks, deleteDocument, getChunkCount, getDocumentCount, getAllTags, saveInterview, exportInterviewAsText, exportKnowledgeBase, importKnowledgeBase, KnowledgeBaseBackup } from '../db';
+import { saveDocumentIndex, getAllChunks, getAllDocuments, clearAllChunks, deleteDocument, getChunkCount, getDocumentCount, getAllTags, saveInterview, exportInterviewAsText, exportKnowledgeBase, importKnowledgeBase, KnowledgeBaseBackup, getAllVisitedPages, getWebMemoryStats, clearWebMemory, deleteVisitedPage, VisitedPage } from '../db';
 
 interface StatusMessage {
   type: 'success' | 'error' | 'info';
@@ -14,13 +14,18 @@ interface ProcessingLog {
 }
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'upload' | 'interview'>('upload');
+  const [activeTab, setActiveTab] = useState<'upload' | 'interview' | 'webmemory'>('upload');
   const [chunks, setChunks] = useState<any[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
   const [allTags, setAllTags] = useState<string[]>([]);
   const [chunkCount, setChunkCount] = useState(0);
   const [documentCount, setDocumentCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  
+  // Web Memory state
+  const [visitedPages, setVisitedPages] = useState<VisitedPage[]>([]);
+  const [webMemoryStats, setWebMemoryStats] = useState<{totalPages: number, uniqueDomains: number, totalVisits: number}>({totalPages: 0, uniqueDomains: 0, totalVisits: 0});
+  const [webMemoryFilter, setWebMemoryFilter] = useState('');
   const [uploading, setUploading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<StatusMessage | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -44,7 +49,53 @@ const App: React.FC = () => {
 
   useEffect(() => {
     loadKnowledgeBase();
+    loadWebMemory();
   }, []);
+
+  const loadWebMemory = async () => {
+    try {
+      const pages = await getAllVisitedPages();
+      const stats = await getWebMemoryStats();
+      setVisitedPages(pages.sort((a, b) => new Date(b.last_visited).getTime() - new Date(a.last_visited).getTime()));
+      setWebMemoryStats(stats);
+      console.log(`Web Memory: ${stats.totalPages} pages, ${stats.uniqueDomains} domains`);
+    } catch (error) {
+      console.error('Failed to load web memory:', error);
+    }
+  };
+
+  const handleClearWebMemory = async () => {
+    if (!confirm('⚠️ Clear ALL Web Memory?\n\nThis will delete all saved website data. This cannot be undone.')) {
+      return;
+    }
+    try {
+      await clearWebMemory();
+      await loadWebMemory();
+      showStatus('success', 'Web Memory cleared!');
+    } catch (error) {
+      showStatus('error', 'Failed to clear web memory');
+    }
+  };
+
+  const handleDeleteVisitedPage = async (pageId: string, title: string) => {
+    if (!confirm(`Delete "${title}" from Web Memory?`)) return;
+    try {
+      await deleteVisitedPage(pageId);
+      await loadWebMemory();
+      showStatus('success', `Deleted: ${title}`);
+    } catch (error) {
+      showStatus('error', 'Failed to delete page');
+    }
+  };
+
+  const filteredPages = visitedPages.filter(page => {
+    if (!webMemoryFilter) return true;
+    const filter = webMemoryFilter.toLowerCase();
+    return page.title.toLowerCase().includes(filter) ||
+           page.url.toLowerCase().includes(filter) ||
+           page.domain.toLowerCase().includes(filter) ||
+           page.content.toLowerCase().includes(filter);
+  });
   
   useEffect(() => {
     // Auto-scroll logs to bottom
@@ -697,6 +748,27 @@ const App: React.FC = () => {
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
           Interactive Interview
+        </button>
+        <button
+          onClick={() => { setActiveTab('webmemory'); loadWebMemory(); }}
+          className={activeTab === 'webmemory' ? 'tab-button active' : 'tab-button'}
+          style={{
+            padding: '14px 24px',
+            border: 'none',
+            background: 'transparent',
+            color: activeTab === 'webmemory' ? '#00D4FF' : 'rgba(255, 255, 255, 0.4)',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: '500',
+            transition: 'all 0.3s',
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+          Web Memory
         </button>
       </div>
 
@@ -1465,6 +1537,231 @@ const App: React.FC = () => {
             </div>
           )}
         </div>
+        </div>
+      )}
+
+      {/* Web Memory Tab */}
+      {activeTab === 'webmemory' && (
+        <div>
+          {/* Web Memory Stats */}
+          <div className="section">
+            <h2>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00D4FF" strokeWidth="2" style={{marginRight: '8px'}}><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+              Web Memory - Saved Websites
+            </h2>
+            <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.5)', marginBottom: '16px' }}>
+              Every website you visit is automatically saved here. Use natural language to search through your browsing history.
+            </p>
+            
+            <div className="kb-stats">
+              <div className="stat-card">
+                <div className="stat-value">{webMemoryStats.totalPages}</div>
+                <div className="stat-label">Pages Saved</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-value">{webMemoryStats.uniqueDomains}</div>
+                <div className="stat-label">Domains</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-value">{webMemoryStats.totalVisits}</div>
+                <div className="stat-label">Total Visits</div>
+              </div>
+            </div>
+            
+            <div className="actions" style={{ marginTop: '16px' }}>
+              <button className="btn btn-primary" onClick={loadWebMemory}>
+                🔄 Refresh
+              </button>
+              <button 
+                className="btn btn-danger"
+                onClick={handleClearWebMemory}
+                disabled={webMemoryStats.totalPages === 0}
+              >
+                🗑️ Clear All Memory
+              </button>
+            </div>
+          </div>
+
+          {/* Search/Filter */}
+          <div className="section">
+            <h2>🔍 Search Your Browsing History</h2>
+            <input
+              type="text"
+              value={webMemoryFilter}
+              onChange={(e) => setWebMemoryFilter(e.target.value)}
+              placeholder="Search by title, URL, domain, or content..."
+              style={{
+                width: '100%',
+                padding: '14px 18px',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '12px',
+                fontSize: '14px',
+                outline: 'none',
+                background: 'rgba(24, 24, 32, 0.9)',
+                color: '#fff',
+                transition: 'all 0.3s'
+              }}
+            />
+            {webMemoryFilter && (
+              <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)', marginTop: '10px' }}>
+                Found {filteredPages.length} of {visitedPages.length} pages
+              </p>
+            )}
+          </div>
+
+          {/* Saved Pages List */}
+          <div className="section">
+            <h2>📚 Saved Websites ({filteredPages.length})</h2>
+            
+            {filteredPages.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-state-icon">🧠</div>
+                <div>
+                  {visitedPages.length === 0 
+                    ? 'No websites saved yet. Start browsing to build your Web Memory!' 
+                    : 'No websites match your search.'}
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {filteredPages.slice(0, 50).map((page) => (
+                  <div key={page.id} style={{
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    padding: '16px 20px',
+                    borderRadius: '14px',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    transition: 'all 0.3s'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <a 
+                          href={page.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          style={{ 
+                            fontWeight: '600', 
+                            fontSize: '14px', 
+                            color: '#00D4FF', 
+                            textDecoration: 'none',
+                            display: 'block',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          {page.title || 'Untitled'}
+                        </a>
+                        <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.4)', marginTop: '4px' }}>
+                          {page.domain}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteVisitedPage(page.id, page.title)}
+                        style={{
+                          background: 'rgba(255, 71, 87, 0.1)',
+                          border: '1px solid rgba(255, 71, 87, 0.3)',
+                          color: '#FF4757',
+                          padding: '6px 10px',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontSize: '11px',
+                          marginLeft: '12px',
+                          transition: 'all 0.3s'
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                    
+                    {page.description && (
+                      <p style={{ 
+                        fontSize: '13px', 
+                        color: 'rgba(255, 255, 255, 0.6)', 
+                        margin: '8px 0',
+                        lineHeight: '1.5',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden'
+                      }}>
+                        {page.description}
+                      </p>
+                    )}
+                    
+                    <div style={{ 
+                      display: 'flex', 
+                      gap: '16px', 
+                      fontSize: '11px', 
+                      color: 'rgba(255, 255, 255, 0.4)',
+                      marginTop: '10px',
+                      flexWrap: 'wrap'
+                    }}>
+                      <span>Visited: {new Date(page.last_visited).toLocaleString()}</span>
+                      <span style={{ color: '#8B5CF6' }}>{page.visit_count}x visits</span>
+                      {page.headings.length > 0 && (
+                        <span>{page.headings.length} headings</span>
+                      )}
+                      {page.keywords.length > 0 && (
+                        <span>{page.keywords.length} keywords</span>
+                      )}
+                    </div>
+                    
+                    {page.keywords.length > 0 && (
+                      <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {page.keywords.slice(0, 8).map((keyword, i) => (
+                          <span key={i} style={{
+                            background: 'rgba(139, 92, 246, 0.15)',
+                            border: '1px solid rgba(139, 92, 246, 0.3)',
+                            color: '#8B5CF6',
+                            padding: '4px 10px',
+                            borderRadius: '12px',
+                            fontSize: '11px'
+                          }}>
+                            {keyword}
+                          </span>
+                        ))}
+                        {page.keywords.length > 8 && (
+                          <span style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.4)', padding: '4px' }}>
+                            +{page.keywords.length - 8} more
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    
+                    <details style={{ marginTop: '12px', fontSize: '12px' }}>
+                      <summary style={{ cursor: 'pointer', color: 'rgba(255, 255, 255, 0.5)' }}>
+                        View Content Preview
+                      </summary>
+                      <div style={{
+                        marginTop: '10px',
+                        padding: '12px',
+                        background: 'rgba(10, 10, 15, 0.5)',
+                        borderRadius: '10px',
+                        fontSize: '12px',
+                        color: 'rgba(255, 255, 255, 0.5)',
+                        lineHeight: '1.6',
+                        maxHeight: '200px',
+                        overflow: 'auto'
+                      }}>
+                        {page.content.substring(0, 1000)}{page.content.length > 1000 && '...'}
+                      </div>
+                    </details>
+                  </div>
+                ))}
+                
+                {filteredPages.length > 50 && (
+                  <div style={{ 
+                    textAlign: 'center', 
+                    padding: '16px', 
+                    color: 'rgba(255, 255, 255, 0.4)', 
+                    fontSize: '13px' 
+                  }}>
+                    Showing 50 of {filteredPages.length} pages. Use search to find specific sites.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

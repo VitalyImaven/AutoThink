@@ -470,6 +470,9 @@ chrome.runtime.onMessage.addListener(
       clearWebMemory().then(() => {
         console.log('🧠 Web Memory cleared!');
       });
+    } else if (message.type === 'OPEN_OPTIONS_PAGE') {
+      // Open options page (for docked panel which can't call openOptionsPage directly)
+      chrome.runtime.openOptionsPage();
     }
     // Don't return true - we're not sending a response back to content script
   }

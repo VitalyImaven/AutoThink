@@ -45,6 +45,31 @@ chrome.storage.sync.get(['enabled', 'autoSuggest'], (result) => {
   console.log('AI Autofill settings loaded:', extensionSettings);
 });
 
+// ============================================
+// PERSISTENT PANEL STATE
+// ============================================
+// Auto-open panel if it was open before navigation
+
+if (!isInIframe) {
+  chrome.storage.local.get(['sidePanelOpen'], (result) => {
+    if (result.sidePanelOpen === true) {
+      console.log('📍 Panel was open - auto-reopening...');
+      // Small delay to ensure page is ready
+      setTimeout(() => {
+        if (!sidePanelOpen) {
+          openSidePanel();
+        }
+      }, 500);
+    }
+  });
+}
+
+// Save panel state when opening/closing
+function savePanelState(isOpen: boolean) {
+  chrome.storage.local.set({ sidePanelOpen: isOpen });
+  console.log('📍 Panel state saved:', isOpen);
+}
+
 // Listen for settings changes
 chrome.storage.onChanged.addListener((changes, namespace) => {
   if (namespace === 'sync') {
@@ -1636,6 +1661,9 @@ function openSidePanel() {
   sidePanelIframe = panel as any;
   sidePanelOpen = true;
   
+  // Save state for persistence across pages
+  savePanelState(true);
+  
   // Initialize handlers IMMEDIATELY after appending
   console.log('🔧 Initializing handlers...');
   initializeSidePanelHandlers(panel);
@@ -2088,7 +2116,8 @@ function initializeSidePanelHandlers(panel: HTMLElement) {
     }},
     { id: '#ai-manage-kb-btn', handler: () => {
       console.log('⚙️ Manage knowledge base clicked');
-      chrome.runtime.openOptionsPage();
+      // Send message to background to open options page (content scripts can't call openOptionsPage directly)
+      chrome.runtime.sendMessage({ type: 'OPEN_OPTIONS_PAGE' });
     }},
     { id: '#ai-float-btn', handler: () => {
       console.log('🪟 Undock clicked - switching to floating window');
@@ -2256,6 +2285,9 @@ function closeSidePanel(force: boolean = false) {
   // Clear handlers
   sidePanelChatHandler = null;
   sidePanelSummaryHandler = null;
+  
+  // Save state - panel is closing
+  savePanelState(false);
   
   // Animate out
   panel.style.right = '-420px';

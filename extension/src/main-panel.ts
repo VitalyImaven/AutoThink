@@ -329,19 +329,7 @@ chatInput.addEventListener('keypress', (e) => {
   }
 });
 
-// Listen for chat responses
-chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
-  if (message.type === 'CHAT_RESPONSE') {
-    removeTypingIndicator();
-    if (message.error) {
-      addMessage('Error: ' + message.error, 'system');
-    } else {
-      addMessage(message.response, 'assistant');
-    }
-    isProcessing = false;
-    sendBtn.disabled = false;
-  }
-});
+// Message listener moved to bottom with memory handlers
 
 // Quick action buttons in chat
 document.querySelectorAll('.quick-action-btn').forEach(btn => {
@@ -586,6 +574,238 @@ async function transcribeAudio(audioBlob: Blob) {
     console.error('Transcription error:', error);
     alert('Transcription failed: ' + (error as Error).message);
   }
+}
+
+// ============================================
+// HELP & ABOUT MODALS
+// ============================================
+
+document.getElementById('helpBtn')?.addEventListener('click', () => showHelpModal());
+document.getElementById('aboutBtn')?.addEventListener('click', () => showAboutModal());
+
+function showHelpModal() {
+  const modal = document.createElement('div');
+  modal.id = 'help-modal';
+  modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px;';
+  
+  modal.innerHTML = `
+    <div style="background: #0A0A0F; border: 1px solid rgba(0, 212, 255, 0.3); border-radius: 16px; width: 100%; max-height: 90%; overflow: hidden; display: flex; flex-direction: column;">
+      <div style="background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(139, 92, 246, 0.1)); padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #00D4FF, #8B5CF6); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          </div>
+          <span style="font-weight: 600; color: #00D4FF;">Help & Features</span>
+        </div>
+        <button id="close-help" style="background: none; border: none; color: rgba(255,255,255,0.6); cursor: pointer; font-size: 20px;">×</button>
+      </div>
+      <div style="padding: 16px; overflow-y: auto; flex: 1;">
+        <div style="background: rgba(24,24,32,0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 14px; margin-bottom: 10px;">
+          <div style="font-weight: 600; color: #00D4FF; margin-bottom: 6px; font-size: 13px;">📝 Smart Form Auto-Fill</div>
+          <div style="font-size: 12px; color: rgba(255,255,255,0.7); line-height: 1.5;">AI fills forms using your uploaded documents. Upload docs in Knowledge Base, then click "Auto-Fill Entire Page".</div>
+        </div>
+        <div style="background: rgba(24,24,32,0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 14px; margin-bottom: 10px;">
+          <div style="font-weight: 600; color: #00D4FF; margin-bottom: 6px; font-size: 13px;">💬 AI Chat Assistant</div>
+          <div style="font-size: 12px; color: rgba(255,255,255,0.7); line-height: 1.5;">Ask questions about any page. The AI reads and understands the current page content.</div>
+        </div>
+        <div style="background: rgba(24,24,32,0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 14px; margin-bottom: 10px;">
+          <div style="font-weight: 600; color: #00D4FF; margin-bottom: 6px; font-size: 13px;">🧠 Web Memory</div>
+          <div style="font-size: 12px; color: rgba(255,255,255,0.7); line-height: 1.5;">Remembers every site you visit. Ask "What was that vacation site about Finland?" to find it.</div>
+        </div>
+        <div style="background: rgba(24,24,32,0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 14px; margin-bottom: 10px;">
+          <div style="font-weight: 600; color: #00D4FF; margin-bottom: 6px; font-size: 13px;">✨ Element Highlighting</div>
+          <div style="font-size: 12px; color: rgba(255,255,255,0.7); line-height: 1.5;">Highlights important buttons/links. Ask "Where do I click to..." for smart highlighting.</div>
+        </div>
+        <div style="background: rgba(24,24,32,0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 14px;">
+          <div style="font-weight: 600; color: #00D4FF; margin-bottom: 6px; font-size: 13px;">📄 Page Summarization</div>
+          <div style="font-size: 12px; color: rgba(255,255,255,0.7); line-height: 1.5;">Get AI summaries of any page. Click "Summarize" in Chat tab.</div>
+        </div>
+        <div style="margin-top: 14px; padding: 12px; background: linear-gradient(135deg, rgba(0,212,255,0.1), rgba(139,92,246,0.1)); border-radius: 10px; font-size: 11px; color: rgba(255,255,255,0.6); line-height: 1.6;">
+          💡 <strong style="color: #00D4FF;">Pro Tip:</strong> All data is stored locally in your browser - private & secure!
+        </div>
+      </div>
+      <div style="padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.1);">
+        <button id="help-got-it" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #00D4FF, #8B5CF6); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">Got it! 👍</button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  const close = () => modal.remove();
+  modal.querySelector('#close-help')?.addEventListener('click', close);
+  modal.querySelector('#help-got-it')?.addEventListener('click', close);
+  modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+}
+
+function showAboutModal() {
+  const modal = document.createElement('div');
+  modal.id = 'about-modal';
+  modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.9); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px;';
+  
+  const year = new Date().getFullYear();
+  
+  modal.innerHTML = `
+    <div style="background: #0A0A0F; border: 1px solid rgba(0, 212, 255, 0.3); border-radius: 16px; width: 100%; text-align: center; overflow: hidden;">
+      <div style="padding: 30px 20px; background: linear-gradient(180deg, rgba(0, 212, 255, 0.15) 0%, transparent 100%);">
+        <div style="width: 60px; height: 60px; margin: 0 auto 16px; background: linear-gradient(135deg, #00D4FF, #8B5CF6); border-radius: 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 30px rgba(0, 212, 255, 0.4);">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+        </div>
+        <h2 style="margin: 0 0 4px 0; font-size: 20px; background: linear-gradient(135deg, #fff, #00D4FF); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">AI Smart Autofill</h2>
+        <div style="font-size: 12px; color: rgba(255,255,255,0.5);">Version 1.1.0 • Web Memory Edition</div>
+      </div>
+      <div style="padding: 20px;">
+        <div style="background: rgba(24,24,32,0.8); border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+          <div style="font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 6px;">Created by</div>
+          <div style="font-size: 18px; font-weight: 700; background: linear-gradient(135deg, #00D4FF, #8B5CF6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Vitaly Grosman</div>
+          <div style="font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 4px;">Software Engineer & AI Enthusiast</div>
+        </div>
+        <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+          <div style="flex: 1; background: rgba(24,24,32,0.8); border-radius: 10px; padding: 12px;">
+            <div style="font-size: 18px;">🔒</div>
+            <div style="font-size: 10px; color: rgba(255,255,255,0.5); margin-top: 4px;">Privacy First</div>
+          </div>
+          <div style="flex: 1; background: rgba(24,24,32,0.8); border-radius: 10px; padding: 12px;">
+            <div style="font-size: 18px;">⚡</div>
+            <div style="font-size: 10px; color: rgba(255,255,255,0.5); margin-top: 4px;">Lightning Fast</div>
+          </div>
+          <div style="flex: 1; background: rgba(24,24,32,0.8); border-radius: 10px; padding: 12px;">
+            <div style="font-size: 18px;">🧠</div>
+            <div style="font-size: 10px; color: rgba(255,255,255,0.5); margin-top: 4px;">AI Powered</div>
+          </div>
+        </div>
+        <div style="font-size: 10px; color: rgba(255,255,255,0.3); margin-bottom: 16px;">© ${year} Vitaly Grosman. All rights reserved.</div>
+        <button id="about-close" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #00D4FF, #8B5CF6); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer;">Close</button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  const close = () => modal.remove();
+  modal.querySelector('#about-close')?.addEventListener('click', close);
+  modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+}
+
+// ============================================
+// MEMORY TAB FUNCTIONALITY
+// ============================================
+
+const memorySearchInput = document.getElementById('memorySearchInput') as HTMLInputElement;
+const memorySearchBtn = document.getElementById('memorySearchBtn') as HTMLButtonElement;
+const memoryResults = document.getElementById('memoryResults') as HTMLElement;
+const memoryStats = document.getElementById('memoryStats') as HTMLElement;
+const clearMemoryBtn = document.getElementById('clearMemoryBtn') as HTMLButtonElement;
+
+// Load memory stats on startup
+chrome.runtime.sendMessage({ type: 'GET_WEB_MEMORY_STATS' });
+
+memorySearchBtn?.addEventListener('click', performMemorySearch);
+memorySearchInput?.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') performMemorySearch();
+});
+
+function performMemorySearch() {
+  const query = memorySearchInput?.value.trim();
+  if (!query) return;
+  
+  console.log('🧠 Memory search:', query);
+  
+  if (memoryResults) {
+    memoryResults.innerHTML = `
+      <div style="text-align: center; padding: 60px 20px;">
+        <div style="width: 40px; height: 40px; margin: 0 auto 16px; border: 3px solid rgba(0, 212, 255, 0.2); border-top-color: #00D4FF; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        <p style="color: rgba(255,255,255,0.6); font-size: 13px;">Searching your web memory...</p>
+      </div>
+      <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+    `;
+  }
+  
+  chrome.runtime.sendMessage({ type: 'SEARCH_WEB_MEMORY', query });
+}
+
+clearMemoryBtn?.addEventListener('click', () => {
+  if (confirm('Clear all Web Memory? This cannot be undone.')) {
+    chrome.runtime.sendMessage({ type: 'CLEAR_WEB_MEMORY' });
+    if (memoryResults) {
+      memoryResults.innerHTML = '<div style="text-align: center; padding: 40px;"><div style="font-size: 40px; margin-bottom: 12px;">✅</div><p style="color: #00D4FF;">Web Memory Cleared</p></div>';
+    }
+    if (memoryStats) {
+      memoryStats.textContent = '📊 0 pages saved';
+    }
+  }
+});
+
+// Listen for memory results
+chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
+  if (message.type === 'CHAT_RESPONSE') {
+    removeTypingIndicator();
+    if (message.error) {
+      addMessage('Error: ' + message.error, 'system');
+    } else {
+      addMessage(message.response, 'assistant');
+    }
+    isProcessing = false;
+    sendBtn.disabled = false;
+  } else if (message.type === 'WEB_MEMORY_RESULT') {
+    handleMemoryResult(message);
+  } else if (message.type === 'WEB_MEMORY_STATS_RESULT') {
+    handleMemoryStats((message as any).stats);
+  }
+});
+
+function handleMemoryResult(message: any) {
+  if (!memoryResults) return;
+  
+  const results = message.results || [];
+  const answer = message.answer || '';
+  
+  let html = '';
+  
+  if (answer) {
+    html += `
+      <div style="background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(139, 92, 246, 0.1)); border: 1px solid rgba(0, 212, 255, 0.2); border-radius: 12px; padding: 14px; margin-bottom: 12px;">
+        <div style="font-weight: 600; color: #00D4FF; margin-bottom: 8px; font-size: 13px;">🧠 Web Memory</div>
+        <p style="color: rgba(255,255,255,0.9); font-size: 12px; line-height: 1.5; margin: 0;">${escapeHtml(answer)}</p>
+      </div>
+    `;
+  }
+  
+  if (results.length > 0) {
+    html += `<div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 10px;">Found ${results.length} page${results.length > 1 ? 's' : ''}:</div>`;
+    
+    for (const result of results) {
+      const date = new Date(result.visited_at).toLocaleDateString();
+      html += `
+        <a href="${escapeHtml(result.url)}" target="_blank" style="display: block; background: rgba(24,24,32,0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px; text-decoration: none; margin-bottom: 8px; transition: all 0.2s;">
+          <div style="font-weight: 600; color: #fff; font-size: 12px; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(result.title)}</div>
+          <div style="font-size: 10px; color: #00D4FF; margin-bottom: 6px;">${escapeHtml(result.domain)}</div>
+          <div style="font-size: 11px; color: rgba(255,255,255,0.6); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${escapeHtml(result.snippet)}</div>
+          <div style="font-size: 9px; color: rgba(255,255,255,0.4); margin-top: 6px;">Visited ${date}</div>
+        </a>
+      `;
+    }
+  } else if (!answer) {
+    html = '<div style="text-align: center; padding: 40px;"><div style="font-size: 40px; margin-bottom: 12px;">🔍</div><p style="color: rgba(255,255,255,0.6); font-size: 13px;">No matching websites found</p></div>';
+  }
+  
+  memoryResults.innerHTML = html;
+}
+
+function handleMemoryStats(stats: any) {
+  if (!memoryStats) return;
+  
+  if (stats.totalPages === 0) {
+    memoryStats.innerHTML = '<span style="color: rgba(255,255,255,0.5);">📊 No pages saved yet</span>';
+  } else {
+    memoryStats.innerHTML = `<span style="color: #00D4FF;">📊 ${stats.totalPages} pages</span> • <span style="color: rgba(255,255,255,0.5);">${stats.uniqueDomains} domains</span>`;
+  }
+}
+
+function escapeHtml(text: string): string {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 
 // Initialize
