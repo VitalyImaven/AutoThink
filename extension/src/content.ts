@@ -1,9 +1,36 @@
 /**
  * Content script - runs on all web pages
  * Detects form field focus and shows suggestions
+ * With all_frames: true, this runs in iframes too!
  */
 
 import { FieldContext, ExtensionMessage } from './types';
+import { 
+  getAllFillableFields, 
+  getFieldValue, 
+  UniversalField 
+} from './wix-support';
+
+// Detect if we're in an iframe or top frame
+const isInIframe = window !== window.top;
+const frameType = isInIframe ? '🖼️ IFRAME' : '📄 TOP FRAME';
+console.log(`AI Smart Autofill loaded in ${frameType}: ${window.location.href.substring(0, 80)}`);
+
+// Listen for messages from iframes (only in top frame)
+if (!isInIframe) {
+  window.addEventListener('message', (event) => {
+    if (event.data?.type === 'AI_AUTOFILL_IFRAME_COMPLETE') {
+      console.log('📥 Received iframe completion:', event.data);
+      
+      // Remove the processing notice
+      const notice = document.getElementById('ai-iframe-notice');
+      if (notice) notice.remove();
+      
+      // Show completion notification
+      showIframeCompletionNotice(event.data.filled, event.data.skipped, event.data.source);
+    }
+  });
+}
 
 // State management
 let currentFieldId: string | null = null;
@@ -293,11 +320,12 @@ let progressBar: HTMLElement | null = null;
 /**
  * Scan page for all fillable fields
  */
+// Store universal fields for processing
+let universalFields: UniversalField[] = [];
+
 function scanAllFields(): (HTMLInputElement | HTMLTextAreaElement)[] {
-  const fields: (HTMLInputElement | HTMLTextAreaElement)[] = [];
-  
   console.log('\n' + '='.repeat(60));
-  console.log('🔍 COMPREHENSIVE FIELD SCAN');
+  console.log('🔍 COMPREHENSIVE FIELD SCAN (Wix/ContentEditable Support)');
   console.log('='.repeat(60));
   
   // Detect framework
@@ -305,65 +333,183 @@ function scanAllFields(): (HTMLInputElement | HTMLTextAreaElement)[] {
   const isWebflow = !!document.querySelector('[data-wf-page]');
   const isWordPress = !!document.querySelector('meta[name="generator"][content*="WordPress"]');
   
-  if (isWix) console.log('⚠️ WIX SITE DETECTED');
-  if (isWebflow) console.log('⚠️ WEBFLOW SITE DETECTED');
-  if (isWordPress) console.log('ℹ️ WordPress site');
+  if (isWix) console.log('✅ WIX SITE - ContentEditable support enabled');
+  if (isWebflow) console.log('✅ WEBFLOW SITE');
+  if (isWordPress) console.log('✅ WordPress site');
   
-  // 1. Standard form fields
-  const standardInputs = document.querySelectorAll('input, textarea');
-  console.log(`📝 Standard fields: ${standardInputs.length} found`);
+  // Get ALL fields using universal detector
+  universalFields = getAllFillableFields();
   
-  let added = 0, skipped = 0;
-  
-  standardInputs.forEach((element) => {
+  // Filter out our panel and already-filled fields
+  const validFields = universalFields.filter(f => {
     // Skip our panel
-    if ((element as HTMLElement).closest('#ai-assistant-sidepanel')) {
-      return;
+    if (f.element.closest('#ai-assistant-sidepanel')) {
+      return false;
     }
-    
-    if (!isFillableField(element as Element)) {
-      return;
-    }
-    
-    const field = element as HTMLInputElement | HTMLTextAreaElement;
     
     // Check visibility
-    const rect = field.getBoundingClientRect();
-    const style = window.getComputedStyle(field);
+    const rect = f.element.getBoundingClientRect();
+    const style = window.getComputedStyle(f.element);
     const isVisible = rect.width > 0 && rect.height > 0 && 
                      style.display !== 'none' && style.visibility !== 'hidden';
     
     if (!isVisible) {
-      skipped++;
-      return;
+      return false;
     }
     
-    // Skip if filled
-    if (field.value && field.value.trim() !== '') {
-      skipped++;
-      return;
+    // Skip if already filled
+    const value = getFieldValue(f);
+    if (value && value.trim() !== '') {
+      return false;
     }
     
-    fields.push(field);
-    added++;
+    return true;
   });
   
-  console.log(`  ✅ Added ${added} standard fields, skipped ${skipped}`);
+  const inputCount = validFields.filter(f => f.type === 'input').length;
+  const textareaCount = validFields.filter(f => f.type === 'textarea').length;
+  const editableCount = validFields.filter(f => f.type === 'contenteditable').length;
   
-  // 2. ContentEditable elements (Wix uses these!)
-  const contentEditables = document.querySelectorAll('[contenteditable="true"]');
-  console.log(`✏️ ContentEditable: ${contentEditables.length} found`);
-  
-  if (contentEditables.length > 0 && isWix) {
-    console.log(`  ⚠️ WIX USES CONTENTEDITABLE - This is a known limitation`);
-    console.log(`  💡 Extension currently only supports standard form fields`);
-    console.log(`  🔧 Wix forms require special handling (coming soon)`);
-  }
-  
-  console.log(`\n✅ TOTAL: ${fields.length} fillable fields detected`);
+  console.log(`📊 Field Types Detected:`);
+  console.log(`  📝 Inputs: ${inputCount}`);
+  console.log(`  📄 Textareas: ${textareaCount}`);
+  console.log(`  ✏️ ContentEditable: ${editableCount}`);
+  console.log(`\n✅ TOTAL: ${validFields.length} fillable fields ready`);
   console.log('='.repeat(60) + '\n');
   
-  return fields;
+  // Convert to standard array for compatibility
+  return validFields.map(f => f.element) as (HTMLInputElement | HTMLTextAreaElement)[];
+}
+
+/**
+ * Show completion notice for iframe forms
+ */
+function showIframeCompletionNotice(filled: number, skipped: number, _source: string) {
+  const notice = document.createElement('div');
+  notice.id = 'ai-iframe-complete';
+  notice.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    color: white;
+    padding: 16px 24px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(17, 153, 142, 0.4);
+    z-index: 999999;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    animation: slideIn 0.3s ease-out;
+    cursor: pointer;
+  `;
+  
+  notice.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div style="font-size: 24px;">✅</div>
+      <div>
+        <div style="font-weight: 600;">Form Auto-Fill Complete!</div>
+        <div style="font-size: 12px; opacity: 0.9;">${filled} fields filled, ${skipped} skipped</div>
+        <div style="font-size: 11px; opacity: 0.7; margin-top: 4px;">Click to dismiss</div>
+      </div>
+    </div>
+  `;
+  
+  // Add animation styles if not already added
+  if (!document.getElementById('ai-autofill-animations')) {
+    const style = document.createElement('style');
+    style.id = 'ai-autofill-animations';
+    style.textContent = `
+      @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+  
+  document.body.appendChild(notice);
+  
+  // Click to dismiss
+  notice.addEventListener('click', () => {
+    notice.style.animation = 'slideIn 0.3s ease-out reverse';
+    setTimeout(() => notice.remove(), 300);
+  });
+  
+  // Auto-remove after 10 seconds
+  setTimeout(() => {
+    if (notice.parentNode) {
+      notice.style.animation = 'slideIn 0.3s ease-out reverse';
+      setTimeout(() => notice.remove(), 300);
+    }
+  }, 10000);
+}
+
+/**
+ * Show notice when processing iframe forms
+ */
+function showIframeProcessingNotice() {
+  // Remove any existing notice
+  const existing = document.getElementById('ai-iframe-notice');
+  if (existing) existing.remove();
+  
+  const notice = document.createElement('div');
+  notice.id = 'ai-iframe-notice';
+  notice.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 16px 24px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+    z-index: 999999;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    animation: slideIn 0.3s ease-out;
+  `;
+  
+  notice.innerHTML = `
+    <div style="
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    "></div>
+    <div>
+      <div style="font-weight: 600;">Processing Embedded Form</div>
+      <div style="font-size: 12px; opacity: 0.9;">Auto-filling fields in iframe...</div>
+    </div>
+  `;
+  
+  // Add animation styles
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  `;
+  notice.appendChild(style);
+  
+  document.body.appendChild(notice);
+  
+  // Auto-remove after 30 seconds (in case iframe completes without notification)
+  setTimeout(() => {
+    notice.style.animation = 'slideIn 0.3s ease-out reverse';
+    setTimeout(() => notice.remove(), 300);
+  }, 30000);
 }
 
 /**
@@ -510,6 +656,9 @@ async function autoFillSingleField(field: HTMLInputElement | HTMLTextAreaElement
  * Process all fields sequentially
  */
 async function processAllFields() {
+  const frameInfo = isInIframe ? `🖼️ IFRAME (${window.location.hostname})` : '📄 TOP FRAME';
+  console.log(`\n🚀 AUTO-FILL TRIGGERED in ${frameInfo}`);
+  
   if (autoFillInProgress) {
     console.log('Auto-fill already in progress');
     return;
@@ -522,15 +671,27 @@ async function processAllFields() {
   const fields = scanAllFields();
   
   if (fields.length === 0) {
-    alert('No empty form fields found on this page!');
+    console.log(`No fields found in ${frameInfo}`);
+    // Only show alert in top frame if there are NO form iframes
+    if (!isInIframe) {
+      const formIframes = document.querySelectorAll('iframe[src*="form"], iframe[src*="123form"], iframe[src*="typeform"], iframe[src*="jotform"], iframe[src*="google.com/forms"]');
+      if (formIframes.length > 0) {
+        // There are form iframes - show a friendly message instead
+        showIframeProcessingNotice();
+      } else {
+        alert('No empty form fields found on this page!');
+      }
+    }
     autoFillInProgress = false;
     return;
   }
   
-  console.log(`Found ${fields.length} fields to fill`);
+  console.log(`✅ Found ${fields.length} fields to fill in ${frameInfo}`);
   
-  // Show progress bar
-  progressBar = createProgressBar(fields.length);
+  // Show progress bar (only in top frame - iframes work silently)
+  if (!isInIframe) {
+    progressBar = createProgressBar(fields.length);
+  }
   
   let filled = 0;
   let skipped = 0;
@@ -562,15 +723,28 @@ async function processAllFields() {
     await new Promise(resolve => setTimeout(resolve, 2000));
   }
   
-  // Show completion message
+  // Show completion message (only in top frame)
   removeProgressBar();
   
-  if (!autoFillCancelled) {
+  if (!autoFillCancelled && !isInIframe) {
     const message = `✅ Auto-fill complete!\n\n` +
                    `Filled: ${filled} fields\n` +
                    `Skipped: ${skipped} fields\n\n` +
                    `Please review the filled information before submitting.`;
     alert(message);
+  } else if (!autoFillCancelled && isInIframe) {
+    console.log(`🖼️ IFRAME AUTO-FILL COMPLETE: ${filled} filled, ${skipped} skipped`);
+    // Notify parent frame about completion
+    try {
+      window.parent.postMessage({
+        type: 'AI_AUTOFILL_IFRAME_COMPLETE',
+        filled,
+        skipped,
+        source: window.location.hostname
+      }, '*');
+    } catch (e) {
+      console.log('Could not notify parent frame');
+    }
   }
   
   autoFillInProgress = false;
@@ -1088,6 +1262,12 @@ function toggleSidePanel() {
 }
 
 function openSidePanel() {
+  // Don't show UI in iframes - only in top frame!
+  if (isInIframe) {
+    console.log('🖼️ Skipping side panel in iframe');
+    return;
+  }
+  
   if (sidePanelIframe) {
     console.log('📍 Side panel already open');
     return;
