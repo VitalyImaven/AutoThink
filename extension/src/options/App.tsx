@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { config } from '../config';
-import { saveDocumentIndex, getAllChunks, getAllDocuments, clearAllChunks, deleteDocument, getChunkCount, getDocumentCount, getAllTags, saveInterview, exportInterviewAsText, exportKnowledgeBase, importKnowledgeBase, KnowledgeBaseBackup, getAllVisitedPages, getWebMemoryStats, clearWebMemory, deleteVisitedPage, VisitedPage } from '../db';
+import { saveDocumentIndex, getAllChunks, getAllDocuments, clearAllChunks, deleteDocument, getChunkCount, getDocumentCount, getAllTags, saveInterview, exportInterviewAsText, exportKnowledgeBase, importKnowledgeBase, KnowledgeBaseBackup, getAllVisitedPages, getWebMemoryStats, clearWebMemory, deleteVisitedPage, VisitedPage, deleteOldPages, enforcePageLimit, deletePagesByDomain, getPagesByDomain } from '../db';
 
 interface StatusMessage {
   type: 'success' | 'error' | 'info';
@@ -26,6 +26,11 @@ const App: React.FC = () => {
   const [visitedPages, setVisitedPages] = useState<VisitedPage[]>([]);
   const [webMemoryStats, setWebMemoryStats] = useState<{totalPages: number, uniqueDomains: number, totalVisits: number}>({totalPages: 0, uniqueDomains: 0, totalVisits: 0});
   const [webMemoryFilter, setWebMemoryFilter] = useState('');
+  const [pagesByDomain, setPagesByDomain] = useState<Map<string, VisitedPage[]>>(new Map());
+  const [viewMode, setViewMode] = useState<'list' | 'domains'>('list');
+  const [displayLimit, setDisplayLimit] = useState(50);
+  const [cleanupDays, setCleanupDays] = useState(90);
+  const [showCleanupOptions, setShowCleanupOptions] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [statusMessage, setStatusMessage] = useState<StatusMessage | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -56,12 +61,59 @@ const App: React.FC = () => {
     try {
       const pages = await getAllVisitedPages();
       const stats = await getWebMemoryStats();
+      const domainGroups = await getPagesByDomain();
       setVisitedPages(pages.sort((a, b) => new Date(b.last_visited).getTime() - new Date(a.last_visited).getTime()));
       setWebMemoryStats(stats);
+      setPagesByDomain(domainGroups);
+      setDisplayLimit(50); // Reset pagination on reload
       console.log(`Web Memory: ${stats.totalPages} pages, ${stats.uniqueDomains} domains`);
     } catch (error) {
       console.error('Failed to load web memory:', error);
     }
+  };
+
+  const handleDeleteOldPages = async () => {
+    if (!confirm(`Delete all pages older than ${cleanupDays} days?\n\nThis cannot be undone.`)) {
+      return;
+    }
+    try {
+      const deleted = await deleteOldPages(cleanupDays);
+      await loadWebMemory();
+      showStatus('success', `Deleted ${deleted} old pages!`);
+    } catch (error) {
+      showStatus('error', 'Failed to delete old pages');
+    }
+  };
+
+  const handleDeleteDomain = async (domain: string) => {
+    const count = pagesByDomain.get(domain)?.length || 0;
+    if (!confirm(`Delete ALL ${count} pages from ${domain}?\n\nThis cannot be undone.`)) {
+      return;
+    }
+    try {
+      const deleted = await deletePagesByDomain(domain);
+      await loadWebMemory();
+      showStatus('success', `Deleted ${deleted} pages from ${domain}`);
+    } catch (error) {
+      showStatus('error', 'Failed to delete domain pages');
+    }
+  };
+
+  const handleEnforceLimit = async (limit: number) => {
+    if (!confirm(`Keep only the ${limit} most recent pages?\n\nOlder pages will be deleted.`)) {
+      return;
+    }
+    try {
+      const deleted = await enforcePageLimit(limit);
+      await loadWebMemory();
+      showStatus('success', deleted > 0 ? `Deleted ${deleted} oldest pages!` : 'Already under limit!');
+    } catch (error) {
+      showStatus('error', 'Failed to enforce limit');
+    }
+  };
+
+  const loadMorePages = () => {
+    setDisplayLimit(prev => prev + 50);
   };
 
   const handleClearWebMemory = async () => {
@@ -1568,9 +1620,15 @@ const App: React.FC = () => {
               </div>
             </div>
             
-            <div className="actions" style={{ marginTop: '16px' }}>
+            <div className="actions" style={{ marginTop: '16px', flexWrap: 'wrap' }}>
               <button className="btn btn-primary" onClick={loadWebMemory}>
                 🔄 Refresh
+              </button>
+              <button 
+                className="btn btn-secondary"
+                onClick={() => setShowCleanupOptions(!showCleanupOptions)}
+              >
+                🧹 Cleanup Options
               </button>
               <button 
                 className="btn btn-danger"
@@ -1580,6 +1638,69 @@ const App: React.FC = () => {
                 🗑️ Clear All Memory
               </button>
             </div>
+            
+            {/* Cleanup Options Panel */}
+            {showCleanupOptions && (
+              <div style={{
+                marginTop: '16px',
+                padding: '16px',
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
+                borderRadius: '12px'
+              }}>
+                <h3 style={{ fontSize: '14px', marginBottom: '14px', color: '#00D4FF', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                  Cleanup Options - Manage Storage
+                </h3>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {/* Delete Old Pages */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    <span style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '13px' }}>Delete pages older than:</span>
+                    <select
+                      value={cleanupDays}
+                      onChange={(e) => setCleanupDays(Number(e.target.value))}
+                      style={{
+                        padding: '8px 12px',
+                        background: 'rgba(24, 24, 32, 0.9)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: '8px',
+                        color: '#fff',
+                        fontSize: '13px'
+                      }}
+                    >
+                      <option value={7}>7 days</option>
+                      <option value={30}>30 days</option>
+                      <option value={60}>60 days</option>
+                      <option value={90}>90 days</option>
+                      <option value={180}>180 days</option>
+                      <option value={365}>1 year</option>
+                    </select>
+                    <button className="btn btn-secondary" onClick={handleDeleteOldPages} style={{ fontSize: '12px', padding: '8px 14px' }}>
+                      Delete Old
+                    </button>
+                  </div>
+                  
+                  {/* Limit Total Pages */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    <span style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '13px' }}>Keep only most recent:</span>
+                    <button className="btn btn-secondary" onClick={() => handleEnforceLimit(500)} style={{ fontSize: '12px', padding: '8px 14px' }}>
+                      500 pages
+                    </button>
+                    <button className="btn btn-secondary" onClick={() => handleEnforceLimit(1000)} style={{ fontSize: '12px', padding: '8px 14px' }}>
+                      1000 pages
+                    </button>
+                    <button className="btn btn-secondary" onClick={() => handleEnforceLimit(2000)} style={{ fontSize: '12px', padding: '8px 14px' }}>
+                      2000 pages
+                    </button>
+                  </div>
+                  
+                  <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.4)', marginTop: '8px' }}>
+                    💡 Tip: Auto-cleanup runs automatically to keep max 2000 pages for performance.
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Search/Filter */}
@@ -1611,9 +1732,161 @@ const App: React.FC = () => {
 
           {/* Saved Pages List */}
           <div className="section">
-            <h2>📚 Saved Websites ({filteredPages.length})</h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+              <h2 style={{ margin: 0 }}>📚 Saved Websites ({filteredPages.length})</h2>
+              
+              {/* View Toggle */}
+              <div style={{ display: 'flex', gap: '4px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '10px', padding: '4px' }}>
+                <button
+                  onClick={() => setViewMode('list')}
+                  style={{
+                    padding: '8px 14px',
+                    border: 'none',
+                    background: viewMode === 'list' ? 'rgba(0, 212, 255, 0.2)' : 'transparent',
+                    color: viewMode === 'list' ? '#00D4FF' : 'rgba(255, 255, 255, 0.5)',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: '500',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                  List
+                </button>
+                <button
+                  onClick={() => setViewMode('domains')}
+                  style={{
+                    padding: '8px 14px',
+                    border: 'none',
+                    background: viewMode === 'domains' ? 'rgba(0, 212, 255, 0.2)' : 'transparent',
+                    color: viewMode === 'domains' ? '#00D4FF' : 'rgba(255, 255, 255, 0.5)',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: '500',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                  By Domain
+                </button>
+              </div>
+            </div>
             
-            {filteredPages.length === 0 ? (
+            {/* Domain View */}
+            {viewMode === 'domains' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {Array.from(pagesByDomain.entries())
+                  .sort((a, b) => b[1].length - a[1].length)
+                  .slice(0, displayLimit)
+                  .map(([domain, pages]) => (
+                  <details key={domain} style={{
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    padding: '14px 18px',
+                    borderRadius: '14px',
+                    border: '1px solid rgba(255, 255, 255, 0.08)'
+                  }}>
+                    <summary style={{ 
+                      cursor: 'pointer', 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      listStyle: 'none'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <img 
+                          src={`https://www.google.com/s2/favicons?domain=${domain}&sz=32`} 
+                          alt="" 
+                          style={{ width: '20px', height: '20px', borderRadius: '4px' }}
+                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                        <span style={{ fontWeight: '600', color: '#00D4FF' }}>{domain}</span>
+                        <span style={{ 
+                          background: 'rgba(139, 92, 246, 0.2)', 
+                          color: '#8B5CF6', 
+                          padding: '2px 10px', 
+                          borderRadius: '10px', 
+                          fontSize: '11px',
+                          fontWeight: '600'
+                        }}>
+                          {pages.length} pages
+                        </span>
+                      </div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDeleteDomain(domain); }}
+                        style={{
+                          background: 'rgba(255, 71, 87, 0.1)',
+                          border: '1px solid rgba(255, 71, 87, 0.3)',
+                          color: '#FF4757',
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '11px'
+                        }}
+                      >
+                        Delete All
+                      </button>
+                    </summary>
+                    <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {pages.slice(0, 10).map((page) => (
+                        <div key={page.id} style={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'center',
+                          padding: '8px 12px',
+                          background: 'rgba(10, 10, 15, 0.5)',
+                          borderRadius: '8px'
+                        }}>
+                          <a 
+                            href={page.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            style={{ 
+                              color: 'rgba(255, 255, 255, 0.8)', 
+                              textDecoration: 'none',
+                              fontSize: '12px',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              flex: 1
+                            }}
+                          >
+                            {page.title || page.url}
+                          </a>
+                          <span style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.4)', marginLeft: '10px' }}>
+                            {page.visit_count}x
+                          </span>
+                        </div>
+                      ))}
+                      {pages.length > 10 && (
+                        <div style={{ textAlign: 'center', fontSize: '11px', color: 'rgba(255, 255, 255, 0.4)', padding: '8px' }}>
+                          +{pages.length - 10} more pages
+                        </div>
+                      )}
+                    </div>
+                  </details>
+                ))}
+                
+                {pagesByDomain.size > displayLimit && (
+                  <button
+                    onClick={loadMorePages}
+                    className="btn btn-secondary"
+                    style={{ alignSelf: 'center', marginTop: '16px' }}
+                  >
+                    Load More Domains ({pagesByDomain.size - displayLimit} remaining)
+                  </button>
+                )}
+              </div>
+            )}
+            
+            {/* List View */}
+            {viewMode === 'list' && (
+              filteredPages.length === 0 ? (
               <div className="empty-state">
                 <div className="empty-state-icon">🧠</div>
                 <div>
@@ -1624,7 +1897,7 @@ const App: React.FC = () => {
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {filteredPages.slice(0, 50).map((page) => (
+                {filteredPages.slice(0, displayLimit).map((page) => (
                   <div key={page.id} style={{
                     background: 'rgba(255, 255, 255, 0.03)',
                     padding: '16px 20px',
@@ -1749,18 +2022,36 @@ const App: React.FC = () => {
                   </div>
                 ))}
                 
-                {filteredPages.length > 50 && (
+                {filteredPages.length > displayLimit && (
+                  <div style={{ 
+                    textAlign: 'center', 
+                    padding: '20px'
+                  }}>
+                    <p style={{ color: 'rgba(255, 255, 255, 0.4)', fontSize: '13px', marginBottom: '12px' }}>
+                      Showing {Math.min(displayLimit, filteredPages.length)} of {filteredPages.length} pages
+                    </p>
+                    <button
+                      onClick={loadMorePages}
+                      className="btn btn-primary"
+                      style={{ padding: '12px 24px' }}
+                    >
+                      Load More ({filteredPages.length - displayLimit} remaining)
+                    </button>
+                  </div>
+                )}
+                
+                {filteredPages.length <= displayLimit && filteredPages.length > 0 && (
                   <div style={{ 
                     textAlign: 'center', 
                     padding: '16px', 
                     color: 'rgba(255, 255, 255, 0.4)', 
                     fontSize: '13px' 
                   }}>
-                    Showing 50 of {filteredPages.length} pages. Use search to find specific sites.
+                    Showing all {filteredPages.length} pages
                   </div>
                 )}
               </div>
-            )}
+            ))}
           </div>
         </div>
       )}

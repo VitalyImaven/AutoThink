@@ -1430,6 +1430,22 @@ function openSidePanel() {
       border-color: #FF4757 !important;
       color: #FF4757 !important;
     }
+    
+    /* Hide scrollbar but keep scroll functionality */
+    #ai-assistant-sidepanel ::-webkit-scrollbar {
+      width: 0px;
+      height: 0px;
+      background: transparent;
+    }
+    
+    #ai-assistant-sidepanel * {
+      scrollbar-width: none;  /* Firefox */
+      -ms-overflow-style: none;  /* IE/Edge */
+    }
+    
+    #ai-assistant-sidepanel *::-webkit-scrollbar {
+      display: none;
+    }
   `;
   document.head.appendChild(style);
   
@@ -2667,6 +2683,32 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
 /**
  * Handle Web Memory search results
  */
+function formatMemoryAnswer(text: string): string {
+  // Format the AI answer with proper HTML
+  let formatted = text;
+  
+  // Handle bullet points (- or •)
+  formatted = formatted.replace(/^[-•]\s+(.+)$/gm, '<div style="margin-left: 12px; margin-bottom: 6px; display: flex; gap: 8px;"><span style="color: #00D4FF;">•</span><span>$1</span></div>');
+  
+  // Handle numbered lists
+  formatted = formatted.replace(/^(\d+)\.\s+(.+)$/gm, '<div style="margin-left: 12px; margin-bottom: 6px;"><strong style="color: #00D4FF;">$1.</strong> $2</div>');
+  
+  // Handle bold text (**text**)
+  formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong style="color: #00D4FF;">$1</strong>');
+  
+  // Handle URLs - make them clickable
+  formatted = formatted.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" style="color: #8B5CF6; text-decoration: underline;">$1</a>');
+  
+  // Handle line breaks - convert double newlines to paragraphs
+  const paragraphs = formatted.split('\n\n');
+  formatted = paragraphs.map(para => {
+    if (para.includes('<div')) return para; // Already formatted
+    return `<p style="margin-bottom: 10px; line-height: 1.6;">${para.replace(/\n/g, '<br>')}</p>`;
+  }).join('');
+  
+  return formatted;
+}
+
 function handleWebMemoryResult(message: any) {
   const memoryResults = document.querySelector('#ai-memory-results') as HTMLElement;
   if (!memoryResults) return;
@@ -2688,7 +2730,7 @@ function handleWebMemoryResult(message: any) {
   // Build results HTML
   let html = '';
   
-  // AI Answer section
+  // AI Answer section - with proper formatting!
   if (answer) {
     html += `
       <div style="background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(139, 92, 246, 0.1)); border: 1px solid rgba(0, 212, 255, 0.2); border-radius: 16px; padding: 16px; margin-bottom: 16px;">
@@ -2698,7 +2740,7 @@ function handleWebMemoryResult(message: any) {
           </div>
           <span style="font-weight: 600; color: #00D4FF; font-size: 14px;">Web Memory</span>
         </div>
-        <p style="color: rgba(255, 255, 255, 0.9); font-size: 13px; line-height: 1.6; margin: 0;">${escapeHtml(answer)}</p>
+        <div style="color: rgba(255, 255, 255, 0.9); font-size: 13px; line-height: 1.6;">${formatMemoryAnswer(answer)}</div>
       </div>
     `;
   }

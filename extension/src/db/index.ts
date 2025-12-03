@@ -539,3 +539,94 @@ export async function getWebMemoryStats(): Promise<{
   };
 }
 
+// ============================================
+// PERFORMANCE & CLEANUP FUNCTIONS
+// ============================================
+
+// Delete pages older than X days
+export async function deleteOldPages(daysOld: number): Promise<number> {
+  const db = await initDB();
+  const all = await db.getAll('visited_pages');
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+  
+  const toDelete = all.filter(p => new Date(p.last_visited) < cutoffDate);
+  
+  const tx = db.transaction('visited_pages', 'readwrite');
+  await Promise.all([
+    ...toDelete.map(page => tx.store.delete(page.id)),
+    tx.done
+  ]);
+  
+  console.log(`🧠 Web Memory: Deleted ${toDelete.length} pages older than ${daysOld} days`);
+  return toDelete.length;
+}
+
+// Keep only the most recent N pages (delete oldest when over limit)
+export async function enforcePageLimit(maxPages: number): Promise<number> {
+  const db = await initDB();
+  const all = await db.getAll('visited_pages');
+  
+  if (all.length <= maxPages) {
+    return 0; // Under limit, nothing to delete
+  }
+  
+  // Sort by last_visited descending (newest first)
+  const sorted = all.sort((a, b) => 
+    new Date(b.last_visited).getTime() - new Date(a.last_visited).getTime()
+  );
+  
+  // Delete everything after maxPages
+  const toDelete = sorted.slice(maxPages);
+  
+  const tx = db.transaction('visited_pages', 'readwrite');
+  await Promise.all([
+    ...toDelete.map(page => tx.store.delete(page.id)),
+    tx.done
+  ]);
+  
+  console.log(`🧠 Web Memory: Deleted ${toDelete.length} oldest pages (limit: ${maxPages})`);
+  return toDelete.length;
+}
+
+// Delete pages by domain
+export async function deletePagesByDomain(domain: string): Promise<number> {
+  const db = await initDB();
+  const pages = await db.getAllFromIndex('visited_pages', 'by-domain', domain);
+  
+  const tx = db.transaction('visited_pages', 'readwrite');
+  await Promise.all([
+    ...pages.map(page => tx.store.delete(page.id)),
+    tx.done
+  ]);
+  
+  console.log(`🧠 Web Memory: Deleted ${pages.length} pages from ${domain}`);
+  return pages.length;
+}
+
+// Get pages grouped by domain (for management UI)
+export async function getPagesByDomain(): Promise<Map<string, VisitedPage[]>> {
+  const db = await initDB();
+  const all = await db.getAll('visited_pages');
+  
+  const grouped = new Map<string, VisitedPage[]>();
+  for (const page of all) {
+    const existing = grouped.get(page.domain) || [];
+    existing.push(page);
+    grouped.set(page.domain, existing);
+  }
+  
+  return grouped;
+}
+
+// Auto-cleanup: delete old + enforce limit (call periodically)
+export async function autoCleanupWebMemory(
+  daysOld: number = 90, 
+  maxPages: number = 2000
+): Promise<{deletedOld: number, deletedOverLimit: number}> {
+  const deletedOld = await deleteOldPages(daysOld);
+  const deletedOverLimit = await enforcePageLimit(maxPages);
+  
+  return { deletedOld, deletedOverLimit };
+}
+

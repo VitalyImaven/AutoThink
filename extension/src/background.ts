@@ -13,7 +13,8 @@ import {
   saveVisitedPage, 
   getAllVisitedPages,
   getWebMemoryStats,
-  clearWebMemory 
+  clearWebMemory,
+  enforcePageLimit 
 } from './db';
 
 /**
@@ -620,6 +621,15 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
       });
       
       console.log(`   ✅ Indexed: ${pageData.title?.substring(0, 40)}...`);
+      
+      // Auto-cleanup: keep max 2000 pages to prevent performance issues
+      // Runs every ~50 pages to avoid running on every save
+      if (Math.random() < 0.02) { // ~2% chance = every ~50 pages
+        const deleted = await enforcePageLimit(2000);
+        if (deleted > 0) {
+          console.log(`   🧹 Auto-cleanup: removed ${deleted} oldest pages`);
+        }
+      }
     }
     
   } catch (error) {

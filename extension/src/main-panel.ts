@@ -754,6 +754,20 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
   }
 });
 
+function formatMemoryAnswer(text: string): string {
+  let formatted = escapeHtml(text);
+  // Handle bullet points
+  formatted = formatted.replace(/^[-•]\s+(.+)$/gm, '<div style="margin-left: 10px; margin-bottom: 4px;">• $1</div>');
+  // Handle numbered lists
+  formatted = formatted.replace(/^(\d+)\.\s+(.+)$/gm, '<div style="margin-left: 10px; margin-bottom: 4px;"><strong style="color: #00D4FF;">$1.</strong> $2</div>');
+  // Handle bold
+  formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong style="color: #00D4FF;">$1</strong>');
+  // Line breaks
+  formatted = formatted.replace(/\n\n/g, '</p><p style="margin-bottom: 8px;">');
+  formatted = formatted.replace(/\n/g, '<br>');
+  return `<p style="margin-bottom: 8px;">${formatted}</p>`;
+}
+
 function handleMemoryResult(message: any) {
   if (!memoryResults) return;
   
@@ -766,7 +780,7 @@ function handleMemoryResult(message: any) {
     html += `
       <div style="background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(139, 92, 246, 0.1)); border: 1px solid rgba(0, 212, 255, 0.2); border-radius: 12px; padding: 14px; margin-bottom: 12px;">
         <div style="font-weight: 600; color: #00D4FF; margin-bottom: 8px; font-size: 13px;">🧠 Web Memory</div>
-        <p style="color: rgba(255,255,255,0.9); font-size: 12px; line-height: 1.5; margin: 0;">${escapeHtml(answer)}</p>
+        <div style="color: rgba(255,255,255,0.9); font-size: 12px; line-height: 1.5;">${formatMemoryAnswer(answer)}</div>
       </div>
     `;
   }
