@@ -8,7 +8,13 @@ import {
   ExtensionMessage,
   FieldContext,
 } from './types';
-import { getAllChunks } from './db';
+import { 
+  getAllChunks, 
+  saveVisitedPage, 
+  getAllVisitedPages,
+  getWebMemoryStats,
+  clearWebMemory 
+} from './db';
 
 /**
  * Call backend API to generate suggestion (DYNAMIC SYSTEM)
@@ -340,6 +346,94 @@ async function handleSummarizePage(
 }
 
 /**
+ * Handle Web Memory search
+ */
+async function handleWebMemorySearch(query: string, sender: chrome.runtime.MessageSender) {
+  try {
+    console.log('🧠 Web Memory search:', query);
+    
+    // Get all visited pages from IndexedDB
+    const pages = await getAllVisitedPages();
+    console.log(`   Found ${pages.length} pages in memory`);
+    
+    if (pages.length === 0) {
+      // Send empty result
+      const response = {
+        type: 'WEB_MEMORY_RESULT',
+        results: [],
+        answer: "I don't have any saved websites yet. Browse some websites and I'll remember them for you!"
+      };
+      chrome.runtime.sendMessage(response);
+      if (sender.tab?.id) {
+        chrome.tabs.sendMessage(sender.tab.id, response).catch(() => {});
+      }
+      return;
+    }
+    
+    // Call backend for AI-powered search
+    const response = await fetch(`${config.backendUrl}/web-memory/search`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        query,
+        pages: pages.map(p => ({
+          url: p.url,
+          title: p.title,
+          domain: p.domain,
+          content: p.content,
+          headings: p.headings,
+          description: p.description,
+          keywords: p.keywords,
+          visited_at: p.visited_at,
+          visit_count: p.visit_count
+        })),
+        max_results: 5
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Search failed: ${response.status}`);
+    }
+    
+    const result = await response.json();
+    console.log(`   ✅ Found ${result.results.length} relevant pages`);
+    
+    // Send results back
+    const memoryResult = {
+      type: 'WEB_MEMORY_RESULT',
+      results: result.results,
+      answer: result.answer
+    };
+    
+    chrome.runtime.sendMessage(memoryResult);
+    if (sender.tab?.id) {
+      chrome.tabs.sendMessage(sender.tab.id, memoryResult).catch(() => {});
+    }
+    
+  } catch (error) {
+    console.error('❌ Web Memory search error:', error);
+    const errorResult = {
+      type: 'WEB_MEMORY_RESULT',
+      results: [],
+      answer: `Error searching web memory: ${error instanceof Error ? error.message : 'Unknown error'}`
+    };
+    chrome.runtime.sendMessage(errorResult);
+  }
+}
+
+/**
+ * Handle saving page to web memory
+ */
+async function handleSavePageToMemory(pageData: any) {
+  try {
+    await saveVisitedPage(pageData);
+    console.log('🧠 Page saved to Web Memory:', pageData.title);
+  } catch (error) {
+    console.error('❌ Error saving to Web Memory:', error);
+  }
+}
+
+/**
  * Message listener
  */
 chrome.runtime.onMessage.addListener(
@@ -355,6 +449,27 @@ chrome.runtime.onMessage.addListener(
         (message as any).pageUrl, 
         sender
       );
+    } else if (message.type === 'SEARCH_WEB_MEMORY') {
+      handleWebMemorySearch((message as any).query, sender);
+    } else if (message.type === 'SAVE_PAGE_TO_MEMORY') {
+      handleSavePageToMemory((message as any).pageData);
+    } else if (message.type === 'GET_WEB_MEMORY_STATS') {
+      // Handle stats request
+      getWebMemoryStats().then(stats => {
+        const response = {
+          type: 'WEB_MEMORY_STATS_RESULT',
+          stats
+        };
+        chrome.runtime.sendMessage(response);
+        if (sender.tab?.id) {
+          chrome.tabs.sendMessage(sender.tab.id, response).catch(() => {});
+        }
+      });
+    } else if (message.type === 'CLEAR_WEB_MEMORY') {
+      // Clear all web memory
+      clearWebMemory().then(() => {
+        console.log('🧠 Web Memory cleared!');
+      });
     }
     // Don't return true - we're not sending a response back to content script
   }
@@ -391,10 +506,131 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   console.log(`Cleaned up chat history for tab ${tabId}`);
 });
 
+// ============================================
+// WEB MEMORY - Auto-index visited pages
+// ============================================
+
+// Track pages being indexed to avoid duplicates
+const indexingInProgress = new Set<number>();
+
+// Domains to skip (internal, extensions, etc.)
+const skipDomains = [
+  'chrome://',
+  'chrome-extension://',
+  'edge://',
+  'about:',
+  'moz-extension://',
+  'file://',
+  'localhost',
+  '127.0.0.1',
+  'newtab',
+];
+
+function shouldIndexPage(url: string): boolean {
+  if (!url) return false;
+  
+  // Skip internal pages
+  for (const skip of skipDomains) {
+    if (url.includes(skip)) return false;
+  }
+  
+  // Only index http/https pages
+  return url.startsWith('http://') || url.startsWith('https://');
+}
+
+// Listen for completed page loads
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  // Only process when page is fully loaded
+  if (changeInfo.status !== 'complete') return;
+  
+  const url = tab.url;
+  if (!url || !shouldIndexPage(url)) return;
+  
+  // Avoid indexing same tab multiple times simultaneously
+  if (indexingInProgress.has(tabId)) return;
+  indexingInProgress.add(tabId);
+  
+  try {
+    console.log(`🧠 Web Memory: Indexing page - ${tab.title?.substring(0, 50)}...`);
+    
+    // Extract page content using scripting API
+    const results = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => {
+        // Extract page information
+        const title = document.title;
+        const description = document.querySelector('meta[name="description"]')?.getAttribute('content') || 
+                          document.querySelector('meta[property="og:description"]')?.getAttribute('content') || '';
+        
+        // Get headings
+        const headings: string[] = [];
+        document.querySelectorAll('h1, h2, h3').forEach(h => {
+          const text = h.textContent?.trim();
+          if (text && text.length > 2 && text.length < 200) {
+            headings.push(text);
+          }
+        });
+        
+        // Get main content (skip scripts, styles, nav, etc.)
+        const mainContent = document.querySelector('main') || 
+                           document.querySelector('article') || 
+                           document.querySelector('[role="main"]') ||
+                           document.body;
+        
+        const clone = mainContent.cloneNode(true) as HTMLElement;
+        clone.querySelectorAll('script, style, nav, header, footer, aside, .ad, .advertisement, noscript').forEach(el => el.remove());
+        const content = clone.textContent?.replace(/\s+/g, ' ').trim() || '';
+        
+        // Extract keywords from meta tags
+        const keywordsMeta = document.querySelector('meta[name="keywords"]')?.getAttribute('content') || '';
+        const keywords = keywordsMeta.split(',').map(k => k.trim()).filter(k => k.length > 0);
+        
+        // Add keywords from common category/tag elements
+        document.querySelectorAll('[class*="tag"], [class*="category"], [class*="topic"]').forEach(el => {
+          const text = el.textContent?.trim();
+          if (text && text.length > 1 && text.length < 50) {
+            keywords.push(text);
+          }
+        });
+        
+        return {
+          title,
+          description,
+          headings: headings.slice(0, 20),  // Limit headings
+          content: content.substring(0, 10000),  // Limit content
+          keywords: [...new Set(keywords)].slice(0, 30)  // Unique keywords
+        };
+      }
+    });
+    
+    if (results && results[0] && results[0].result) {
+      const pageData = results[0].result;
+      
+      // Save to IndexedDB
+      await saveVisitedPage({
+        url,
+        title: pageData.title || tab.title || 'Untitled',
+        content: pageData.content,
+        headings: pageData.headings,
+        description: pageData.description,
+        keywords: pageData.keywords
+      });
+      
+      console.log(`   ✅ Indexed: ${pageData.title?.substring(0, 40)}...`);
+    }
+    
+  } catch (error) {
+    // Silently fail for pages we can't access (like chrome:// pages)
+    console.log(`   ⚠️ Could not index ${url?.substring(0, 50)}: ${error}`);
+  } finally {
+    indexingInProgress.delete(tabId);
+  }
+});
+
 // Track open panel windows
 let panelWindowId: number | null = null;
 
-// Handle extension icon click - open draggable window
+// Handle extension icon click - open draggable window in TOP-RIGHT corner
 chrome.action.onClicked.addListener(async () => {
   // Check if window already exists
   if (panelWindowId !== null) {
@@ -409,13 +645,31 @@ chrome.action.onClicked.addListener(async () => {
     }
   }
   
-  // Create new window with better sizing
+  // Get current window to determine screen position
+  const currentWindow = await chrome.windows.getCurrent();
+  
+  // Panel dimensions
+  const panelWidth = 440;
+  const panelHeight = 650;
+  
+  // Calculate top-right position (where extensions usually appear)
+  // Position it in the top-right of the current browser window
+  let left = (currentWindow.left || 0) + (currentWindow.width || 1200) - panelWidth - 10;
+  let top = (currentWindow.top || 0) + 80; // Below the toolbar
+  
+  // Ensure it's not off-screen
+  if (left < 0) left = 10;
+  if (top < 0) top = 10;
+  
+  // Create new window positioned in top-right corner
   const window = await chrome.windows.create({
     url: chrome.runtime.getURL('src/main-panel.html'),
     type: 'popup',
-    width: 440,
-    height: 650,
-    focused: true  // Focus the window when opened
+    width: panelWidth,
+    height: panelHeight,
+    left: left,
+    top: top,
+    focused: true
   });
   
   panelWindowId = window.id || null;

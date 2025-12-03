@@ -133,6 +133,54 @@ export interface ToggleSidePanelMessage {
   type: "TOGGLE_SIDE_PANEL";
 }
 
+// Web Memory types - Save and search visited websites
+export interface SavePageToMemoryMessage {
+  type: "SAVE_PAGE_TO_MEMORY";
+  pageData: {
+    url: string;
+    title: string;
+    content: string;
+    headings: string[];
+    description: string;
+    keywords: string[];
+  };
+}
+
+export interface SearchWebMemoryMessage {
+  type: "SEARCH_WEB_MEMORY";
+  query: string;
+}
+
+export interface WebMemoryResultMessage {
+  type: "WEB_MEMORY_RESULT";
+  results: Array<{
+    url: string;
+    title: string;
+    snippet: string;
+    domain: string;
+    relevance: number;
+    visited_at: string;
+  }>;
+  answer?: string;  // AI-generated answer based on the results
+}
+
+export interface GetWebMemoryStatsMessage {
+  type: "GET_WEB_MEMORY_STATS";
+}
+
+export interface WebMemoryStatsResultMessage {
+  type: "WEB_MEMORY_STATS_RESULT";
+  stats: {
+    totalPages: number;
+    uniqueDomains: number;
+    totalVisits: number;
+  };
+}
+
+export interface ClearWebMemoryMessage {
+  type: "CLEAR_WEB_MEMORY";
+}
+
 export type ExtensionMessage =
   | FieldFocusedMessage
   | ManualSuggestMessage
@@ -146,7 +194,13 @@ export type ExtensionMessage =
   | SummarizePageMessage
   | SummarizePageResultMessage
   | ClearHighlightsMessage
-  | ToggleSidePanelMessage;
+  | ToggleSidePanelMessage
+  | SavePageToMemoryMessage
+  | SearchWebMemoryMessage
+  | WebMemoryResultMessage
+  | GetWebMemoryStatsMessage
+  | WebMemoryStatsResultMessage
+  | ClearWebMemoryMessage;
 
 // Configuration
 export interface ExtensionConfig {

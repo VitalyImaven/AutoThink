@@ -15,6 +15,22 @@ interface SemanticChunk {
   metadata: Record<string, any>;
 }
 
+// Web Memory - saved visited pages
+export interface VisitedPage {
+  id: string;           // URL hash as ID
+  url: string;
+  title: string;
+  domain: string;
+  content: string;      // Page text content (first 10000 chars)
+  headings: string[];   // H1, H2, H3 headings
+  description: string;  // Meta description
+  keywords: string[];   // Extracted keywords/topics
+  visited_at: string;   // ISO timestamp
+  visit_count: number;  // How many times visited
+  last_visited: string; // Last visit timestamp
+  thumbnail?: string;   // Optional: favicon or screenshot
+}
+
 interface KnowledgeDB extends DBSchema {
   semantic_chunks: {
     key: string;
@@ -44,6 +60,14 @@ interface KnowledgeDB extends DBSchema {
       qa_count: number;
     };
   };
+  visited_pages: {
+    key: string;  // URL hash
+    value: VisitedPage;
+    indexes: {
+      'by-domain': string;
+      'by-visited': string;
+    };
+  };
 }
 
 let dbInstance: IDBPDatabase<KnowledgeDB> | null = null;
@@ -53,9 +77,9 @@ export async function initDB(): Promise<IDBPDatabase<KnowledgeDB>> {
     return dbInstance;
   }
 
-  dbInstance = await openDB<KnowledgeDB>('ai-autofill-dynamic-kb', 4, {
+  dbInstance = await openDB<KnowledgeDB>('ai-autofill-dynamic-kb', 5, {
     upgrade(db, oldVersion) {
-      console.log(`Upgrading IndexedDB from version ${oldVersion} to 4`);
+      console.log(`Upgrading IndexedDB from version ${oldVersion} to 5`);
       
       // Create semantic_chunks store
       if (!db.objectStoreNames.contains('semantic_chunks')) {
@@ -78,6 +102,16 @@ export async function initDB(): Promise<IDBPDatabase<KnowledgeDB>> {
           keyPath: 'profile',
         });
         console.log('Created interviews store');
+      }
+      
+      // Create visited_pages store for Web Memory feature (v5+)
+      if (!db.objectStoreNames.contains('visited_pages')) {
+        const pagesStore = db.createObjectStore('visited_pages', {
+          keyPath: 'id',
+        });
+        pagesStore.createIndex('by-domain', 'domain', { unique: false });
+        pagesStore.createIndex('by-visited', 'last_visited', { unique: false });
+        console.log('Created visited_pages store for Web Memory');
       }
     },
   });
@@ -335,5 +369,173 @@ export async function isKnowledgeBaseEmpty(): Promise<boolean> {
   const db = await initDB();
   const docCount = await db.count('documents');
   return docCount === 0;
+}
+
+// ============================================
+// WEB MEMORY FUNCTIONS - Save & Search Visited Pages
+// ============================================
+
+// Generate a hash ID from URL
+function hashUrl(url: string): string {
+  let hash = 0;
+  for (let i = 0; i < url.length; i++) {
+    const char = url.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return 'page_' + Math.abs(hash).toString(36);
+}
+
+// Extract domain from URL
+function extractDomain(url: string): string {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.hostname;
+  } catch {
+    return 'unknown';
+  }
+}
+
+// Save a visited page to Web Memory
+export async function saveVisitedPage(pageData: {
+  url: string;
+  title: string;
+  content: string;
+  headings: string[];
+  description: string;
+  keywords: string[];
+}): Promise<void> {
+  const db = await initDB();
+  const id = hashUrl(pageData.url);
+  const domain = extractDomain(pageData.url);
+  const now = new Date().toISOString();
+  
+  // Check if page already exists
+  const existing = await db.get('visited_pages', id);
+  
+  if (existing) {
+    // Update existing - increment visit count
+    await db.put('visited_pages', {
+      ...existing,
+      title: pageData.title || existing.title,
+      content: pageData.content.substring(0, 10000) || existing.content,
+      headings: pageData.headings.length > 0 ? pageData.headings : existing.headings,
+      description: pageData.description || existing.description,
+      keywords: [...new Set([...existing.keywords, ...pageData.keywords])],
+      visit_count: existing.visit_count + 1,
+      last_visited: now,
+    });
+    console.log(`🧠 Web Memory: Updated page (visit #${existing.visit_count + 1}): ${pageData.title}`);
+  } else {
+    // Save new page
+    await db.put('visited_pages', {
+      id,
+      url: pageData.url,
+      title: pageData.title,
+      domain,
+      content: pageData.content.substring(0, 10000),
+      headings: pageData.headings,
+      description: pageData.description,
+      keywords: pageData.keywords,
+      visited_at: now,
+      visit_count: 1,
+      last_visited: now,
+    });
+    console.log(`🧠 Web Memory: Saved NEW page: ${pageData.title}`);
+  }
+}
+
+// Get all visited pages
+export async function getAllVisitedPages(): Promise<VisitedPage[]> {
+  const db = await initDB();
+  return db.getAll('visited_pages');
+}
+
+// Get visited pages by domain
+export async function getVisitedPagesByDomain(domain: string): Promise<VisitedPage[]> {
+  const db = await initDB();
+  return db.getAllFromIndex('visited_pages', 'by-domain', domain);
+}
+
+// Get recent visited pages (last N)
+export async function getRecentVisitedPages(limit: number = 100): Promise<VisitedPage[]> {
+  const db = await initDB();
+  const all = await db.getAll('visited_pages');
+  // Sort by last_visited descending and limit
+  return all
+    .sort((a, b) => new Date(b.last_visited).getTime() - new Date(a.last_visited).getTime())
+    .slice(0, limit);
+}
+
+// Search visited pages by text (simple local search)
+export async function searchVisitedPages(query: string): Promise<VisitedPage[]> {
+  const db = await initDB();
+  const all = await db.getAll('visited_pages');
+  const queryLower = query.toLowerCase();
+  
+  return all.filter(page => 
+    page.title.toLowerCase().includes(queryLower) ||
+    page.content.toLowerCase().includes(queryLower) ||
+    page.description.toLowerCase().includes(queryLower) ||
+    page.keywords.some(k => k.toLowerCase().includes(queryLower)) ||
+    page.headings.some(h => h.toLowerCase().includes(queryLower)) ||
+    page.domain.toLowerCase().includes(queryLower)
+  );
+}
+
+// Get visited page count
+export async function getVisitedPageCount(): Promise<number> {
+  const db = await initDB();
+  return db.count('visited_pages');
+}
+
+// Delete a specific visited page
+export async function deleteVisitedPage(id: string): Promise<void> {
+  const db = await initDB();
+  await db.delete('visited_pages', id);
+  console.log(`🧠 Web Memory: Deleted page ${id}`);
+}
+
+// Clear all visited pages
+export async function clearWebMemory(): Promise<void> {
+  const db = await initDB();
+  await db.clear('visited_pages');
+  console.log('🧠 Web Memory: Cleared all visited pages');
+}
+
+// Get web memory statistics
+export async function getWebMemoryStats(): Promise<{
+  totalPages: number;
+  uniqueDomains: number;
+  totalVisits: number;
+  oldestPage: string | null;
+  newestPage: string | null;
+}> {
+  const db = await initDB();
+  const all = await db.getAll('visited_pages');
+  
+  if (all.length === 0) {
+    return {
+      totalPages: 0,
+      uniqueDomains: 0,
+      totalVisits: 0,
+      oldestPage: null,
+      newestPage: null,
+    };
+  }
+  
+  const domains = new Set(all.map(p => p.domain));
+  const totalVisits = all.reduce((sum, p) => sum + p.visit_count, 0);
+  const sorted = all.sort((a, b) => 
+    new Date(a.visited_at).getTime() - new Date(b.visited_at).getTime()
+  );
+  
+  return {
+    totalPages: all.length,
+    uniqueDomains: domains.size,
+    totalVisits,
+    oldestPage: sorted[0].visited_at,
+    newestPage: sorted[sorted.length - 1].visited_at,
+  };
 }
 

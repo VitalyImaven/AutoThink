@@ -1459,6 +1459,10 @@ function openSidePanel() {
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
         <span>Chat</span>
       </button>
+      <button class="ai-tab-btn" data-tab="memory" style="flex: 1; padding: 14px 8px; border: none; background: transparent; cursor: pointer; font-size: 13px; font-weight: 500; color: rgba(255, 255, 255, 0.4); border-bottom: 2px solid transparent; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+        <span>Memory</span>
+      </button>
     </div>
     
     <div style="flex: 1; overflow-y: auto; overflow-x: hidden;">
@@ -1512,7 +1516,21 @@ function openSidePanel() {
           </button>
         </div>
         
-        <div style="padding: 16px; text-align: center; font-size: 11px; color: rgba(255, 255, 255, 0.4); margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+        <div style="background: rgba(24, 24, 32, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 16px; margin-top: 12px;">
+          <h3 style="font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 14px 0; color: rgba(255, 255, 255, 0.4); font-weight: 600;">Information</h3>
+          <div style="display: flex; gap: 10px;">
+            <button id="ai-help-btn" class="ai-btn-secondary" style="flex: 1; padding: 12px 16px; background: rgba(24, 24, 32, 0.9); color: rgba(255, 255, 255, 0.7); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+              Help
+            </button>
+            <button id="ai-about-btn" class="ai-btn-secondary" style="flex: 1; padding: 12px 16px; background: rgba(24, 24, 32, 0.9); color: rgba(255, 255, 255, 0.7); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+              About
+            </button>
+          </div>
+        </div>
+        
+        <div style="padding: 12px 16px; text-align: center; font-size: 11px; color: rgba(255, 255, 255, 0.4); margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 6px;">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#00D4FF" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
           Switch to Chat tab to ask questions about this page
         </div>
@@ -1569,6 +1587,47 @@ function openSidePanel() {
       
       <!-- Removed old Actions Tab -->
       <div class="ai-tab-content" data-tab="actions" style="display: none;"></div>
+      
+      <!-- Memory Tab - Web Browsing Memory -->
+      <div class="ai-tab-content" data-tab="memory" style="display: none; flex-direction: column; height: 100%;">
+        <div style="padding: 16px; background: rgba(255, 255, 255, 0.03); border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <input type="text" id="ai-memory-search" placeholder="What was that vacation site in Finland?" style="flex: 1; padding: 12px 16px; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px; font-size: 13px; outline: none; font-family: inherit; transition: all 0.3s; background: rgba(24, 24, 32, 0.9); color: #fff;">
+            <button id="ai-memory-search-btn" style="padding: 12px 16px; background: linear-gradient(135deg, #00D4FF, #8B5CF6); color: white; border: none; border-radius: 24px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+            </button>
+          </div>
+        </div>
+        
+        <div id="ai-memory-results" style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+          <div style="text-align: center; padding: 40px 20px;">
+            <div style="width: 80px; height: 80px; margin: 0 auto 20px; background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(139, 92, 246, 0.1)); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#00D4FF" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+            </div>
+            <h3 style="font-size: 16px; font-weight: 600; color: #fff; margin: 0 0 8px 0;">Web Memory</h3>
+            <p style="font-size: 13px; color: rgba(255, 255, 255, 0.5); margin: 0 0 16px 0; line-height: 1.5;">
+              I remember every website you visit.<br>
+              Ask me questions like:
+            </p>
+            <div style="text-align: left; background: rgba(24, 24, 32, 0.8); border-radius: 12px; padding: 12px 16px; margin-bottom: 16px;">
+              <div style="font-size: 12px; color: rgba(255, 255, 255, 0.7); margin-bottom: 8px;">• "What was that vacation site about Finland?"</div>
+              <div style="font-size: 12px; color: rgba(255, 255, 255, 0.7); margin-bottom: 8px;">• "Show me the restaurant I looked at last week"</div>
+              <div style="font-size: 12px; color: rgba(255, 255, 255, 0.7); margin-bottom: 8px;">• "Find articles about machine learning"</div>
+              <div style="font-size: 12px; color: rgba(255, 255, 255, 0.7);">• "Where did I see info about electric cars?"</div>
+            </div>
+            <div id="ai-memory-stats" style="font-size: 11px; color: rgba(255, 255, 255, 0.4); padding: 8px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+              Loading memory stats...
+            </div>
+          </div>
+        </div>
+        
+        <div style="padding: 12px 16px; background: rgba(255, 255, 255, 0.03); border-top: 1px solid rgba(255, 255, 255, 0.1);">
+          <button id="ai-clear-memory-btn" class="ai-btn-secondary" style="width: 100%; padding: 10px; background: rgba(24, 24, 32, 0.9); color: rgba(255, 255, 255, 0.6); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            Clear Web Memory
+          </button>
+        </div>
+      </div>
     </div>
   `;
   
@@ -2080,6 +2139,92 @@ function initializeSidePanelHandlers(panel: HTMLElement) {
   });
   
   console.log(`✅ Attached ${attachedCount}/${actionButtons.length} action buttons`);
+  
+  // ============================================
+  // HELP & ABOUT MODALS
+  // ============================================
+  
+  const helpBtn = panel.querySelector('#ai-help-btn') as HTMLButtonElement;
+  const aboutBtn = panel.querySelector('#ai-about-btn') as HTMLButtonElement;
+  
+  if (helpBtn) {
+    helpBtn.addEventListener('click', () => showHelpModal());
+  }
+  
+  if (aboutBtn) {
+    aboutBtn.addEventListener('click', () => showAboutModal());
+  }
+  
+  // ============================================
+  // WEB MEMORY TAB HANDLERS
+  // ============================================
+  
+  const memorySearchInput = panel.querySelector('#ai-memory-search') as HTMLInputElement;
+  const memorySearchBtn = panel.querySelector('#ai-memory-search-btn') as HTMLButtonElement;
+  const memoryResults = panel.querySelector('#ai-memory-results') as HTMLElement;
+  const memoryStats = panel.querySelector('#ai-memory-stats') as HTMLElement;
+  const clearMemoryBtn = panel.querySelector('#ai-clear-memory-btn') as HTMLButtonElement;
+  
+  // Load memory stats on panel open
+  chrome.runtime.sendMessage({ type: 'GET_WEB_MEMORY_STATS' });
+  
+  // Handle memory search
+  function performMemorySearch() {
+    const query = memorySearchInput?.value.trim();
+    if (!query) return;
+    
+    console.log('🧠 Memory search:', query);
+    
+    // Show loading state
+    memoryResults.innerHTML = `
+      <div style="text-align: center; padding: 60px 20px;">
+        <div style="width: 50px; height: 50px; margin: 0 auto 16px; border: 3px solid rgba(0, 212, 255, 0.2); border-top-color: #00D4FF; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        <p style="color: rgba(255, 255, 255, 0.6); font-size: 14px;">Searching your web memory...</p>
+        <p style="color: rgba(255, 255, 255, 0.4); font-size: 12px; margin-top: 8px;">"${escapeHtml(query)}"</p>
+      </div>
+    `;
+    
+    // Send search request
+    chrome.runtime.sendMessage({
+      type: 'SEARCH_WEB_MEMORY',
+      query
+    });
+  }
+  
+  if (memorySearchBtn) {
+    memorySearchBtn.addEventListener('click', performMemorySearch);
+  }
+  
+  if (memorySearchInput) {
+    memorySearchInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        performMemorySearch();
+      }
+    });
+  }
+  
+  // Handle clear memory button
+  if (clearMemoryBtn) {
+    clearMemoryBtn.addEventListener('click', () => {
+      if (confirm('⚠️ Clear all Web Memory?\\n\\nThis will delete all saved website data. This action cannot be undone.')) {
+        // Clear memory via background script
+        chrome.runtime.sendMessage({ type: 'CLEAR_WEB_MEMORY' });
+        
+        // Update UI
+        memoryResults.innerHTML = `
+          <div style="text-align: center; padding: 40px 20px;">
+            <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
+            <p style="color: #00D4FF; font-size: 14px; font-weight: 600;">Web Memory Cleared</p>
+            <p style="color: rgba(255, 255, 255, 0.5); font-size: 12px; margin-top: 8px;">I'll start remembering new sites you visit.</p>
+          </div>
+        `;
+        
+        if (memoryStats) {
+          memoryStats.textContent = '📊 0 pages saved';
+        }
+      }
+    });
+  }
 }
 
 function closeSidePanel(force: boolean = false) {
@@ -2120,6 +2265,310 @@ function closeSidePanel(force: boolean = false) {
     sidePanelIframe = null;
     sidePanelOpen = false;
   }, 300);
+}
+
+// ============================================
+// HELP & ABOUT MODALS
+// ============================================
+
+function showHelpModal() {
+  // Remove any existing modal
+  const existing = document.getElementById('ai-help-modal');
+  if (existing) existing.remove();
+  
+  const modal = document.createElement('div');
+  modal.id = 'ai-help-modal';
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    z-index: 2147483648;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease-out;
+  `;
+  
+  modal.innerHTML = `
+    <style>
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+      .help-feature { 
+        background: rgba(24, 24, 32, 0.9); 
+        border: 1px solid rgba(255, 255, 255, 0.1); 
+        border-radius: 12px; 
+        padding: 16px; 
+        margin-bottom: 12px;
+        transition: all 0.3s;
+      }
+      .help-feature:hover {
+        border-color: #00D4FF;
+        transform: translateX(4px);
+      }
+      .help-feature h4 {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0 0 8px 0;
+        font-size: 14px;
+        font-weight: 600;
+        color: #00D4FF;
+      }
+      .help-feature p {
+        margin: 0;
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.7);
+        line-height: 1.5;
+      }
+      .help-feature .how-to {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        font-size: 11px;
+        color: rgba(255, 255, 255, 0.5);
+      }
+      .help-feature .how-to strong {
+        color: #8B5CF6;
+      }
+    </style>
+    <div style="background: #0A0A0F; border: 1px solid rgba(0, 212, 255, 0.3); border-radius: 20px; width: 500px; max-height: 85vh; overflow: hidden; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5); animation: slideUp 0.3s ease-out;">
+      <div style="background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(139, 92, 246, 0.1)); padding: 20px 24px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #00D4FF, #8B5CF6); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          </div>
+          <div>
+            <h2 style="margin: 0; font-size: 18px; font-weight: 700; background: linear-gradient(135deg, #fff, #00D4FF); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Help & Features Guide</h2>
+            <p style="margin: 2px 0 0 0; font-size: 12px; color: rgba(255, 255, 255, 0.5);">Everything you need to know</p>
+          </div>
+        </div>
+        <button id="close-help-modal" style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: rgba(255, 255, 255, 0.6); width: 36px; height: 36px; border-radius: 10px; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; transition: all 0.3s;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      
+      <div style="padding: 20px 24px; max-height: 60vh; overflow-y: auto;">
+        
+        <div class="help-feature">
+          <h4>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10H12V2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            Smart Form Auto-Fill
+          </h4>
+          <p>Automatically fills web forms using AI-powered suggestions from your uploaded documents. The AI understands what each field is asking for and suggests the most relevant content.</p>
+          <div class="how-to">
+            <strong>How to use:</strong> Upload your documents in Knowledge Base → Navigate to any form → Click on fields or use "Auto-Fill Entire Page" button
+          </div>
+        </div>
+        
+        <div class="help-feature">
+          <h4>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            AI Chat Assistant
+          </h4>
+          <p>Ask questions about any webpage you're viewing. The AI reads and understands the current page content, helping you navigate, find information, or understand complex content.</p>
+          <div class="how-to">
+            <strong>How to use:</strong> Go to Chat tab → Type your question → AI analyzes the page and responds with specific guidance
+          </div>
+        </div>
+        
+        <div class="help-feature">
+          <h4>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+            Web Memory
+          </h4>
+          <p>Your personal browsing assistant that remembers every website you visit. Search through your browsing history using natural language like "What was that vacation site about Finland?"</p>
+          <div class="how-to">
+            <strong>How to use:</strong> Browse normally (sites are auto-saved) → Go to Memory tab → Ask questions about sites you've visited
+          </div>
+        </div>
+        
+        <div class="help-feature">
+          <h4>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            Smart Element Highlighting
+          </h4>
+          <p>Highlights important interactive elements on any page. Ask "Where do I click to change my password?" and the AI identifies and highlights the relevant buttons/links.</p>
+          <div class="how-to">
+            <strong>How to use:</strong> Click "Highlight Important Elements" or ask in Chat "Where do I click to..."
+          </div>
+        </div>
+        
+        <div class="help-feature">
+          <h4>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+            Page Summarization
+          </h4>
+          <p>Get AI-generated summaries of any webpage. Perfect for long articles, documentation, or complex pages. Quickly understand the key points without reading everything.</p>
+          <div class="how-to">
+            <strong>How to use:</strong> In Chat tab, click "Summarize" quick action or ask "Summarize this page"
+          </div>
+        </div>
+        
+        <div class="help-feature">
+          <h4>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+            Knowledge Base
+          </h4>
+          <p>Upload your personal documents (.txt, .md files) like resume, bio, company info, etc. The AI learns from your documents and uses them to auto-fill forms intelligently.</p>
+          <div class="how-to">
+            <strong>How to use:</strong> Click "Manage Knowledge Base" → Upload files → AI analyzes and indexes your content
+          </div>
+        </div>
+        
+        <div style="background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(139, 92, 246, 0.1)); border: 1px solid rgba(0, 212, 255, 0.2); border-radius: 12px; padding: 16px; margin-top: 16px;">
+          <h4 style="margin: 0 0 8px 0; font-size: 13px; color: #00D4FF; display: flex; align-items: center; gap: 8px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5"></path><path d="M2 12l10 5 10-5"></path></svg>
+            Pro Tips
+          </h4>
+          <ul style="margin: 0; padding-left: 20px; font-size: 12px; color: rgba(255, 255, 255, 0.7); line-height: 1.8;">
+            <li>All your data is stored <strong style="color: #00D4FF;">locally in your browser</strong> - private & secure</li>
+            <li>Use <strong style="color: #00D4FF;">natural language</strong> to ask questions - just talk normally!</li>
+            <li>The more you browse, the smarter <strong style="color: #00D4FF;">Web Memory</strong> becomes</li>
+            <li>Right-click any field → "AI Autofill Suggest" for <strong style="color: #00D4FF;">manual suggestions</strong></li>
+          </ul>
+        </div>
+      </div>
+      
+      <div style="padding: 16px 24px; border-top: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.02);">
+        <button id="help-got-it-btn" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #00D4FF, #8B5CF6); color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 20px rgba(0, 212, 255, 0.3); transition: all 0.3s;">
+          Got it! 👍
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  // Close handlers
+  const closeBtn = modal.querySelector('#close-help-modal');
+  const gotItBtn = modal.querySelector('#help-got-it-btn');
+  
+  const closeModal = () => modal.remove();
+  
+  closeBtn?.addEventListener('click', closeModal);
+  gotItBtn?.addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+}
+
+function showAboutModal() {
+  // Remove any existing modal
+  const existing = document.getElementById('ai-about-modal');
+  if (existing) existing.remove();
+  
+  const modal = document.createElement('div');
+  modal.id = 'ai-about-modal';
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    z-index: 2147483648;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease-out;
+  `;
+  
+  const currentYear = new Date().getFullYear();
+  
+  modal.innerHTML = `
+    <style>
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+      @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+      @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+    </style>
+    <div style="background: #0A0A0F; border: 1px solid rgba(0, 212, 255, 0.3); border-radius: 24px; width: 420px; overflow: hidden; box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5); animation: slideUp 0.3s ease-out;">
+      
+      <div style="position: relative; padding: 40px 24px; text-align: center; background: linear-gradient(180deg, rgba(0, 212, 255, 0.15) 0%, transparent 100%);">
+        <div style="position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, #00D4FF, #8B5CF6, transparent);"></div>
+        
+        <div style="width: 80px; height: 80px; margin: 0 auto 20px; background: linear-gradient(135deg, #00D4FF, #8B5CF6); border-radius: 20px; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 40px rgba(0, 212, 255, 0.4); animation: float 3s ease-in-out infinite;">
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+        </div>
+        
+        <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 800; background: linear-gradient(135deg, #fff, #00D4FF); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+          AI Smart Autofill
+        </h1>
+        
+        <p style="margin: 0 0 4px 0; font-size: 14px; color: rgba(255, 255, 255, 0.6);">
+          Your Intelligent Browsing Companion
+        </p>
+        
+        <div style="display: inline-flex; align-items: center; gap: 8px; margin-top: 16px; padding: 8px 16px; background: rgba(0, 212, 255, 0.1); border: 1px solid rgba(0, 212, 255, 0.2); border-radius: 20px;">
+          <span style="font-size: 12px; color: #00D4FF; font-weight: 600;">Version 1.1.0</span>
+          <span style="width: 4px; height: 4px; background: #00D4FF; border-radius: 50%;"></span>
+          <span style="font-size: 12px; color: rgba(255, 255, 255, 0.5);">Web Memory Edition</span>
+        </div>
+      </div>
+      
+      <div style="padding: 24px;">
+        <div style="background: rgba(24, 24, 32, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 20px; text-align: center;">
+          <div style="font-size: 13px; color: rgba(255, 255, 255, 0.5); margin-bottom: 12px;">Created by</div>
+          <div style="font-size: 20px; font-weight: 700; background: linear-gradient(135deg, #00D4FF, #8B5CF6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 8px;">
+            Vitaly Grosman
+          </div>
+          <div style="font-size: 12px; color: rgba(255, 255, 255, 0.4);">
+            Software Engineer & AI Enthusiast
+          </div>
+        </div>
+        
+        <div style="margin-top: 16px; padding: 16px; background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 12px;">
+          <div style="font-size: 12px; color: rgba(255, 255, 255, 0.6); line-height: 1.6; text-align: center;">
+            Built with ❤️ using modern web technologies.<br>
+            Powered by OpenAI GPT for intelligent assistance.
+          </div>
+        </div>
+        
+        <div style="display: flex; gap: 12px; margin-top: 16px;">
+          <div style="flex: 1; background: rgba(24, 24, 32, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 14px; text-align: center;">
+            <div style="font-size: 20px; margin-bottom: 4px;">🔒</div>
+            <div style="font-size: 11px; color: rgba(255, 255, 255, 0.5);">Privacy First</div>
+          </div>
+          <div style="flex: 1; background: rgba(24, 24, 32, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 14px; text-align: center;">
+            <div style="font-size: 20px; margin-bottom: 4px;">⚡</div>
+            <div style="font-size: 11px; color: rgba(255, 255, 255, 0.5);">Lightning Fast</div>
+          </div>
+          <div style="flex: 1; background: rgba(24, 24, 32, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 14px; text-align: center;">
+            <div style="font-size: 20px; margin-bottom: 4px;">🧠</div>
+            <div style="font-size: 11px; color: rgba(255, 255, 255, 0.5);">AI Powered</div>
+          </div>
+        </div>
+      </div>
+      
+      <div style="padding: 16px 24px 24px; text-align: center;">
+        <div style="font-size: 11px; color: rgba(255, 255, 255, 0.3); margin-bottom: 16px;">
+          © ${currentYear} Vitaly Grosman. All rights reserved.
+        </div>
+        <button id="about-close-btn" style="width: 100%; padding: 14px; background: linear-gradient(135deg, #00D4FF, #8B5CF6); color: white; border: none; border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 20px rgba(0, 212, 255, 0.3); transition: all 0.3s;">
+          Close
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  // Close handlers
+  const closeBtn = modal.querySelector('#about-close-btn');
+  
+  const closeModal = () => modal.remove();
+  
+  closeBtn?.addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
 }
 
 /**
@@ -2174,8 +2623,98 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
   } else if (message.type === 'TOGGLE_SIDE_PANEL') {
     console.log('   📍 TOGGLE_SIDE_PANEL message received!');
     toggleSidePanel();
+  } else if (message.type === 'WEB_MEMORY_RESULT') {
+    console.log('   🧠 Web Memory result received!');
+    handleWebMemoryResult(message);
+  } else if (message.type === 'WEB_MEMORY_STATS_RESULT') {
+    console.log('   📊 Web Memory stats received!');
+    handleWebMemoryStats(message.stats);
   }
 });
+
+/**
+ * Handle Web Memory search results
+ */
+function handleWebMemoryResult(message: any) {
+  const memoryResults = document.querySelector('#ai-memory-results') as HTMLElement;
+  if (!memoryResults) return;
+  
+  const results = message.results || [];
+  const answer = message.answer || '';
+  
+  if (results.length === 0 && !answer) {
+    memoryResults.innerHTML = `
+      <div style="text-align: center; padding: 40px 20px;">
+        <div style="font-size: 48px; margin-bottom: 16px;">🔍</div>
+        <p style="color: rgba(255, 255, 255, 0.7); font-size: 14px;">No matching websites found</p>
+        <p style="color: rgba(255, 255, 255, 0.4); font-size: 12px; margin-top: 8px;">Try different keywords or browse more websites.</p>
+      </div>
+    `;
+    return;
+  }
+  
+  // Build results HTML
+  let html = '';
+  
+  // AI Answer section
+  if (answer) {
+    html += `
+      <div style="background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(139, 92, 246, 0.1)); border: 1px solid rgba(0, 212, 255, 0.2); border-radius: 16px; padding: 16px; margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+          <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #00D4FF, #8B5CF6); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+          </div>
+          <span style="font-weight: 600; color: #00D4FF; font-size: 14px;">Web Memory</span>
+        </div>
+        <p style="color: rgba(255, 255, 255, 0.9); font-size: 13px; line-height: 1.6; margin: 0;">${escapeHtml(answer)}</p>
+      </div>
+    `;
+  }
+  
+  // Results list
+  if (results.length > 0) {
+    html += `<div style="font-size: 12px; color: rgba(255, 255, 255, 0.5); margin-bottom: 12px;">Found ${results.length} relevant page${results.length > 1 ? 's' : ''}:</div>`;
+    
+    for (const result of results) {
+      const visitDate = new Date(result.visited_at).toLocaleDateString();
+      html += `
+        <a href="${escapeHtml(result.url)}" target="_blank" style="display: block; background: rgba(24, 24, 32, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 14px; text-decoration: none; transition: all 0.3s; cursor: pointer;" onmouseover="this.style.borderColor='#00D4FF'; this.style.transform='translateY(-2px)';" onmouseout="this.style.borderColor='rgba(255, 255, 255, 0.1)'; this.style.transform='translateY(0)';">
+          <div style="display: flex; align-items: start; gap: 12px;">
+            <div style="width: 40px; height: 40px; background: rgba(0, 212, 255, 0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00D4FF" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+            </div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-weight: 600; color: #fff; font-size: 13px; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(result.title)}</div>
+              <div style="font-size: 11px; color: #00D4FF; margin-bottom: 6px;">${escapeHtml(result.domain)}</div>
+              <div style="font-size: 12px; color: rgba(255, 255, 255, 0.6); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${escapeHtml(result.snippet)}</div>
+              <div style="font-size: 10px; color: rgba(255, 255, 255, 0.4); margin-top: 8px;">Visited ${visitDate}</div>
+            </div>
+          </div>
+        </a>
+      `;
+    }
+  }
+  
+  memoryResults.innerHTML = html;
+}
+
+/**
+ * Handle Web Memory stats
+ */
+function handleWebMemoryStats(stats: any) {
+  const memoryStats = document.querySelector('#ai-memory-stats') as HTMLElement;
+  if (!memoryStats) return;
+  
+  if (stats.totalPages === 0) {
+    memoryStats.innerHTML = `<span style="color: rgba(255, 255, 255, 0.5);">📊 No pages saved yet. Start browsing!</span>`;
+  } else {
+    memoryStats.innerHTML = `
+      <span style="color: #00D4FF;">📊 ${stats.totalPages} pages</span> • 
+      <span style="color: rgba(255, 255, 255, 0.5);">${stats.uniqueDomains} domains</span> • 
+      <span style="color: rgba(255, 255, 255, 0.5);">${stats.totalVisits} visits</span>
+    `;
+  }
+}
 
 // Initialize: listen to all focus events
 document.addEventListener('focusin', handleFieldFocus, true);

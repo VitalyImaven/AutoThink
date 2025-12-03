@@ -1,12 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app import routes_dynamic, routes_chat, routes_interview
+from app import routes_dynamic, routes_chat, routes_interview, routes_web_memory
 
 app = FastAPI(
     title="AI Smart Autofill Backend - Dynamic Categorization",
-    description="Backend API for AI-powered form autofill with dynamic AI-discovered categorization",
-    version="3.0.0"
+    description="Backend API for AI-powered form autofill with dynamic AI-discovered categorization and Web Memory",
+    version="3.1.0"
 )
 
 # CORS middleware for Chrome extension
@@ -27,15 +27,25 @@ app.include_router(routes_chat.router, tags=["Chat & Summarization"])
 # Include interview routes (voice + interactive knowledge gathering)
 app.include_router(routes_interview.router, tags=["Interactive Interview"])
 
+# Include web memory routes (save & search visited websites)
+app.include_router(routes_web_memory.router, tags=["Web Memory"])
+
 
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
     return {
         "status": "ok",
-        "version": "3.0.0",
-        "system": "Dynamic AI Categorization",
-        "description": "No hardcoded categories - AI discovers semantic topics from your documents"
+        "version": "3.1.0",
+        "system": "Dynamic AI Categorization + Web Memory",
+        "description": "AI discovers semantic topics from your documents. Web Memory remembers every site you visit.",
+        "features": [
+            "Form Autofill",
+            "Chat Assistant",
+            "Page Summarization",
+            "Element Highlighting",
+            "Web Memory - Search your browsing history with AI"
+        ]
     }
 
 

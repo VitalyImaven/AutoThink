@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
   "name": "AI Smart Autofill",
-  "version": "1.0.0",
-  "description": "AI-powered smart autofill assistant for web forms",
+  "version": "1.1.0",
+  "description": "AI-powered smart autofill assistant with Web Memory - remembers every site you visit",
   "permissions": [
     "storage",
     "scripting",
     "activeTab",
-    "contextMenus"
+    "contextMenus",
+    "tabs"
   ],
   "host_permissions": [
     "https://*/*",
