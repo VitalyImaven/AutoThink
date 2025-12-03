@@ -255,3 +255,85 @@ export async function exportInterviewAsText(profile: string): Promise<string> {
   return text;
 }
 
+// ============================================
+// BACKUP & RESTORE FUNCTIONS
+// ============================================
+
+export interface KnowledgeBaseBackup {
+  version: number;
+  exported_at: string;
+  documents: any[];
+  chunks: SemanticChunk[];
+  interviews: any[];
+}
+
+// Export entire knowledge base to JSON
+export async function exportKnowledgeBase(): Promise<KnowledgeBaseBackup> {
+  const db = await initDB();
+  
+  const documents = await db.getAll('documents');
+  const chunks = await db.getAll('semantic_chunks');
+  const interviews = await db.getAll('interviews');
+  
+  const backup: KnowledgeBaseBackup = {
+    version: 1,
+    exported_at: new Date().toISOString(),
+    documents,
+    chunks,
+    interviews
+  };
+  
+  console.log(`✅ Exported backup: ${documents.length} documents, ${chunks.length} chunks, ${interviews.length} interviews`);
+  return backup;
+}
+
+// Import knowledge base from JSON backup
+export async function importKnowledgeBase(backup: KnowledgeBaseBackup): Promise<{ documents: number; chunks: number; interviews: number }> {
+  const db = await initDB();
+  
+  // Validate backup format
+  if (!backup.version || !backup.documents || !backup.chunks) {
+    throw new Error('Invalid backup file format');
+  }
+  
+  let docCount = 0;
+  let chunkCount = 0;
+  let interviewCount = 0;
+  
+  // Import documents
+  const docTx = db.transaction('documents', 'readwrite');
+  for (const doc of backup.documents) {
+    await docTx.store.put(doc);
+    docCount++;
+  }
+  await docTx.done;
+  
+  // Import chunks
+  const chunkTx = db.transaction('semantic_chunks', 'readwrite');
+  for (const chunk of backup.chunks) {
+    await chunkTx.store.put(chunk);
+    chunkCount++;
+  }
+  await chunkTx.done;
+  
+  // Import interviews if present
+  if (backup.interviews && backup.interviews.length > 0) {
+    const interviewTx = db.transaction('interviews', 'readwrite');
+    for (const interview of backup.interviews) {
+      await interviewTx.store.put(interview);
+      interviewCount++;
+    }
+    await interviewTx.done;
+  }
+  
+  console.log(`✅ Imported: ${docCount} documents, ${chunkCount} chunks, ${interviewCount} interviews`);
+  return { documents: docCount, chunks: chunkCount, interviews: interviewCount };
+}
+
+// Check if knowledge base is empty
+export async function isKnowledgeBaseEmpty(): Promise<boolean> {
+  const db = await initDB();
+  const docCount = await db.count('documents');
+  return docCount === 0;
+}
+

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { config } from '../config';
-import { saveDocumentIndex, getAllChunks, getAllDocuments, clearAllChunks, deleteDocument, getChunkCount, getDocumentCount, getAllTags, saveInterview, exportInterviewAsText } from '../db';
+import { saveDocumentIndex, getAllChunks, getAllDocuments, clearAllChunks, deleteDocument, getChunkCount, getDocumentCount, getAllTags, saveInterview, exportInterviewAsText, exportKnowledgeBase, importKnowledgeBase, KnowledgeBaseBackup } from '../db';
 
 interface StatusMessage {
   type: 'success' | 'error' | 'info';
@@ -517,9 +517,26 @@ const App: React.FC = () => {
   };
 
   const handleClearKnowledgeBase = async () => {
-    if (!confirm('Are you sure you want to clear ALL documents? This cannot be undone.')) {
-      return;
-    }
+    // Double confirmation for safety
+    const firstConfirm = confirm(
+      '⚠️ WARNING: Clear ALL Knowledge Base?\n\n' +
+      'This will permanently delete:\n' +
+      `• ${documentCount} document(s)\n` +
+      `• ${chunkCount} knowledge chunk(s)\n` +
+      `• All semantic tags\n\n` +
+      '💡 TIP: Click "Backup" first to save your data!\n\n' +
+      'Are you sure you want to continue?'
+    );
+    
+    if (!firstConfirm) return;
+    
+    const secondConfirm = confirm(
+      '🚨 FINAL CONFIRMATION\n\n' +
+      'Type "DELETE" mentally and click OK to confirm.\n\n' +
+      'This action CANNOT be undone!'
+    );
+    
+    if (!secondConfirm) return;
 
     try {
       addLog('🗑️ Clearing entire knowledge base...', 'info');
@@ -530,6 +547,65 @@ const App: React.FC = () => {
     } catch (error) {
       addLog(`❌ Error clearing knowledge base: ${(error as Error).message}`, 'error');
       showStatus('error', 'Failed to clear knowledge base: ' + (error as Error).message);
+    }
+  };
+
+  // Backup knowledge base to JSON file
+  const handleBackupKnowledgeBase = async () => {
+    try {
+      addLog('📦 Creating backup...', 'info');
+      showStatus('info', 'Creating backup...');
+      
+      const backup = await exportKnowledgeBase();
+      
+      // Download as JSON file
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ai-autofill-backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      addLog(`✅ Backup created: ${backup.documents.length} documents, ${backup.chunks.length} chunks`, 'success');
+      showStatus('success', `Backup saved! ${backup.documents.length} documents, ${backup.chunks.length} chunks`);
+    } catch (error) {
+      addLog(`❌ Backup failed: ${(error as Error).message}`, 'error');
+      showStatus('error', 'Backup failed: ' + (error as Error).message);
+    }
+  };
+
+  // Restore knowledge base from JSON file
+  const handleRestoreKnowledgeBase = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    try {
+      addLog(`📥 Restoring from ${file.name}...`, 'info');
+      showStatus('info', `Restoring from ${file.name}...`);
+      
+      const text = await file.text();
+      const backup: KnowledgeBaseBackup = JSON.parse(text);
+      
+      // Validate
+      if (!backup.version || !backup.documents || !backup.chunks) {
+        throw new Error('Invalid backup file format');
+      }
+      
+      const result = await importKnowledgeBase(backup);
+      await loadKnowledgeBase();
+      
+      addLog(`✅ Restored: ${result.documents} documents, ${result.chunks} chunks, ${result.interviews} interviews`, 'success');
+      showStatus('success', `Restored ${result.documents} documents and ${result.chunks} chunks!`);
+      
+      // Reset file input
+      event.target.value = '';
+    } catch (error) {
+      addLog(`❌ Restore failed: ${(error as Error).message}`, 'error');
+      showStatus('error', 'Restore failed: ' + (error as Error).message);
+      event.target.value = '';
     }
   };
 
@@ -721,10 +797,27 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        <div className="actions">
+        <div className="actions" style={{ flexWrap: 'wrap' }}>
           <button className="btn btn-primary" onClick={loadKnowledgeBase} disabled={loading}>
             {loading ? 'Loading...' : '🔄 Refresh'}
           </button>
+          <button 
+            className="btn btn-primary" 
+            onClick={handleBackupKnowledgeBase}
+            disabled={loading || chunkCount === 0}
+            style={{ background: 'linear-gradient(135deg, #00FF88, #00D4FF)' }}
+          >
+            💾 Backup
+          </button>
+          <label className="btn btn-secondary" style={{ cursor: 'pointer', margin: 0 }}>
+            📥 Restore
+            <input
+              type="file"
+              accept=".json"
+              onChange={handleRestoreKnowledgeBase}
+              style={{ display: 'none' }}
+            />
+          </label>
           <button
             className="btn btn-danger"
             onClick={handleClearKnowledgeBase}
@@ -732,6 +825,19 @@ const App: React.FC = () => {
           >
             🗑️ Clear All
           </button>
+        </div>
+        
+        <div style={{ 
+          marginTop: '16px', 
+          padding: '12px', 
+          background: 'rgba(0, 212, 255, 0.1)', 
+          border: '1px solid rgba(0, 212, 255, 0.2)',
+          borderRadius: '8px',
+          fontSize: '12px',
+          color: 'rgba(255, 255, 255, 0.7)'
+        }}>
+          <strong style={{ color: '#00D4FF' }}>💡 Tip:</strong> Before uninstalling the extension, click <strong>"Backup"</strong> to save your knowledge base. 
+          After reinstalling, click <strong>"Restore"</strong> to load it back!
         </div>
       </div>
 

@@ -1356,6 +1356,14 @@ function openSidePanel() {
       to { opacity: 1; transform: translateY(0) scale(1); }
     }
     
+    /* Quick action buttons - default state */
+    #ai-assistant-sidepanel .ai-quick-btn {
+      background: rgba(24, 24, 32, 0.9) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      color: rgba(255, 255, 255, 0.6) !important;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    
     #ai-assistant-sidepanel .ai-quick-btn:hover {
       background: rgba(0, 212, 255, 0.1) !important;
       border-color: #00D4FF !important;
