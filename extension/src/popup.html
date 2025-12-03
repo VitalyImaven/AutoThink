@@ -4,7 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Smart Autofill</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary: #00D4FF;
+            --primary-glow: rgba(0, 212, 255, 0.4);
+            --secondary: #FF006E;
+            --accent: #8B5CF6;
+            --accent-glow: rgba(139, 92, 246, 0.4);
+            --dark-bg: #0A0A0F;
+            --dark-surface: #12121A;
+            --dark-card: rgba(24, 24, 32, 0.9);
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #FFFFFF;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --text-muted: rgba(255, 255, 255, 0.4);
+            --success: #00FF88;
+            --warning: #FFB800;
+        }
+        
         * {
             margin: 0;
             padding: 0;
@@ -12,34 +31,143 @@
         }
         
         body {
-            width: 320px;
-            padding: 16px;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            width: 340px;
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            padding: 0;
+            position: relative;
+            overflow: hidden;
         }
         
+        /* Animated gradient background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(0, 212, 255, 0.2) 0%, transparent 40%),
+                radial-gradient(circle at 80% 70%, rgba(139, 92, 246, 0.2) 0%, transparent 40%),
+                radial-gradient(circle at 50% 50%, rgba(255, 0, 110, 0.1) 0%, transparent 50%);
+            animation: bgFloat 20s ease-in-out infinite;
+            z-index: -1;
+        }
+        
+        @keyframes bgFloat {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(-5%, -5%) scale(1.1); }
+        }
+        
+        .container {
+            padding: 20px;
+        }
+        
+        /* Header */
         .header {
             text-align: center;
             margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 20px var(--primary-glow);
+            animation: logoPulse 3s ease-in-out infinite;
+        }
+        
+        @keyframes logoPulse {
+            0%, 100% { box-shadow: 0 4px 20px var(--primary-glow); }
+            50% { box-shadow: 0 4px 30px var(--accent-glow); }
+        }
+        
+        .logo-icon svg {
+            width: 22px;
+            height: 22px;
+            color: white;
         }
         
         h1 {
             font-size: 20px;
-            margin-bottom: 4px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         
         .subtitle {
             font-size: 12px;
-            opacity: 0.9;
+            color: var(--text-muted);
+            margin-top: 4px;
         }
         
-        .control-group {
-            background: white;
+        /* Status Badge */
+        #status {
+            text-align: center;
+            padding: 10px 16px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
             border-radius: 12px;
+            font-size: 12px;
+            margin-bottom: 16px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        #status.enabled {
+            background: rgba(0, 255, 136, 0.1);
+            border-color: rgba(0, 255, 136, 0.3);
+            color: var(--success);
+        }
+        
+        #status.disabled {
+            background: rgba(255, 0, 110, 0.1);
+            border-color: rgba(255, 0, 110, 0.3);
+            color: var(--secondary);
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: statusPulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes statusPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Control Group */
+        .control-group {
+            background: var(--dark-card);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
             padding: 16px;
-            margin-bottom: 12px;
-            color: #333;
+            margin-bottom: 16px;
         }
         
         .control-item {
@@ -47,30 +175,35 @@
             justify-content: space-between;
             align-items: center;
             padding: 12px 0;
-            border-bottom: 1px solid #f0f0f0;
+            border-bottom: 1px solid var(--glass-border);
         }
         
         .control-item:last-child {
             border-bottom: none;
+            padding-bottom: 0;
+        }
+        
+        .control-item:first-child {
+            padding-top: 0;
         }
         
         .control-label {
             font-size: 14px;
             font-weight: 500;
-            color: #333;
+            color: var(--text-primary);
         }
         
         .control-description {
-            font-size: 12px;
-            color: #666;
-            margin-top: 4px;
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 2px;
         }
         
+        /* Toggle Switch */
         .toggle-switch {
             position: relative;
-            display: inline-block;
             width: 48px;
-            height: 24px;
+            height: 26px;
         }
         
         .toggle-switch input {
@@ -86,124 +219,226 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: #ccc;
-            transition: .3s;
-            border-radius: 24px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 26px;
         }
         
         .slider:before {
             position: absolute;
             content: "";
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 3px;
-            background-color: white;
-            transition: .3s;
+            height: 20px;
+            width: 20px;
+            left: 2px;
+            bottom: 2px;
+            background: var(--text-muted);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             border-radius: 50%;
         }
         
         input:checked + .slider {
-            background-color: #667eea;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-color: transparent;
+            box-shadow: 0 0 20px var(--primary-glow);
         }
         
         input:checked + .slider:before {
-            transform: translateX(24px);
+            transform: translateX(22px);
+            background: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
         }
         
-        .status {
-            text-align: center;
-            padding: 12px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
-            font-size: 13px;
-            margin-bottom: 12px;
-        }
-        
-        .status.enabled {
-            background: rgba(76, 175, 80, 0.3);
-        }
-        
-        .status.disabled {
-            background: rgba(244, 67, 54, 0.3);
-        }
-        
+        /* Buttons */
         .btn {
             width: 100%;
-            padding: 12px;
+            padding: 14px 16px;
             border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            font-family: inherit;
             cursor: pointer;
-            background: white;
-            color: #667eea;
-            transition: all 0.2s;
-            margin-bottom: 8px;
-        }
-        
-        .btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
-        
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
             color: white;
         }
         
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px var(--primary-glow);
+        }
+        
+        .btn:hover::before {
+            left: 100%;
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn-secondary {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            color: var(--text-secondary);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(0, 212, 255, 0.1);
+            border-color: var(--primary);
+            color: var(--primary);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .btn-icon {
+            width: 16px;
+            height: 16px;
+            flex-shrink: 0;
+        }
+        
+        /* Info Footer */
         .info {
             font-size: 11px;
             text-align: center;
-            opacity: 0.8;
-            margin-top: 12px;
+            color: var(--text-muted);
+            margin-top: 16px;
+            padding: 12px;
+            background: var(--glass-bg);
+            border-radius: 10px;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        
+        .info svg {
+            color: var(--primary);
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>🤖 AI Smart Autofill</h1>
-        <div class="subtitle">Control your autofill assistant</div>
-    </div>
-    
-    <div id="status" class="status">Loading...</div>
-    
-    <div class="control-group">
-        <div class="control-item">
-            <div>
-                <div class="control-label">Extension Enabled</div>
-                <div class="control-description">Master on/off switch</div>
+    <div class="container">
+        <div class="header">
+            <div class="logo-container">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                    </svg>
+                </div>
+                <div>
+                    <h1>AI Smart Autofill</h1>
+                    <div class="subtitle">Your intelligent assistant</div>
+                </div>
             </div>
-            <label class="toggle-switch">
-                <input type="checkbox" id="enabledToggle" checked>
-                <span class="slider"></span>
-            </label>
         </div>
         
-        <div class="control-item">
-            <div>
-                <div class="control-label">Auto-Suggest</div>
-                <div class="control-description">Suggest on field focus</div>
-            </div>
-            <label class="toggle-switch">
-                <input type="checkbox" id="autoSuggestToggle">
-                <span class="slider"></span>
-            </label>
+        <div id="status" class="enabled">
+            <span class="status-dot"></span>
+            Loading...
         </div>
-    </div>
-    
-    <button class="btn" id="openChat">💬 Open AI Chat Assistant</button>
-    <button class="btn" id="summarizePage">📄 Summarize This Page</button>
-    <button class="btn" id="highlightElements">✨ Highlight Important Elements</button>
-    <button class="btn" id="openOptions">⚙️ Manage Knowledge Base</button>
-    <button class="btn btn-secondary" id="autoFillPage">🤖 Auto-Fill Entire Page</button>
-    <button class="btn btn-secondary" id="testSuggestion">✨ Test Field Suggestion</button>
-    
-    <div class="info">
-        💡 New: Chat with AI, get page summaries, and find important elements!
+        
+        <div class="control-group">
+            <div class="control-item">
+                <div>
+                    <div class="control-label">Extension Enabled</div>
+                    <div class="control-description">Master on/off switch</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="enabledToggle" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            
+            <div class="control-item">
+                <div>
+                    <div class="control-label">Auto-Suggest</div>
+                    <div class="control-description">Suggest on field focus</div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="autoSuggestToggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+        </div>
+        
+        <button class="btn" id="openChat">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            Open AI Chat Assistant
+        </button>
+        
+        <button class="btn btn-secondary" id="summarizePage">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+            Summarize This Page
+        </button>
+        
+        <button class="btn btn-secondary" id="highlightElements">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+            Highlight Important Elements
+        </button>
+        
+        <button class="btn btn-secondary" id="openOptions">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+            </svg>
+            Manage Knowledge Base
+        </button>
+        
+        <button class="btn btn-secondary" id="autoFillPage">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2a10 10 0 1 0 10 10H12V2z"></path>
+                <path d="M12 2a10 10 0 0 1 10 10"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            Auto-Fill Entire Page
+        </button>
+        
+        <button class="btn btn-secondary" id="testSuggestion">
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            Test Field Suggestion
+        </button>
+        
+        <div class="info">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            Chat with AI, get page summaries, and find elements!
+        </div>
     </div>
     
     <script type="module" src="./popup.ts"></script>
 </body>
 </html>
-

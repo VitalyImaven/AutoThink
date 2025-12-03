@@ -554,7 +554,18 @@ const App: React.FC = () => {
 
   return (
     <div>
-      <h1>🤖 AI Smart Autofill - Knowledge Base</h1>
+      <h1>
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="url(#gradient1)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <defs>
+            <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#00D4FF" />
+              <stop offset="100%" stopColor="#8B5CF6" />
+            </linearGradient>
+          </defs>
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+        </svg>
+        AI Smart Autofill - Knowledge Base
+      </h1>
       <p className="subtitle">
         Build your AI-powered knowledge base through documents or interactive interviews
       </p>
@@ -562,41 +573,54 @@ const App: React.FC = () => {
       {/* Tab Navigation */}
       <div style={{ 
         display: 'flex', 
-        gap: '8px', 
+        gap: '0', 
         marginBottom: '24px',
-        borderBottom: '2px solid #e0e0e0'
+        borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+        background: 'rgba(255, 255, 255, 0.03)',
+        borderRadius: '12px 12px 0 0',
+        padding: '0 8px'
       }}>
         <button
           onClick={() => setActiveTab('upload')}
+          className={activeTab === 'upload' ? 'tab-button active' : 'tab-button'}
           style={{
-            padding: '12px 24px',
+            padding: '14px 24px',
             border: 'none',
-            background: activeTab === 'upload' ? '#667eea' : 'transparent',
-            color: activeTab === 'upload' ? 'white' : '#666',
-            borderBottom: activeTab === 'upload' ? '3px solid #667eea' : '3px solid transparent',
+            background: 'transparent',
+            color: activeTab === 'upload' ? '#00D4FF' : 'rgba(255, 255, 255, 0.4)',
             cursor: 'pointer',
             fontSize: '14px',
             fontWeight: '500',
-            transition: 'all 0.2s'
+            transition: 'all 0.3s',
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
           }}
         >
-          📄 Upload Documents
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><polyline points="9 15 12 12 15 15"></polyline></svg>
+          Upload Documents
         </button>
         <button
           onClick={() => setActiveTab('interview')}
+          className={activeTab === 'interview' ? 'tab-button active' : 'tab-button'}
           style={{
-            padding: '12px 24px',
+            padding: '14px 24px',
             border: 'none',
-            background: activeTab === 'interview' ? '#667eea' : 'transparent',
-            color: activeTab === 'interview' ? 'white' : '#666',
-            borderBottom: activeTab === 'interview' ? '3px solid #667eea' : '3px solid transparent',
+            background: 'transparent',
+            color: activeTab === 'interview' ? '#00D4FF' : 'rgba(255, 255, 255, 0.4)',
             cursor: 'pointer',
             fontSize: '14px',
             fontWeight: '500',
-            transition: 'all 0.2s'
+            transition: 'all 0.3s',
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
           }}
         >
-          🎙️ Interactive Interview
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+          Interactive Interview
         </button>
       </div>
 
@@ -639,31 +663,39 @@ const App: React.FC = () => {
       {/* Processing Log */}
       {processingLogs.length > 0 && (
         <div className="section">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <h2>📋 Processing Log</h2>
-            <button className="btn btn-secondary" onClick={clearLogs} style={{ padding: '6px 12px', fontSize: '13px' }}>
-              Clear Log
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h2>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00D4FF" strokeWidth="2" style={{marginRight: '8px'}}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+              Processing Log
+            </h2>
+            <button className="btn btn-secondary" onClick={clearLogs} style={{ padding: '8px 14px', fontSize: '12px' }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{marginRight: '4px'}}><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              Clear
             </button>
           </div>
           <div style={{
-            background: '#1e1e1e',
-            color: '#d4d4d4',
-            padding: '16px',
-            borderRadius: '8px',
-            fontFamily: 'Monaco, Consolas, monospace',
+            background: 'rgba(10, 10, 15, 0.8)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            color: 'rgba(255, 255, 255, 0.7)',
+            padding: '18px',
+            borderRadius: '12px',
+            fontFamily: '"JetBrains Mono", Monaco, Consolas, monospace',
             fontSize: '12px',
             maxHeight: '400px',
             overflowY: 'auto',
-            lineHeight: '1.6'
+            lineHeight: '1.7'
           }}>
             {processingLogs.map((log, index) => (
               <div key={index} style={{
-                color: log.type === 'success' ? '#4ec9b0' : log.type === 'error' ? '#f48771' : '#d4d4d4',
-                marginBottom: '4px'
+                color: log.type === 'success' ? '#00FF88' : log.type === 'error' ? '#FF4757' : 'rgba(255, 255, 255, 0.6)',
+                marginBottom: '6px',
+                display: 'flex',
+                gap: '8px'
               }}>
-                <span style={{ color: '#808080' }}>
+                <span style={{ color: 'rgba(255, 255, 255, 0.3)', flexShrink: 0 }}>
                   [{log.timestamp.toLocaleTimeString()}]
-                </span> {log.message}
+                </span>
+                <span>{log.message}</span>
               </div>
             ))}
             <div ref={logsEndRef} />
@@ -717,41 +749,47 @@ const App: React.FC = () => {
         ) : (
           documents.map((doc) => (
             <div key={doc.document_id} style={{
-              background: '#f8f9fa',
-              padding: '16px',
-              borderRadius: '8px',
+              background: 'rgba(255, 255, 255, 0.03)',
+              padding: '20px',
+              borderRadius: '16px',
               marginBottom: '16px',
-              border: '1px solid #dee2e6'
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              transition: 'all 0.3s'
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                <div style={{ fontWeight: '600', fontSize: '16px', color: '#333', flex: 1 }}>
-                📄 {doc.source_file}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                <div style={{ fontWeight: '600', fontSize: '15px', color: '#fff', flex: 1, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#00D4FF" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                  {doc.source_file}
                 </div>
                 <button
                   className="btn btn-danger"
                   onClick={() => handleDeleteDocument(doc.document_id, doc.source_file)}
-                  style={{ padding: '6px 12px', fontSize: '12px' }}
+                  style={{ padding: '8px 14px', fontSize: '12px' }}
                   title="Delete this document"
                 >
-                  🗑️ Delete
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{marginRight: '4px'}}><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                  Delete
                 </button>
               </div>
-              <div style={{ fontSize: '13px', color: '#666', marginBottom: '12px' }}>
-                Uploaded: {new Date(doc.uploaded_at).toLocaleString()} • {doc.chunk_count} chunks • {doc.all_tags.length} semantic tags
+              <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.4)', marginBottom: '14px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                <span>Uploaded: {new Date(doc.uploaded_at).toLocaleString()}</span>
+                <span style={{color: '#00D4FF'}}>{doc.chunk_count} chunks</span>
+                <span style={{color: '#8B5CF6'}}>{doc.all_tags.length} semantic tags</span>
               </div>
               
               {doc.discovered_topics && doc.discovered_topics.length > 0 && (
-                <div style={{ marginBottom: '12px' }}>
-                  <div style={{ fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: '#555' }}>
-                    🎯 Discovered Topics:
+                <div style={{ marginBottom: '14px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: '600', marginBottom: '8px', color: 'rgba(255, 255, 255, 0.5)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    Discovered Topics
                   </div>
                   {doc.discovered_topics.map((topic: any, i: number) => (
-                    <div key={i} style={{ marginLeft: '12px', marginBottom: '6px' }}>
-                      <div style={{ fontSize: '13px', fontWeight: '500', color: '#667eea' }}>
-                        • {topic.topic}
+                    <div key={i} style={{ marginLeft: '8px', marginBottom: '8px' }}>
+                      <div style={{ fontSize: '13px', fontWeight: '500', color: '#00D4FF', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"></circle></svg>
+                        {topic.topic}
                       </div>
                       {topic.subtopics && topic.subtopics.length > 0 && (
-                        <div style={{ fontSize: '12px', color: '#999', marginLeft: '12px' }}>
+                        <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.4)', marginLeft: '16px', marginTop: '4px' }}>
                           {topic.subtopics.join(', ')}
                         </div>
                       )}
@@ -761,19 +799,21 @@ const App: React.FC = () => {
               )}
               
               <details style={{ fontSize: '13px' }}>
-                <summary style={{ cursor: 'pointer', color: '#667eea', fontWeight: '500' }}>
+                <summary style={{ cursor: 'pointer', color: '#8B5CF6', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
                   View All Tags ({doc.all_tags.length})
                 </summary>
                 <div style={{ 
-                  marginTop: '8px', 
-                  padding: '8px', 
-                  background: 'white', 
-                  borderRadius: '4px',
+                  marginTop: '12px', 
+                  padding: '12px', 
+                  background: 'rgba(10, 10, 15, 0.5)', 
+                  borderRadius: '10px',
+                  border: '1px solid rgba(255, 255, 255, 0.05)',
                   maxHeight: '200px',
                   overflowY: 'auto'
                 }}>
                   {doc.all_tags.map((tag: string, i: number) => (
-                    <span key={i} className="tag" style={{ margin: '2px' }}>
+                    <span key={i} className="tag" style={{ margin: '3px' }}>
                       {tag}
                     </span>
                   ))}
@@ -838,25 +878,30 @@ const App: React.FC = () => {
             Create separate profiles for different people - gather information about yourself, family members, or anyone else.
           </p>
           
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
             {/* Default profiles */}
             {['me', 'spouse'].map(profile => (
               <button
                 key={profile}
                 onClick={() => setInterviewProfile(profile)}
                 style={{
-                  padding: '10px 16px',
-                  border: interviewProfile === profile ? '2px solid #667eea' : '1px solid #e0e0e0',
-                  background: interviewProfile === profile ? '#f9f9ff' : 'white',
-                  color: interviewProfile === profile ? '#667eea' : '#666',
-                  borderRadius: '8px',
+                  padding: '12px 18px',
+                  border: interviewProfile === profile ? '1px solid #00D4FF' : '1px solid rgba(255, 255, 255, 0.1)',
+                  background: interviewProfile === profile ? 'rgba(0, 212, 255, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                  color: interviewProfile === profile ? '#00D4FF' : 'rgba(255, 255, 255, 0.6)',
+                  borderRadius: '12px',
                   cursor: 'pointer',
                   fontSize: '13px',
                   fontWeight: '500',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.3s',
+                  boxShadow: interviewProfile === profile ? '0 0 20px rgba(0, 212, 255, 0.3)' : 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
                 }}
               >
-                {profile === 'me' ? '👤 Me' : '💑 Spouse'}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                {profile === 'me' ? 'Me' : 'Spouse'}
               </button>
             ))}
             
@@ -866,21 +911,23 @@ const App: React.FC = () => {
                 key={profile}
                 onClick={() => setInterviewProfile(profile)}
                 style={{
-                  padding: '10px 16px',
-                  border: interviewProfile === profile ? '2px solid #667eea' : '1px solid #e0e0e0',
-                  background: interviewProfile === profile ? '#f9f9ff' : 'white',
-                  color: interviewProfile === profile ? '#667eea' : '#666',
-                  borderRadius: '8px',
+                  padding: '12px 18px',
+                  border: interviewProfile === profile ? '1px solid #00D4FF' : '1px solid rgba(255, 255, 255, 0.1)',
+                  background: interviewProfile === profile ? 'rgba(0, 212, 255, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                  color: interviewProfile === profile ? '#00D4FF' : 'rgba(255, 255, 255, 0.6)',
+                  borderRadius: '12px',
                   cursor: 'pointer',
                   fontSize: '13px',
                   fontWeight: '500',
-                  transition: 'all 0.2s',
+                  transition: 'all 0.3s',
+                  boxShadow: interviewProfile === profile ? '0 0 20px rgba(0, 212, 255, 0.3)' : 'none',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px'
+                  gap: '8px'
                 }}
               >
-                👤 {profile.split('-').map(word => 
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                {profile.split('-').map(word => 
                   word.charAt(0).toUpperCase() + word.slice(1)
                 ).join(' ')}
                 <span
@@ -896,7 +943,8 @@ const App: React.FC = () => {
                   style={{
                     marginLeft: '4px',
                     opacity: 0.6,
-                    fontSize: '14px'
+                    fontSize: '14px',
+                    color: '#FF4757'
                   }}
                 >
                   ×
@@ -909,43 +957,49 @@ const App: React.FC = () => {
               <button
                 onClick={() => setShowAddProfile(true)}
                 style={{
-                  padding: '10px 16px',
-                  border: '2px dashed #667eea',
-                  background: 'white',
-                  color: '#667eea',
-                  borderRadius: '8px',
+                  padding: '12px 18px',
+                  border: '2px dashed rgba(0, 212, 255, 0.5)',
+                  background: 'transparent',
+                  color: '#00D4FF',
+                  borderRadius: '12px',
                   cursor: 'pointer',
                   fontSize: '13px',
                   fontWeight: '500',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.3s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
                 }}
               >
-                + Add Person
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                Add Person
               </button>
             ) : (
-              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <input
                   type="text"
                   value={newProfileName}
                   onChange={(e) => setNewProfileName(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleAddProfile()}
-                  placeholder="Name (e.g., Jan, Mom, Friend)"
+                  placeholder="Name (e.g., Jan, Mom)"
                   style={{
-                    padding: '8px 12px',
-                    border: '1px solid #e0e0e0',
-                    borderRadius: '6px',
+                    padding: '10px 14px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '10px',
                     fontSize: '13px',
                     outline: 'none',
-                    width: '150px'
+                    width: '160px',
+                    background: 'rgba(24, 24, 32, 0.9)',
+                    color: '#fff'
                   }}
                   autoFocus
                 />
                 <button
                   onClick={handleAddProfile}
                   className="btn btn-primary"
-                  style={{ padding: '8px 12px', fontSize: '12px' }}
+                  style={{ padding: '10px 14px', fontSize: '12px' }}
                 >
-                  ✓
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
                 </button>
                 <button
                   onClick={() => {
@@ -953,27 +1007,32 @@ const App: React.FC = () => {
                     setNewProfileName('');
                   }}
                   className="btn btn-secondary"
-                  style={{ padding: '8px 12px', fontSize: '12px' }}
+                  style={{ padding: '10px 14px', fontSize: '12px' }}
                 >
-                  ✕
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
               </div>
             )}
           </div>
           
           <div style={{
-            background: '#f8f9fa',
-            padding: '12px',
-            borderRadius: '8px',
+            background: 'rgba(0, 212, 255, 0.08)',
+            border: '1px solid rgba(0, 212, 255, 0.2)',
+            padding: '14px 16px',
+            borderRadius: '12px',
             fontSize: '13px',
-            color: '#666'
+            color: 'rgba(255, 255, 255, 0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px'
           }}>
-            💡 <strong>Current Profile:</strong> {
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00D4FF" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            <span><strong style={{color: '#00D4FF'}}>Current Profile:</strong> {
               interviewProfile === 'me' ? 'Information about yourself' :
               interviewProfile === 'spouse' ? 'Information about your spouse/partner' :
               interviewProfile.startsWith('kid') ? `Information about ${interviewProfile.replace('kid-', 'child ')}` :
               'Information about another person'
-            }
+            }</span>
           </div>
         </div>
 
@@ -986,29 +1045,42 @@ const App: React.FC = () => {
           
           {/* Chat Container */}
           <div style={{
-            background: 'white',
-            border: '1px solid #e0e0e0',
-            borderRadius: '12px',
+            background: 'rgba(24, 24, 32, 0.9)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '16px',
             height: '400px',
             display: 'flex',
             flexDirection: 'column',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            boxShadow: '0 4px 30px rgba(0, 0, 0, 0.3)'
           }}>
             {/* Messages */}
             <div style={{
               flex: 1,
               overflowY: 'auto',
               padding: '16px',
-              background: '#f5f5f5'
+              background: 'rgba(10, 10, 15, 0.5)'
             }}>
               {interviewMessages.length === 0 ? (
                 <div style={{
                   textAlign: 'center',
-                  padding: '40px 20px',
-                  color: '#999'
+                  padding: '50px 20px',
+                  color: 'rgba(255, 255, 255, 0.4)'
                 }}>
-                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎙️</div>
-                  <p style={{ marginBottom: '16px' }}>No interview started yet</p>
+                  <div style={{ 
+                    width: '80px', 
+                    height: '80px', 
+                    margin: '0 auto 20px',
+                    background: 'linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(139, 92, 246, 0.2))',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '1px solid rgba(0, 212, 255, 0.3)'
+                  }}>
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#00D4FF" strokeWidth="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                  </div>
+                  <p style={{ marginBottom: '20px', color: 'rgba(255, 255, 255, 0.6)' }}>No interview started yet</p>
                   <button
                     className="btn btn-primary"
                     onClick={() => {
@@ -1017,9 +1089,10 @@ const App: React.FC = () => {
                         content: `Hi! Let's gather information about ${interviewProfile === 'me' ? 'you' : interviewProfile}. I'll ask you questions to build a comprehensive profile. Ready to start?`
                       }]);
                     }}
-                    style={{ marginTop: '8px' }}
+                    style={{ marginTop: '8px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
                   >
-                    🚀 Start Interview
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                    Start Interview
                   </button>
                 </div>
               ) : (
@@ -1032,10 +1105,12 @@ const App: React.FC = () => {
                         style={{
                           maxWidth: '85%',
                           alignSelf: 'flex-start',
-                          background: 'white',
-                          padding: '12px 16px',
-                          borderRadius: '12px',
-                          boxShadow: '0 2px 4px rgba(0,0,0,0.08)'
+                          background: 'rgba(24, 24, 32, 0.9)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          padding: '14px 18px',
+                          borderRadius: '16px',
+                          display: 'flex',
+                          gap: '6px'
                         }}
                       >
                         <span style={{
@@ -1043,8 +1118,7 @@ const App: React.FC = () => {
                           width: '8px',
                           height: '8px',
                           borderRadius: '50%',
-                          background: '#667eea',
-                          margin: '0 3px',
+                          background: 'linear-gradient(135deg, #00D4FF, #8B5CF6)',
                           animation: 'typing 1.4s infinite'
                         }}></span>
                         <span style={{
@@ -1052,8 +1126,7 @@ const App: React.FC = () => {
                           width: '8px',
                           height: '8px',
                           borderRadius: '50%',
-                          background: '#667eea',
-                          margin: '0 3px',
+                          background: 'linear-gradient(135deg, #00D4FF, #8B5CF6)',
                           animation: 'typing 1.4s infinite 0.2s'
                         }}></span>
                         <span style={{
@@ -1061,14 +1134,13 @@ const App: React.FC = () => {
                           width: '8px',
                           height: '8px',
                           borderRadius: '50%',
-                          background: '#667eea',
-                          margin: '0 3px',
+                          background: 'linear-gradient(135deg, #00D4FF, #8B5CF6)',
                           animation: 'typing 1.4s infinite 0.4s'
                         }}></span>
                         <style>{`
                           @keyframes typing {
-                            0%, 60%, 100% { transform: translateY(0); opacity: 0.7; }
-                            30% { transform: translateY(-8px); opacity: 1; }
+                            0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+                            30% { transform: translateY(-10px); opacity: 1; }
                           }
                         `}</style>
                       </div>
@@ -1080,14 +1152,17 @@ const App: React.FC = () => {
                           maxWidth: '85%',
                           alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
                           background: msg.role === 'user' ? 
-                            'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 
-                            'white',
-                          color: msg.role === 'user' ? 'white' : '#333',
-                          padding: '10px 14px',
-                          borderRadius: '12px',
+                            'linear-gradient(135deg, #00D4FF 0%, #8B5CF6 100%)' : 
+                            'rgba(24, 24, 32, 0.9)',
+                          border: msg.role === 'assistant' ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
+                          color: msg.role === 'user' ? 'white' : 'rgba(255, 255, 255, 0.9)',
+                          padding: '12px 16px',
+                          borderRadius: '16px',
+                          borderBottomRightRadius: msg.role === 'user' ? '4px' : '16px',
+                          borderBottomLeftRadius: msg.role === 'assistant' ? '4px' : '16px',
                           fontSize: '13px',
-                          lineHeight: '1.5',
-                          boxShadow: msg.role === 'assistant' ? '0 2px 4px rgba(0,0,0,0.08)' : 'none'
+                          lineHeight: '1.6',
+                          boxShadow: msg.role === 'user' ? '0 4px 15px rgba(0, 212, 255, 0.3)' : 'none'
                         }}
                       >
                         {msg.content}
@@ -1101,11 +1176,11 @@ const App: React.FC = () => {
             {/* Input Area */}
             {interviewMessages.length > 0 && (
               <div style={{
-                padding: '12px',
-                background: 'white',
-                borderTop: '1px solid #e0e0e0',
+                padding: '12px 16px',
+                background: 'rgba(255, 255, 255, 0.03)',
+                borderTop: '1px solid rgba(255, 255, 255, 0.1)',
                 display: 'flex',
-                gap: '8px',
+                gap: '10px',
                 alignItems: 'center'
               }}>
                 <input
@@ -1117,16 +1192,19 @@ const App: React.FC = () => {
                       handleInterviewMessage();
                     }
                   }}
-                  placeholder={isRecording ? "Recording... Click button to stop" : "Type your answer or click 🎤 to speak..."}
+                  placeholder={isRecording ? "Recording... Click button to stop" : "Type your answer or click mic to speak..."}
                   disabled={interviewProcessing || isRecording}
                   style={{
                     flex: 1,
-                    padding: '10px 12px',
-                    border: '1px solid #e0e0e0',
-                    borderRadius: '20px',
+                    padding: '12px 16px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '24px',
                     fontSize: '13px',
                     outline: 'none',
-                    fontFamily: 'inherit'
+                    fontFamily: 'inherit',
+                    background: 'rgba(24, 24, 32, 0.9)',
+                    color: '#fff',
+                    transition: 'all 0.3s'
                   }}
                 />
                 
@@ -1146,19 +1224,22 @@ const App: React.FC = () => {
                   }}
                   disabled={interviewProcessing}
                   style={{
-                    padding: '10px 20px',
-                    background: isRecording ? '#dc3545' : 
-                               interviewInput.trim() ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' :
-                               '#667eea',
+                    padding: '12px 20px',
+                    background: isRecording ? 'linear-gradient(135deg, #FF4757, #FF006E)' : 
+                               'linear-gradient(135deg, #00D4FF 0%, #8B5CF6 100%)',
                     color: 'white',
                     border: 'none',
-                    borderRadius: '20px',
+                    borderRadius: '24px',
                     cursor: 'pointer',
-                    fontSize: isRecording || !interviewInput.trim() ? '16px' : '13px',
-                    fontWeight: '500',
-                    minWidth: isRecording || !interviewInput.trim() ? '48px' : '70px',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    minWidth: interviewInput.trim() ? '80px' : '48px',
                     transition: 'all 0.3s',
-                    animation: isRecording ? 'pulse 1.5s infinite' : 'none'
+                    boxShadow: isRecording ? '0 0 20px rgba(255, 71, 87, 0.5)' : '0 4px 15px rgba(0, 212, 255, 0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px'
                   }}
                   title={
                     isRecording ? 'Click to stop recording' :
@@ -1166,9 +1247,16 @@ const App: React.FC = () => {
                     'Click to start voice input'
                   }
                 >
-                  {isRecording ? '⏹️' : 
-                   interviewInput.trim() ? 'Send' :
-                   '🎤'}
+                  {isRecording ? (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>
+                  ) : interviewInput.trim() ? (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                      Send
+                    </>
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                  )}
                 </button>
               </div>
             )}
@@ -1218,35 +1306,55 @@ const App: React.FC = () => {
           {/* Interview Info */}
           {interviewMessages.length > 0 && (
             <div style={{
-              marginTop: '12px',
-              padding: '12px',
-              background: '#f8f9fa',
-              borderRadius: '8px',
+              marginTop: '16px',
+              padding: '16px',
+              background: 'rgba(255, 255, 255, 0.03)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: '12px',
               fontSize: '12px',
-              color: '#666',
-              lineHeight: '1.6'
+              color: 'rgba(255, 255, 255, 0.6)',
+              lineHeight: '1.7'
             }}>
-              <div style={{ marginBottom: '8px' }}>
-                💡 <strong>Auto-Indexing:</strong> Your answers are automatically indexed for auto-fill:
-                <ul style={{ margin: '8px 0 0 20px' }}>
-                  <li>After every <strong>5 Q&A pairs</strong></li>
-                  <li>After <strong>10 minutes of inactivity</strong></li>
-                  <li>Or click "Upload to KB" to index immediately</li>
-                </ul>
+              <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00D4FF" strokeWidth="2" style={{flexShrink: 0, marginTop: '2px'}}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                <div>
+                  <strong style={{color: '#00D4FF'}}>Auto-Indexing:</strong> Your answers are automatically indexed for auto-fill:
+                  <ul style={{ margin: '8px 0 0 16px', color: 'rgba(255, 255, 255, 0.5)' }}>
+                    <li>After every <strong style={{color: 'rgba(255, 255, 255, 0.7)'}}>5 Q&A pairs</strong></li>
+                    <li>After <strong style={{color: 'rgba(255, 255, 255, 0.7)'}}>10 minutes of inactivity</strong></li>
+                    <li>Or click "Upload to KB" to index immediately</li>
+                  </ul>
+                </div>
               </div>
               {pendingIndexCount > 0 && (
                 <div style={{ 
-                  marginTop: '8px', 
-                  padding: '8px', 
-                  background: '#fff3cd', 
-                  borderRadius: '4px',
-                  color: '#856404'
+                  marginTop: '12px', 
+                  padding: '10px 12px', 
+                  background: 'rgba(255, 184, 0, 0.1)', 
+                  border: '1px solid rgba(255, 184, 0, 0.3)',
+                  borderRadius: '8px',
+                  color: '#FFB800',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
                 }}>
-                  ⏳ <strong>{pendingIndexCount} Q&A pair(s)</strong> pending indexing (auto-indexes at 5)
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                  <strong>{pendingIndexCount} Q&A pair(s)</strong> pending indexing (auto-indexes at 5)
                 </div>
               )}
-              <div style={{ marginTop: '8px', fontSize: '11px', opacity: 0.8 }}>
-                📍 Stored locally in your browser • 📥 Export to backup • 🔒 Private & secure
+              <div style={{ marginTop: '12px', fontSize: '11px', color: 'rgba(255, 255, 255, 0.4)', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                <span style={{display: 'flex', alignItems: 'center', gap: '4px'}}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                  Stored locally
+                </span>
+                <span style={{display: 'flex', alignItems: 'center', gap: '4px'}}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                  Export to backup
+                </span>
+                <span style={{display: 'flex', alignItems: 'center', gap: '4px'}}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                  Private & secure
+                </span>
               </div>
             </div>
           )}
