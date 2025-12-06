@@ -149,16 +149,17 @@ document.getElementById('openOptionsBtn')?.addEventListener('click', () => {
   chrome.runtime.openOptionsPage();
 });
 
-// Chat functionality
+// Chat functionality (Note: Chat UI moved to floating panel, but keeping some logic for compatibility)
 let conversationHistory: Array<{role: string, content: string}> = [];
 let isProcessing = false;
 let currentTabId: number | null = null;
 let isRecording = false;
 let mediaRecorder: MediaRecorder | null = null;
 
-const chatMessages = document.getElementById('chatMessages')!;
-const chatInput = document.getElementById('chatInput') as HTMLInputElement;
-const sendBtn = document.getElementById('sendBtn') as HTMLButtonElement;
+// Chat elements may not exist anymore (moved to floating panel)
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput') as HTMLInputElement | null;
+const sendBtn = document.getElementById('sendBtn') as HTMLButtonElement | null;
 
 // Load conversation history
 async function loadConversationHistory() {
@@ -224,6 +225,8 @@ function formatMessage(content: string): string {
 }
 
 function addMessageToUI(content: string, type: 'user' | 'assistant' | 'system') {
+  if (!chatMessages) return; // Chat UI moved to floating panel
+  
   const messageDiv = document.createElement('div');
   messageDiv.className = `chat-message ${type}`;
   
@@ -252,6 +255,8 @@ function addMessage(content: string, type: 'user' | 'assistant' | 'system') {
 }
 
 function showTypingIndicator() {
+  if (!chatMessages) return; // Chat UI moved to floating panel
+  
   const typingDiv = document.createElement('div');
   typingDiv.className = 'typing-indicator';
   typingDiv.id = 'typing-indicator';
@@ -265,12 +270,12 @@ function removeTypingIndicator() {
 }
 
 async function sendMessage(message?: string) {
-  const text = message || chatInput.value.trim();
+  const text = message || chatInput?.value.trim() || '';
   if (!text || isProcessing) return;
   
   isProcessing = true;
-  sendBtn.disabled = true;
-  chatInput.value = '';
+  if (sendBtn) sendBtn.disabled = true;
+  if (chatInput) chatInput.value = '';
   
   addMessage(text, 'user');
   showTypingIndicator();
@@ -302,32 +307,36 @@ async function sendMessage(message?: string) {
     removeTypingIndicator();
     addMessage('Error: ' + (error instanceof Error ? error.message : 'Unknown error'), 'system');
     isProcessing = false;
-    sendBtn.disabled = false;
+    if (sendBtn) sendBtn.disabled = false;
   }
 }
 
-// Smart button - mic or send depending on state
-sendBtn.addEventListener('click', () => {
-  if (isRecording) {
-    stopRecording();
-  } else if (chatInput.value.trim()) {
-    sendMessage();
-  } else {
-    startRecording();
-  }
-});
+// Smart button - mic or send depending on state (only if chat UI exists)
+if (sendBtn) {
+  sendBtn.addEventListener('click', () => {
+    if (isRecording) {
+      stopRecording();
+    } else if (chatInput?.value.trim()) {
+      sendMessage();
+    } else {
+      startRecording();
+    }
+  });
+}
 
-// Update button on input
-chatInput.addEventListener('input', () => {
-  updateSendButton();
-});
+// Update button on input (only if chat UI exists)
+if (chatInput) {
+  chatInput.addEventListener('input', () => {
+    updateSendButton();
+  });
 
-chatInput.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter' && chatInput.value.trim() && !isRecording) {
-    e.preventDefault();
-    sendMessage();
-  }
-});
+  chatInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter' && chatInput.value.trim() && !isRecording) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+}
 
 // Message listener moved to bottom with memory handlers
 
@@ -353,7 +362,9 @@ function handleQuickAction(action: string | undefined) {
       sendMessage('What does this page do and how do I use it?');
       break;
     case 'clear':
-      chatMessages.innerHTML = '<div class="chat-message system">👋 Hello! I can help you navigate this page, answer questions, and find information. What would you like to know?</div>';
+      if (chatMessages) {
+        chatMessages.innerHTML = '<div class="chat-message system">👋 Hello! I can help you navigate this page, answer questions, and find information. What would you like to know?</div>';
+      }
       conversationHistory = [];
       saveConversationHistory();
       break;
@@ -491,6 +502,8 @@ document.getElementById('toggleSidePanelBtn')?.addEventListener('click', async (
 
 // Voice recording functions - Modern SVG icons like docked version
 function updateSendButton() {
+  if (!sendBtn) return; // Chat UI moved to floating panel
+  
   const micIcon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>`;
   const sendIcon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`;
   const stopIcon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>`;
@@ -500,7 +513,7 @@ function updateSendButton() {
     sendBtn.style.background = 'linear-gradient(135deg, #FF4757, #FF006E)';
     sendBtn.style.boxShadow = '0 0 20px rgba(255, 71, 87, 0.5)';
     sendBtn.style.animation = 'pulse 1.5s infinite';
-  } else if (chatInput.value.trim()) {
+  } else if (chatInput?.value.trim()) {
     sendBtn.innerHTML = sendIcon;
     sendBtn.style.background = 'linear-gradient(135deg, var(--primary), var(--accent))';
     sendBtn.style.boxShadow = '0 4px 15px rgba(0, 212, 255, 0.3)';
@@ -514,6 +527,8 @@ function updateSendButton() {
 }
 
 async function startRecording() {
+  if (!chatInput) return; // Chat UI moved to floating panel
+  
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     
@@ -552,12 +567,16 @@ async function startRecording() {
 function stopRecording() {
   if (mediaRecorder && isRecording) {
     mediaRecorder.stop();
-    chatInput.disabled = false;
-    chatInput.placeholder = 'Ask me anything about this page...';
+    if (chatInput) {
+      chatInput.disabled = false;
+      chatInput.placeholder = 'Ask me anything about this page...';
+    }
   }
 }
 
 async function transcribeAudio(audioBlob: Blob) {
+  if (!chatInput) return; // Chat UI moved to floating panel
+  
   try {
     const formData = new FormData();
     formData.append('audio', audioBlob, 'recording.webm');
@@ -958,7 +977,7 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
       addMessage((message as any).response, 'assistant');
     }
     isProcessing = false;
-    sendBtn.disabled = false;
+    if (sendBtn) sendBtn.disabled = false;
   } else if (message.type === 'WEB_MEMORY_RESULT') {
     handleMemoryResult(message);
   } else if (message.type === 'WEB_MEMORY_STATS_RESULT') {

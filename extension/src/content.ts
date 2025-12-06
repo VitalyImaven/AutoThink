@@ -2644,8 +2644,18 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
     summarizePage();
   } else if (message.type === 'SUMMARIZE_PAGE_RESULT') {
     console.log('   📄 Summary result received');
+    
+    // Forward to floating chat panel if open
+    if (floatingChatPanel && floatingChatPanel.style.display !== 'none') {
+      console.log('   🎯 Forwarding summary to floating chat panel');
+      if (message.error) {
+        handleFloatingChatResponse('Error summarizing: ' + message.error);
+      } else {
+        handleFloatingChatResponse('📄 **Summary:**\n\n' + message.summary);
+      }
+    }
     // If side panel is open, use its handler
-    if (sidePanelSummaryHandler) {
+    else if (sidePanelSummaryHandler) {
       console.log('   🎯 Forwarding to side panel summary handler');
       sidePanelSummaryHandler(message.summary, message.error);
     } else {
@@ -2654,11 +2664,18 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
     }
   } else if (message.type === 'CHAT_RESPONSE') {
     console.log('   💬 Chat response received!');
-    console.log('   Side panel open?', sidePanelOpen);
-    console.log('   Handler set?', !!sidePanelChatHandler);
     
-    // Forward to side panel if open
-    if (sidePanelOpen && sidePanelChatHandler) {
+    // Forward to floating chat panel if open
+    if (floatingChatPanel && floatingChatPanel.style.display !== 'none') {
+      console.log('   🎯 Forwarding to floating chat panel');
+      if (message.error) {
+        handleFloatingChatResponse('Error: ' + message.error);
+      } else {
+        handleFloatingChatResponse(message.response);
+      }
+    }
+    // Also forward to side panel if open
+    else if (sidePanelOpen && sidePanelChatHandler) {
       console.log('   🎯 Forwarding to side panel chat handler');
       if (message.error) {
         sidePanelChatHandler('Error: ' + message.error, 'system');
@@ -2666,9 +2683,7 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
         sidePanelChatHandler(message.response, 'assistant');
       }
     } else {
-      console.log('   ⚠️ Side panel not ready to receive message');
-      console.log('   sidePanelOpen:', sidePanelOpen);
-      console.log('   sidePanelChatHandler:', sidePanelChatHandler);
+      console.log('   ⚠️ No chat panel ready to receive message');
     }
   } else if (message.type === 'TOGGLE_SIDE_PANEL') {
     console.log('   📍 TOGGLE_SIDE_PANEL message received!');
@@ -2796,91 +2811,785 @@ function handleWebMemoryStats(stats: any) {
 document.addEventListener('focusin', handleFieldFocus, true);
 
 // ============================================
-// SMART BOOKMARKS - Quick Bookmark Button
+// AI ASSISTANT - Floating Action Button (FAB)
 // ============================================
 
-let bookmarkButton: HTMLElement | null = null;
+let fabContainer: HTMLElement | null = null;
+let fabMenu: HTMLElement | null = null;
+let fabExpanded = false;
+let floatingChatPanel: HTMLElement | null = null;
 let bookmarkModal: HTMLElement | null = null;
 let currentBookmark: any = null;
 
-// Create the floating bookmark button (only in top frame)
-function createBookmarkButton() {
-  if (isInIframe || bookmarkButton) return;
+// Create the floating action button with expandable menu
+function createFABMenu() {
+  if (isInIframe || fabContainer) return;
   
-  const btn = document.createElement('div');
-  btn.id = 'ai-bookmark-btn';
-  btn.innerHTML = `
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+  // Inject styles for animations
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = `
+    @keyframes fabPulse {
+      0%, 100% { box-shadow: 0 4px 20px rgba(0, 212, 255, 0.4); }
+      50% { box-shadow: 0 4px 30px rgba(139, 92, 246, 0.6); }
+    }
+    @keyframes fabMenuSlideIn {
+      from { opacity: 0; transform: translateY(10px) scale(0.9); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes fabMenuSlideOut {
+      from { opacity: 1; transform: translateY(0) scale(1); }
+      to { opacity: 0; transform: translateY(10px) scale(0.9); }
+    }
+    @keyframes chatPanelSlideIn {
+      from { opacity: 0; transform: translateX(20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    #ai-fab-container * { box-sizing: border-box; }
+    #ai-chat-messages::-webkit-scrollbar { display: none; width: 0; height: 0; }
+    #ai-floating-chat * { box-sizing: border-box; }
+  `;
+  document.head.appendChild(styleSheet);
+  
+  // Container for FAB and menu
+  const container = document.createElement('div');
+  container.id = 'ai-fab-container';
+  container.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 2147483640;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  `;
+  
+  // Main FAB button
+  const fab = document.createElement('div');
+  fab.id = 'ai-fab-main';
+  fab.innerHTML = `
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="pointer-events: none;">
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
     </svg>
   `;
-  btn.style.cssText = `
-    position: fixed;
-    bottom: 100px;
-    right: 20px;
-    width: 48px;
-    height: 48px;
+  fab.style.cssText = `
+    width: 56px;
+    height: 56px;
     background: linear-gradient(135deg, #00D4FF, #8B5CF6);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    z-index: 2147483640;
     box-shadow: 0 4px 20px rgba(0, 212, 255, 0.4);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     color: white;
+    animation: fabPulse 3s ease-in-out infinite;
+    user-select: none;
   `;
   
-  btn.addEventListener('mouseenter', () => {
-    btn.style.transform = 'scale(1.1)';
-    btn.style.boxShadow = '0 6px 30px rgba(0, 212, 255, 0.6)';
+  fab.addEventListener('mouseenter', () => {
+    fab.style.transform = 'scale(1.1)';
+    fab.style.boxShadow = '0 6px 30px rgba(0, 212, 255, 0.6)';
   });
   
-  btn.addEventListener('mouseleave', () => {
-    btn.style.transform = 'scale(1)';
-    btn.style.boxShadow = '0 4px 20px rgba(0, 212, 255, 0.4)';
+  fab.addEventListener('mouseleave', () => {
+    if (!fabExpanded) {
+      fab.style.transform = 'scale(1)';
+      fab.style.boxShadow = '0 4px 20px rgba(0, 212, 255, 0.4)';
+    }
   });
   
-  btn.addEventListener('click', () => {
-    showBookmarkModal();
+  fab.addEventListener('click', (e) => {
+    e.stopPropagation(); // Prevent document click handler from firing
+    toggleFABMenu();
   });
   
-  document.body.appendChild(btn);
-  bookmarkButton = btn;
+  // Menu container
+  const menu = document.createElement('div');
+  menu.id = 'ai-fab-menu';
+  menu.style.cssText = `
+    position: absolute;
+    bottom: 70px;
+    right: 0;
+    background: rgba(10, 10, 15, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    border-radius: 16px;
+    padding: 8px;
+    min-width: 180px;
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  `;
+  
+  // Menu items with modern SVG icons
+  const menuItems = [
+    { 
+      id: 'chat', 
+      icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`, 
+      label: 'Chat with AI', 
+      action: () => openFloatingChat() 
+    },
+    { 
+      id: 'autofill', 
+      icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10H12V2z"></path><path d="M12 2a10 10 0 0 1 10 10"></path><circle cx="12" cy="12" r="3"></circle></svg>`, 
+      label: 'Auto-fill Page', 
+      action: () => triggerAutoFill() 
+    },
+    { 
+      id: 'bookmark', 
+      icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>`, 
+      label: 'Bookmark Page', 
+      action: () => showBookmarkModal(), 
+      badge: null as string | null 
+    },
+  ];
+  
+  menuItems.forEach(item => {
+    const menuItem = document.createElement('div');
+    menuItem.id = `ai-fab-item-${item.id}`;
+    menuItem.innerHTML = `
+      <span style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; color: currentColor;">${item.icon}</span>
+      <span style="flex: 1; font-size: 13px; font-weight: 500;">${item.label}</span>
+      ${item.badge ? `<span style="background: #00FF88; color: #000; font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: 600;">${item.badge}</span>` : ''}
+    `;
+    menuItem.style.cssText = `
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      cursor: pointer;
+      color: rgba(255, 255, 255, 0.9);
+      transition: all 0.2s ease;
+    `;
+    
+    menuItem.addEventListener('mouseenter', () => {
+      menuItem.style.background = 'rgba(0, 212, 255, 0.15)';
+      menuItem.style.color = '#00D4FF';
+    });
+    
+    menuItem.addEventListener('mouseleave', () => {
+      menuItem.style.background = 'transparent';
+      menuItem.style.color = 'rgba(255, 255, 255, 0.9)';
+    });
+    
+    menuItem.addEventListener('click', (e) => {
+      e.stopPropagation();
+      item.action();
+      if (item.id !== 'chat') {
+        closeFABMenu();
+      }
+    });
+    
+    menu.appendChild(menuItem);
+  });
+  
+  container.appendChild(menu);
+  container.appendChild(fab);
+  document.body.appendChild(container);
+  
+  fabContainer = container;
+  fabMenu = menu;
+  
+  // Close menu when clicking outside
+  document.addEventListener('click', (e) => {
+    if (fabExpanded && fabContainer && !fabContainer.contains(e.target as Node)) {
+      closeFABMenu();
+    }
+  });
   
   // Check if current page is already bookmarked
   checkIfBookmarked();
 }
 
-// Check if current page is bookmarked and update button
+// Toggle FAB menu
+function toggleFABMenu() {
+  if (fabExpanded) {
+    closeFABMenu();
+  } else {
+    openFABMenu();
+  }
+}
+
+// Open FAB menu
+function openFABMenu() {
+  if (!fabMenu) return;
+  fabExpanded = true;
+  fabMenu.style.display = 'flex';
+  fabMenu.style.animation = 'fabMenuSlideIn 0.2s ease forwards';
+  
+  const fab = document.getElementById('ai-fab-main');
+  if (fab) {
+    fab.innerHTML = `
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="pointer-events: none;">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    `;
+    fab.style.background = 'linear-gradient(135deg, #8B5CF6, #EC4899)';
+  }
+}
+
+// Close FAB menu
+function closeFABMenu() {
+  if (!fabMenu) return;
+  fabExpanded = false;
+  fabMenu.style.animation = 'fabMenuSlideOut 0.2s ease forwards';
+  setTimeout(() => {
+    if (fabMenu) fabMenu.style.display = 'none';
+  }, 200);
+  
+  const fab = document.getElementById('ai-fab-main');
+  if (fab) {
+    fab.innerHTML = `
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="pointer-events: none;">
+        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+      </svg>
+    `;
+    fab.style.background = 'linear-gradient(135deg, #00D4FF, #8B5CF6)';
+  }
+}
+
+// Start highlight mode from FAB
+function startHighlightMode() {
+  chrome.runtime.sendMessage({ type: 'START_HIGHLIGHT_MODE' });
+}
+
+// Trigger summarize from FAB/Chat
+function triggerSummarize() {
+  // Send message to summarize current page
+  const pageContent = document.body.innerText.substring(0, 10000);
+  const pageTitle = document.title;
+  const pageUrl = window.location.href;
+  
+  chrome.runtime.sendMessage({
+    type: 'SUMMARIZE_PAGE',
+    pageContent,
+    pageTitle,
+    pageUrl
+  });
+  
+  showFABToast('Summarizing page... 📄');
+}
+
+// Trigger auto-fill from FAB
+function triggerAutoFill() {
+  showFABToast('Starting auto-fill... 🤖');
+  
+  // Use the existing processAllFields function
+  processAllFields();
+}
+
+// Show toast notification from FAB
+function showFABToast(message: string) {
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    background: rgba(10, 10, 15, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 500;
+    z-index: 2147483641;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    animation: fabMenuSlideIn 0.3s ease;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  `;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.style.animation = 'fabMenuSlideOut 0.3s ease forwards';
+    setTimeout(() => toast.remove(), 300);
+  }, 2500);
+}
+
+// ============================================
+// FLOATING CHAT PANEL
+// ============================================
+
+function openFloatingChat() {
+  if (floatingChatPanel) {
+    floatingChatPanel.style.display = 'flex';
+    return;
+  }
+  
+  const panel = document.createElement('div');
+  panel.id = 'ai-floating-chat';
+  panel.style.cssText = `
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    width: 380px;
+    height: 500px;
+    background: rgba(10, 10, 15, 0.98);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    z-index: 2147483639;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    animation: chatPanelSlideIn 0.3s ease;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    overflow: hidden;
+  `;
+  
+  panel.innerHTML = `
+    <!-- Header -->
+    <div style="
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(0, 0, 0, 0.3);
+    ">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="
+          width: 32px;
+          height: 32px;
+          background: linear-gradient(135deg, #00D4FF, #8B5CF6);
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        ">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+        </div>
+        <span style="font-size: 15px; font-weight: 600; color: white;">AI Assistant</span>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button id="ai-chat-minimize" style="
+          background: none;
+          border: none;
+          color: rgba(255, 255, 255, 0.6);
+          cursor: pointer;
+          padding: 4px;
+          font-size: 18px;
+        ">−</button>
+        <button id="ai-chat-close" style="
+          background: none;
+          border: none;
+          color: rgba(255, 255, 255, 0.6);
+          cursor: pointer;
+          padding: 4px;
+          font-size: 18px;
+        ">×</button>
+      </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div style="
+      padding: 12px 16px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    ">
+      <button class="ai-chat-quick-btn" data-action="summarize" style="
+        padding: 8px 14px;
+        background: rgba(0, 212, 255, 0.1);
+        border: 1px solid rgba(0, 212, 255, 0.3);
+        border-radius: 20px;
+        color: #00D4FF;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      ">📄 Summarize</button>
+      <button class="ai-chat-quick-btn" data-action="highlight" style="
+        padding: 8px 14px;
+        background: rgba(139, 92, 246, 0.1);
+        border: 1px solid rgba(139, 92, 246, 0.3);
+        border-radius: 20px;
+        color: #8B5CF6;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      ">🎯 Highlight</button>
+      <button class="ai-chat-quick-btn" data-action="explain" style="
+        padding: 8px 14px;
+        background: rgba(0, 255, 136, 0.1);
+        border: 1px solid rgba(0, 255, 136, 0.3);
+        border-radius: 20px;
+        color: #00FF88;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      ">💡 Explain</button>
+    </div>
+    
+    <!-- Messages -->
+    <div id="ai-chat-messages" style="
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    ">
+      <div style="
+        background: rgba(0, 212, 255, 0.1);
+        border-radius: 16px;
+        padding: 14px 16px;
+        max-width: 85%;
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 13px;
+        line-height: 1.5;
+      ">
+        👋 Hi! I can help you navigate this page, answer questions, and summarize content. What would you like to know?
+      </div>
+    </div>
+    
+    <!-- Input -->
+    <div style="
+      padding: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    ">
+      <input id="ai-chat-input" type="text" placeholder="Ask anything or click 🎤 to speak..." style="
+        flex: 1;
+        padding: 12px 16px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        color: white;
+        font-size: 13px;
+        outline: none;
+        transition: all 0.2s;
+      " />
+      <button id="ai-chat-send" title="Click to send message or use microphone" style="
+        width: 44px;
+        height: 44px;
+        background: linear-gradient(135deg, #00D4FF, #8B5CF6);
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+      ">
+        <svg id="ai-chat-send-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+          <line x1="12" y1="19" x2="12" y2="23"></line>
+          <line x1="8" y1="23" x2="16" y2="23"></line>
+        </svg>
+      </button>
+    </div>
+  `;
+  
+  document.body.appendChild(panel);
+  floatingChatPanel = panel;
+  
+  // Wire up event handlers
+  setupFloatingChatHandlers(panel);
+  
+  // Close FAB menu
+  closeFABMenu();
+}
+
+// Floating chat state
+let floatingChatRecording = false;
+let floatingChatMediaRecorder: MediaRecorder | null = null;
+
+// SVG Icons for floating chat
+const floatingChatIcons = {
+  mic: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>`,
+  send: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`,
+  stop: `<svg width="20" height="20" viewBox="0 0 24 24" fill="white"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>`
+};
+
+// Setup floating chat event handlers
+function setupFloatingChatHandlers(panel: HTMLElement) {
+  const closeBtn = panel.querySelector('#ai-chat-close');
+  const minimizeBtn = panel.querySelector('#ai-chat-minimize');
+  const input = panel.querySelector('#ai-chat-input') as HTMLInputElement;
+  const sendBtn = panel.querySelector('#ai-chat-send') as HTMLButtonElement;
+  
+  closeBtn?.addEventListener('click', () => {
+    if (floatingChatRecording) stopFloatingChatRecording();
+    panel.remove();
+    floatingChatPanel = null;
+  });
+  
+  minimizeBtn?.addEventListener('click', () => {
+    panel.style.display = 'none';
+  });
+  
+  // Quick action buttons
+  panel.querySelectorAll('.ai-chat-quick-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const action = (btn as HTMLElement).dataset.action;
+      if (action === 'summarize') {
+        triggerSummarize();
+        addChatMessage('Summarizing this page for you... 📄', 'user');
+      } else if (action === 'highlight') {
+        startHighlightMode();
+        addChatMessage('Starting highlight mode... 🎯', 'user');
+        panel.style.display = 'none';
+      } else if (action === 'explain') {
+        addChatMessage('What would you like me to explain?', 'assistant');
+      }
+    });
+  });
+  
+  // Update send button icon based on state
+  const updateFloatingChatButton = () => {
+    if (!sendBtn) return;
+    if (floatingChatRecording) {
+      sendBtn.innerHTML = floatingChatIcons.stop;
+      sendBtn.style.background = 'linear-gradient(135deg, #FF4757, #FF006E)';
+      sendBtn.style.animation = 'fabPulse 1.5s infinite';
+    } else if (input.value.trim()) {
+      sendBtn.innerHTML = floatingChatIcons.send;
+      sendBtn.style.background = 'linear-gradient(135deg, #00D4FF, #8B5CF6)';
+      sendBtn.style.animation = 'none';
+    } else {
+      sendBtn.innerHTML = floatingChatIcons.mic;
+      sendBtn.style.background = 'linear-gradient(135deg, #00D4FF, #8B5CF6)';
+      sendBtn.style.animation = 'none';
+    }
+  };
+  
+  // Send message
+  const sendMessage = () => {
+    const message = input.value.trim();
+    if (!message) return;
+    
+    addChatMessage(message, 'user');
+    input.value = '';
+    updateFloatingChatButton();
+    
+    // Send to backend via background script
+    chrome.runtime.sendMessage({
+      type: 'CHAT_MESSAGE',
+      message,
+      conversationHistory: []
+    });
+  };
+  
+  // Start voice recording
+  const startFloatingChatRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const chunks: Blob[] = [];
+      
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunks.push(e.data);
+      };
+      
+      recorder.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop());
+        const audioBlob = new Blob(chunks, { type: 'audio/webm' });
+        
+        // Transcribe audio
+        try {
+          const formData = new FormData();
+          formData.append('audio', audioBlob, 'recording.webm');
+          
+          const response = await fetch('http://localhost:8000/interview/transcribe', {
+            method: 'POST',
+            body: formData
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            input.value = result.text;
+            input.focus();
+            updateFloatingChatButton();
+          } else {
+            addChatMessage('Voice transcription failed. Please try again.', 'assistant');
+          }
+        } catch (error) {
+          console.error('Transcription error:', error);
+          addChatMessage('Could not transcribe audio. Is the backend running?', 'assistant');
+        }
+        
+        floatingChatRecording = false;
+        updateFloatingChatButton();
+      };
+      
+      recorder.start();
+      floatingChatMediaRecorder = recorder;
+      floatingChatRecording = true;
+      input.placeholder = 'Recording... Click ⏹️ to stop';
+      input.disabled = true;
+      updateFloatingChatButton();
+      
+    } catch (error) {
+      console.error('Microphone error:', error);
+      addChatMessage('Could not access microphone. Please grant permission.', 'assistant');
+    }
+  };
+  
+  // Stop voice recording
+  const stopFloatingChatRecording = () => {
+    if (floatingChatMediaRecorder && floatingChatRecording) {
+      floatingChatMediaRecorder.stop();
+      input.disabled = false;
+      input.placeholder = 'Ask anything or click 🎤 to speak...';
+    }
+  };
+  
+  // Smart button click - handles mic, send, or stop
+  sendBtn?.addEventListener('click', () => {
+    if (floatingChatRecording) {
+      stopFloatingChatRecording();
+    } else if (input.value.trim()) {
+      sendMessage();
+    } else {
+      startFloatingChatRecording();
+    }
+  });
+  
+  input?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter' && input.value.trim() && !floatingChatRecording) {
+      sendMessage();
+    }
+  });
+  
+  input?.addEventListener('input', () => {
+    updateFloatingChatButton();
+  });
+  
+  input?.addEventListener('focus', () => {
+    input.style.borderColor = 'rgba(0, 212, 255, 0.5)';
+    input.style.background = 'rgba(255, 255, 255, 0.08)';
+  });
+  
+  input?.addEventListener('blur', () => {
+    input.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+    input.style.background = 'rgba(255, 255, 255, 0.05)';
+  });
+  
+  // Initial button state
+  updateFloatingChatButton();
+}
+
+// Format message content with rich HTML (for AI responses)
+function formatChatMessage(content: string): string {
+  let formatted = content;
+  
+  // Handle bullet points (lines starting with - or •)
+  formatted = formatted.replace(/^- (.+)$/gm, '<div style="margin-left: 12px; margin-bottom: 4px;">• $1</div>');
+  formatted = formatted.replace(/^• (.+)$/gm, '<div style="margin-left: 12px; margin-bottom: 4px;">• $1</div>');
+  
+  // Handle numbered lists (lines starting with numbers)
+  formatted = formatted.replace(/^(\d+)\.\s+(.+)$/gm, '<div style="margin-left: 12px; margin-bottom: 4px;"><strong>$1.</strong> $2</div>');
+  formatted = formatted.replace(/^(\d+)\)\s+(.+)$/gm, '<div style="margin-left: 12px; margin-bottom: 4px;"><strong>$1)</strong> $2</div>');
+  
+  // Handle bold text (wrapped in ** or __)
+  formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong style="color: #00D4FF;">$1</strong>');
+  formatted = formatted.replace(/__(.+?)__/g, '<strong style="color: #00D4FF;">$1</strong>');
+  
+  // Handle italic text (wrapped in * or _)
+  formatted = formatted.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+  formatted = formatted.replace(/(?<!_)_([^_]+)_(?!_)/g, '<em>$1</em>');
+  
+  // Handle headers (lines ending with :)
+  formatted = formatted.replace(/^([A-Z][^:\n]+):$/gm, '<div style="font-weight: 600; margin-top: 12px; margin-bottom: 6px; color: #00D4FF;">$1:</div>');
+  
+  // Handle sections with dashes
+  formatted = formatted.replace(/^—\s*(.+)$/gm, '<div style="margin-left: 16px; margin-bottom: 4px;">— $1</div>');
+  
+  // Convert double newlines to paragraphs, single newlines to <br>
+  formatted = formatted.split('\n\n').map(para => {
+    if (para.includes('<div')) {
+      return para; // Already has divs, don't wrap
+    }
+    return `<p style="margin-bottom: 8px; line-height: 1.6;">${para.replace(/\n/g, '<br>')}</p>`;
+  }).join('');
+  
+  return formatted;
+}
+
+// Add message to floating chat
+function addChatMessage(content: string, role: 'user' | 'assistant') {
+  const messagesContainer = document.querySelector('#ai-chat-messages');
+  if (!messagesContainer) return;
+  
+  const message = document.createElement('div');
+  message.style.cssText = `
+    background: ${role === 'user' ? 'rgba(139, 92, 246, 0.15)' : 'rgba(0, 212, 255, 0.1)'};
+    border-radius: 16px;
+    padding: 14px 16px;
+    max-width: 85%;
+    ${role === 'user' ? 'align-self: flex-end;' : ''}
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 13px;
+    line-height: 1.5;
+  `;
+  
+  // Format assistant messages with rich HTML
+  if (role === 'assistant') {
+    message.innerHTML = formatChatMessage(content);
+  } else {
+    message.textContent = content;
+  }
+  
+  messagesContainer.appendChild(message);
+  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+// Handle chat response for floating panel
+function handleFloatingChatResponse(response: string) {
+  addChatMessage(response, 'assistant');
+}
+
+// Update FAB bookmark indicator
+function updateFABBookmarkIndicator(isBookmarked: boolean, rating?: number) {
+  const bookmarkItem = document.querySelector('#ai-fab-item-bookmark');
+  if (!bookmarkItem) return;
+  
+  // Remove existing badge if any
+  const existingBadge = bookmarkItem.querySelector('.fab-bookmark-badge');
+  if (existingBadge) {
+    existingBadge.remove();
+  }
+  
+  if (isBookmarked && rating) {
+    const newBadge = document.createElement('span');
+    newBadge.className = 'fab-bookmark-badge';
+    newBadge.style.cssText = 'background: #00FF88; color: #000; font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: 600;';
+    newBadge.textContent = rating.toString();
+    bookmarkItem.appendChild(newBadge);
+  }
+}
+
+// Legacy function name for compatibility
+function updateBookmarkButton(isBookmarked: boolean, rating?: number) {
+  updateFABBookmarkIndicator(isBookmarked, rating);
+}
+
+// Check if current page is bookmarked
 function checkIfBookmarked() {
   chrome.runtime.sendMessage({
     type: 'GET_BOOKMARK',
     url: window.location.href
   });
-}
-
-// Update bookmark button appearance
-function updateBookmarkButton(isBookmarked: boolean, rating?: number) {
-  if (!bookmarkButton) return;
-  
-  if (isBookmarked) {
-    bookmarkButton.innerHTML = `
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2">
-        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-      </svg>
-      ${rating ? `<span style="position: absolute; bottom: -2px; right: -2px; background: #00FF88; color: #000; font-size: 10px; font-weight: bold; padding: 2px 5px; border-radius: 8px;">${rating}</span>` : ''}
-    `;
-    bookmarkButton.style.background = 'linear-gradient(135deg, #00FF88, #00D4FF)';
-  } else {
-    bookmarkButton.innerHTML = `
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-      </svg>
-    `;
-    bookmarkButton.style.background = 'linear-gradient(135deg, #00D4FF, #8B5CF6)';
-  }
 }
 
 // Show the bookmark modal
@@ -3252,13 +3961,13 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
   }
 });
 
-// Initialize bookmark button after page load (only in top frame)
+// Initialize FAB menu after page load (only in top frame)
 if (!isInIframe) {
   if (document.readyState === 'complete') {
-    setTimeout(createBookmarkButton, 1000);
+    setTimeout(createFABMenu, 1000);
   } else {
     window.addEventListener('load', () => {
-      setTimeout(createBookmarkButton, 1000);
+      setTimeout(createFABMenu, 1000);
     });
   }
 }
