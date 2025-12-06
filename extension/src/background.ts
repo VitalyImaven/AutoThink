@@ -4,6 +4,7 @@
  */
 
 import { config } from './config';
+import { apiPostLong, getErrorMessage } from './api';
 import {
   ExtensionMessage,
   FieldContext,
@@ -36,23 +37,16 @@ async function generateSuggestion(
   
   console.log(`Sending ${all_chunks.length} chunks from IndexedDB to backend`);
   
-  const response = await fetch(`${config.backendUrl}/suggest`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      field_context: fieldContext,
-      all_chunks: all_chunks,
-    }),
+  const result = await apiPostLong('/suggest', {
+    field_context: fieldContext,
+    all_chunks: all_chunks,
   });
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Suggestion generation failed: ${error}`);
+  if (!result.success) {
+    throw new Error(getErrorMessage(result.error || 'Suggestion failed'));
   }
 
-  return response.json();
+  return result.data;
 }
 
 /**
@@ -203,27 +197,18 @@ Note: Could not extract full page content. Error: ${e}`;
     console.log('   Sending to backend...');
     console.log('   Backend URL:', config.backendUrl);
     
-    // Call backend chat endpoint
-    const response = await fetch(`${config.backendUrl}/chat`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        message,
-        conversation_history: conversationHistory || [],
-        page_context: pageContext
-      }),
+    // Call backend chat endpoint with timeout
+    const result = await apiPostLong('/chat', {
+      message,
+      conversation_history: conversationHistory || [],
+      page_context: pageContext
     });
     
-    console.log('   Backend response status:', response.status);
+    console.log('   Backend response:', result.success ? 'success' : 'failed');
 
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Chat request failed: ${error}`);
+    if (!result.success) {
+      throw new Error(result.error || 'Chat request failed');
     }
-
-    const result = await response.json();
     
     console.log('   ✅ Got result from backend');
     
@@ -231,7 +216,7 @@ Note: Could not extract full page content. Error: ${e}`;
     // Use runtime.sendMessage for popup/options
     chrome.runtime.sendMessage({
       type: 'CHAT_RESPONSE',
-      response: result.response
+      response: result.data.response
     } as ExtensionMessage);
     
     // Also send to the content script of the target tab
@@ -239,7 +224,7 @@ Note: Could not extract full page content. Error: ${e}`;
       console.log('   📤 Sending CHAT_RESPONSE to tab', targetTab.id);
       chrome.tabs.sendMessage(targetTab.id, {
         type: 'CHAT_RESPONSE',
-        response: result.response
+        response: result.data.response
       } as ExtensionMessage).catch(err => {
         console.log('   ⚠️ Could not send to tab (might be closed):', err);
       });
@@ -301,50 +286,35 @@ async function handleSummarizePage(
   pageUrl: string,
   sender: chrome.runtime.MessageSender
 ) {
+  const tabId = sender.tab?.id;
+  
   try {
-    const tabId = sender.tab?.id;
-    
-    // Call backend summarize endpoint
-    const response = await fetch(`${config.backendUrl}/summarize`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        page_content: pageContent,
-        page_title: pageTitle,
-        page_url: pageUrl
-      }),
+    // Call backend summarize endpoint with timeout
+    const result = await apiPostLong('/summarize', {
+      page_content: pageContent,
+      page_title: pageTitle,
+      page_url: pageUrl
     });
 
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`Summarization failed: ${error}`);
+    if (!result.success) {
+      throw new Error(result.error || 'Summarization failed');
     }
-
-    const result = await response.json();
     
     // Send summary back to content script
     if (tabId) {
       chrome.tabs.sendMessage(tabId, {
         type: 'SUMMARIZE_PAGE_RESULT',
-        summary: result.summary
+        summary: result.data.summary
       } as ExtensionMessage);
     }
     
   } catch (error) {
     console.error('Error summarizing page:', error);
     
-    let errorMessage = '';
+    const errorMessage = getErrorMessage(error instanceof Error ? error.message : 'Unknown error');
     
-    if (error instanceof TypeError && error.message.includes('fetch')) {
-      errorMessage = 'Backend server not running. Start it with: python -m uvicorn app.main:app --reload --port 8000';
-    } else {
-      errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    }
-    
-    if (sender.tab?.id) {
-      chrome.tabs.sendMessage(sender.tab.id, {
+    if (tabId) {
+      chrome.tabs.sendMessage(tabId, {
         type: 'SUMMARIZE_PAGE_RESULT',
         summary: '',
         error: errorMessage
@@ -378,39 +348,34 @@ async function handleWebMemorySearch(query: string, sender: chrome.runtime.Messa
       return;
     }
     
-    // Call backend for AI-powered search
-    const response = await fetch(`${config.backendUrl}/web-memory/search`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        query,
-        pages: pages.map(p => ({
-          url: p.url,
-          title: p.title,
-          domain: p.domain,
-          content: p.content,
-          headings: p.headings,
-          description: p.description,
-          keywords: p.keywords,
-          visited_at: p.visited_at,
-          visit_count: p.visit_count
-        })),
-        max_results: 5
-      })
+    // Call backend for AI-powered search with timeout
+    const result = await apiPostLong('/web-memory/search', {
+      query,
+      pages: pages.map(p => ({
+        url: p.url,
+        title: p.title,
+        domain: p.domain,
+        content: p.content,
+        headings: p.headings,
+        description: p.description,
+        keywords: p.keywords,
+        visited_at: p.visited_at,
+        visit_count: p.visit_count
+      })),
+      max_results: 5
     });
     
-    if (!response.ok) {
-      throw new Error(`Search failed: ${response.status}`);
+    if (!result.success) {
+      throw new Error(result.error || 'Search failed');
     }
     
-    const result = await response.json();
-    console.log(`   ✅ Found ${result.results.length} relevant pages`);
+    console.log(`   ✅ Found ${result.data.results.length} relevant pages`);
     
     // Send results back
     const memoryResult = {
       type: 'WEB_MEMORY_RESULT',
-      results: result.results,
-      answer: result.answer
+      results: result.data.results,
+      answer: result.data.answer
     };
     
     chrome.runtime.sendMessage(memoryResult);
@@ -423,9 +388,12 @@ async function handleWebMemorySearch(query: string, sender: chrome.runtime.Messa
     const errorResult = {
       type: 'WEB_MEMORY_RESULT',
       results: [],
-      answer: `Error searching web memory: ${error instanceof Error ? error.message : 'Unknown error'}`
+      answer: getErrorMessage(error instanceof Error ? error.message : 'Unknown error')
     };
     chrome.runtime.sendMessage(errorResult);
+    if (sender.tab?.id) {
+      chrome.tabs.sendMessage(sender.tab.id, errorResult).catch(() => {});
+    }
   }
 }
 
@@ -540,31 +508,26 @@ async function handleSearchBookmarks(params: any, sender: chrome.runtime.Message
     // If there's a natural language query, call AI for smart search
     if (params.query && bookmarks.length > 0) {
       try {
-        const response = await fetch(`${config.backendUrl}/bookmarks/search`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            query: params.query,
-            bookmarks: bookmarks.map(b => ({
-              url: b.url,
-              title: b.title,
-              domain: b.domain,
-              rating: b.rating,
-              comment: b.comment,
-              categories: b.categories,
-              ai_summary: b.ai_summary
-            })),
-            min_rating: params.minRating,
-            max_rating: params.maxRating
-          })
+        const result = await apiPostLong('/bookmarks/search', {
+          query: params.query,
+          bookmarks: bookmarks.map(b => ({
+            url: b.url,
+            title: b.title,
+            domain: b.domain,
+            rating: b.rating,
+            comment: b.comment,
+            categories: b.categories,
+            ai_summary: b.ai_summary
+          })),
+          min_rating: params.minRating,
+          max_rating: params.maxRating
         });
         
-        if (response.ok) {
-          const result = await response.json();
-          answer = result.answer || '';
+        if (result.success && result.data) {
+          answer = result.data.answer || '';
           // Reorder bookmarks based on AI relevance if provided
-          if (result.relevant_urls && result.relevant_urls.length > 0) {
-            const urlOrder = new Map<string, number>(result.relevant_urls.map((url: string, i: number) => [url, i]));
+          if (result.data.relevant_urls && result.data.relevant_urls.length > 0) {
+            const urlOrder = new Map<string, number>(result.data.relevant_urls.map((url: string, i: number) => [url, i]));
             bookmarks.sort((a, b) => {
               const aOrder: number = urlOrder.get(a.url) ?? 999;
               const bOrder: number = urlOrder.get(b.url) ?? 999;
@@ -649,26 +612,21 @@ async function handleGenerateBookmarkSummary(params: { url: string; title: strin
     
     console.log('   📤 Calling backend...');
     
-    const response = await fetch(`${config.backendUrl}/bookmarks/summarize`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        url: params.url,
-        title: params.title,
-        content: params.content.substring(0, 5000)  // Limit content length
-      })
+    const result = await apiPostLong('/bookmarks/summarize', {
+      url: params.url,
+      title: params.title,
+      content: params.content.substring(0, 5000)  // Limit content length
     });
     
-    console.log('   📥 Backend response status:', response.status);
+    console.log('   📥 Backend response:', result.success ? 'success' : 'failed');
     
-    if (response.ok) {
-      const result = await response.json();
-      console.log('   📝 Summary received:', result.summary?.substring(0, 50) + '...');
-      console.log('   📁 Categories:', result.suggested_categories);
+    if (result.success && result.data) {
+      console.log('   📝 Summary received:', result.data.summary?.substring(0, 50) + '...');
+      console.log('   📁 Categories:', result.data.suggested_categories);
       
       // Update the bookmark with the summary AND categories
       console.log('   💾 Updating bookmark in DB...');
-      await updateBookmarkSummary(params.url, result.summary, result.suggested_categories);
+      await updateBookmarkSummary(params.url, result.data.summary, result.data.suggested_categories);
       
       // Get updated bookmark
       console.log('   🔍 Getting updated bookmark...');
@@ -691,20 +649,19 @@ async function handleGenerateBookmarkSummary(params: { url: string; title: strin
       
       console.log('   ✅ AI summary generated and sent!');
     } else {
-      const errorText = await response.text();
-      console.error('   ❌ Backend error:', errorText);
-      throw new Error('Failed to generate summary: ' + errorText);
+      throw new Error(result.error || 'Failed to generate summary');
     }
   } catch (error) {
     console.error('❌ Error generating bookmark summary:', error);
+    const errorMsg = getErrorMessage(error instanceof Error ? error.message : 'Failed to generate summary');
     chrome.runtime.sendMessage({
       type: 'BOOKMARK_RESULT',
-      error: error instanceof Error ? error.message : 'Failed to generate summary'
+      error: errorMsg
     });
     if (sender.tab?.id) {
       chrome.tabs.sendMessage(sender.tab.id, {
         type: 'BOOKMARK_RESULT',
-        error: error instanceof Error ? error.message : 'Failed to generate summary'
+        error: errorMsg
       }).catch(() => {});
     }
   }

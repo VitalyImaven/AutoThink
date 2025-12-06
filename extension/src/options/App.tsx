@@ -30,6 +30,10 @@ const App: React.FC = () => {
   const [bookmarkMinRating, setBookmarkMinRating] = useState(0);
   const [bookmarkCategoryFilter, setBookmarkCategoryFilter] = useState('');
   const [bookmarkSortBy, setBookmarkSortBy] = useState('date');
+  const [showBookmarkCleanup, setShowBookmarkCleanup] = useState(false);
+  const [cleanupCategory, setCleanupCategory] = useState('');
+  const [cleanupRating, setCleanupRating] = useState(0);
+  const [cleanupDaysBookmark, setCleanupDaysBookmark] = useState(0);
   
   // Web Memory state
   const [visitedPages, setVisitedPages] = useState<VisitedPage[]>([]);
@@ -2532,20 +2536,205 @@ const App: React.FC = () => {
               </button>
               <button 
                 className="btn btn-secondary" 
-                onClick={() => {
-                  if (confirm('⚠️ Clear ALL bookmarks?\n\nThis cannot be undone!')) {
-                    clearAllBookmarks().then(() => {
-                      loadBookmarks();
-                      showStatus('success', 'All bookmarks cleared');
-                    });
-                  }
-                }}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#EF4444' }}
+                onClick={() => setShowBookmarkCleanup(!showBookmarkCleanup)}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                Clear All
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                Cleanup Options {showBookmarkCleanup ? '▲' : '▼'}
               </button>
             </div>
+            
+            {/* Cleanup Options Panel */}
+            {showBookmarkCleanup && (
+              <div style={{
+                marginTop: '16px',
+                padding: '20px',
+                background: 'rgba(239, 68, 68, 0.05)',
+                border: '1px solid rgba(239, 68, 68, 0.2)',
+                borderRadius: '12px'
+              }}>
+                <h3 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '16px', color: '#EF4444', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                  Cleanup Options
+                </h3>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {/* Delete All */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                    <button 
+                      className="btn"
+                      onClick={() => {
+                        if (confirm('⚠️ Delete ALL bookmarks?\n\nThis cannot be undone!')) {
+                          clearAllBookmarks().then(() => {
+                            loadBookmarks();
+                            showStatus('success', 'All bookmarks cleared');
+                          });
+                        }
+                      }}
+                      style={{ 
+                        background: 'rgba(239, 68, 68, 0.1)', 
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        color: '#EF4444',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                      Delete All Bookmarks
+                    </button>
+                  </div>
+                  
+                  {/* Delete by Category */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>Delete by category:</span>
+                    <select
+                      value={cleanupCategory}
+                      onChange={(e) => setCleanupCategory(e.target.value)}
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        background: '#1a1a2e',
+                        color: '#fff',
+                        fontSize: '13px',
+                        outline: 'none',
+                        minWidth: '150px'
+                      }}
+                    >
+                      <option value="">Select category...</option>
+                      {Array.from(new Set(bookmarks.flatMap(b => b.categories || []))).sort().map(cat => (
+                        <option key={cat} value={cat}>{cat} ({bookmarks.filter(b => b.categories?.includes(cat)).length})</option>
+                      ))}
+                    </select>
+                    <button 
+                      className="btn"
+                      disabled={!cleanupCategory}
+                      onClick={() => {
+                        const count = bookmarks.filter(b => b.categories?.includes(cleanupCategory)).length;
+                        if (confirm(`Delete ${count} bookmarks in category "${cleanupCategory}"?\n\nThis cannot be undone!`)) {
+                          Promise.all(
+                            bookmarks
+                              .filter(b => b.categories?.includes(cleanupCategory))
+                              .map(b => deleteBookmark(b.url))
+                          ).then(() => {
+                            loadBookmarks();
+                            showStatus('success', `Deleted ${count} bookmarks from "${cleanupCategory}"`);
+                            setCleanupCategory('');
+                          });
+                        }
+                      }}
+                      style={{ 
+                        background: cleanupCategory ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255,255,255,0.05)', 
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        color: cleanupCategory ? '#EF4444' : 'rgba(255,255,255,0.3)',
+                        cursor: cleanupCategory ? 'pointer' : 'not-allowed'
+                      }}
+                    >
+                      Delete Category
+                    </button>
+                  </div>
+                  
+                  {/* Delete by Rating */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>Delete low-rated:</span>
+                    <select
+                      value={cleanupRating}
+                      onChange={(e) => setCleanupRating(Number(e.target.value))}
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        background: '#1a1a2e',
+                        color: '#fff',
+                        fontSize: '13px',
+                        outline: 'none',
+                        minWidth: '150px'
+                      }}
+                    >
+                      <option value={0}>Select max rating...</option>
+                      <option value={3}>Rating 3 or below ({bookmarks.filter(b => b.rating <= 3).length})</option>
+                      <option value={4}>Rating 4 or below ({bookmarks.filter(b => b.rating <= 4).length})</option>
+                      <option value={5}>Rating 5 or below ({bookmarks.filter(b => b.rating <= 5).length})</option>
+                    </select>
+                    <button 
+                      className="btn"
+                      disabled={cleanupRating === 0}
+                      onClick={() => {
+                        const count = bookmarks.filter(b => b.rating <= cleanupRating).length;
+                        if (confirm(`Delete ${count} bookmarks rated ${cleanupRating} or below?\n\nThis cannot be undone!`)) {
+                          Promise.all(
+                            bookmarks
+                              .filter(b => b.rating <= cleanupRating)
+                              .map(b => deleteBookmark(b.url))
+                          ).then(() => {
+                            loadBookmarks();
+                            showStatus('success', `Deleted ${count} low-rated bookmarks`);
+                            setCleanupRating(0);
+                          });
+                        }
+                      }}
+                      style={{ 
+                        background: cleanupRating > 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255,255,255,0.05)', 
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        color: cleanupRating > 0 ? '#EF4444' : 'rgba(255,255,255,0.3)',
+                        cursor: cleanupRating > 0 ? 'pointer' : 'not-allowed'
+                      }}
+                    >
+                      Delete Low-Rated
+                    </button>
+                  </div>
+                  
+                  {/* Delete older than */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)' }}>Delete older than:</span>
+                    <select
+                      value={cleanupDaysBookmark}
+                      onChange={(e) => setCleanupDaysBookmark(Number(e.target.value))}
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        background: '#1a1a2e',
+                        color: '#fff',
+                        fontSize: '13px',
+                        outline: 'none',
+                        minWidth: '150px'
+                      }}
+                    >
+                      <option value={0}>Select age...</option>
+                      <option value={30}>30 days ({bookmarks.filter(b => (Date.now() - new Date(b.bookmarked_at).getTime()) > 30*24*60*60*1000).length})</option>
+                      <option value={60}>60 days ({bookmarks.filter(b => (Date.now() - new Date(b.bookmarked_at).getTime()) > 60*24*60*60*1000).length})</option>
+                      <option value={90}>90 days ({bookmarks.filter(b => (Date.now() - new Date(b.bookmarked_at).getTime()) > 90*24*60*60*1000).length})</option>
+                      <option value={180}>180 days ({bookmarks.filter(b => (Date.now() - new Date(b.bookmarked_at).getTime()) > 180*24*60*60*1000).length})</option>
+                    </select>
+                    <button 
+                      className="btn"
+                      disabled={cleanupDaysBookmark === 0}
+                      onClick={() => {
+                        const cutoff = Date.now() - cleanupDaysBookmark * 24 * 60 * 60 * 1000;
+                        const oldBookmarks = bookmarks.filter(b => new Date(b.bookmarked_at).getTime() < cutoff);
+                        if (confirm(`Delete ${oldBookmarks.length} bookmarks older than ${cleanupDaysBookmark} days?\n\nThis cannot be undone!`)) {
+                          Promise.all(oldBookmarks.map(b => deleteBookmark(b.url))).then(() => {
+                            loadBookmarks();
+                            showStatus('success', `Deleted ${oldBookmarks.length} old bookmarks`);
+                            setCleanupDaysBookmark(0);
+                          });
+                        }
+                      }}
+                      style={{ 
+                        background: cleanupDaysBookmark > 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255,255,255,0.05)', 
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        color: cleanupDaysBookmark > 0 ? '#EF4444' : 'rgba(255,255,255,0.3)',
+                        cursor: cleanupDaysBookmark > 0 ? 'pointer' : 'not-allowed'
+                      }}
+                    >
+                      Delete Old
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* AI Search */}
@@ -2595,18 +2784,19 @@ const App: React.FC = () => {
                   style={{
                     padding: '8px 12px',
                     borderRadius: '8px',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    background: '#1a1a2e',
                     color: '#fff',
                     fontSize: '13px',
-                    outline: 'none'
+                    outline: 'none',
+                    cursor: 'pointer'
                   }}
                 >
                   <option value={0}>All</option>
-                  <option value={6}>6+ ⭐⭐</option>
-                  <option value={7}>7+ ⭐⭐⭐</option>
-                  <option value={8}>8+ ⭐⭐⭐⭐</option>
-                  <option value={9}>9+ ⭐⭐⭐⭐⭐</option>
+                  <option value={6}>6+ ★★</option>
+                  <option value={7}>7+ ★★★</option>
+                  <option value={8}>8+ ★★★★</option>
+                  <option value={9}>9+ ★★★★★</option>
                 </select>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -2617,11 +2807,13 @@ const App: React.FC = () => {
                   style={{
                     padding: '8px 12px',
                     borderRadius: '8px',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    background: '#1a1a2e',
                     color: '#fff',
                     fontSize: '13px',
-                    outline: 'none'
+                    outline: 'none',
+                    cursor: 'pointer',
+                    minWidth: '140px'
                   }}
                 >
                   <option value="">All Categories</option>
@@ -2638,11 +2830,12 @@ const App: React.FC = () => {
                   style={{
                     padding: '8px 12px',
                     borderRadius: '8px',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    background: '#1a1a2e',
                     color: '#fff',
                     fontSize: '13px',
-                    outline: 'none'
+                    outline: 'none',
+                    cursor: 'pointer'
                   }}
                 >
                   <option value="date">Most Recent</option>
