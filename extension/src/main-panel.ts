@@ -4,6 +4,7 @@
  */
 
 import { ExtensionMessage } from './types';
+import { getAllDocuments, deleteDocument, getAllChunks, clearAllChunks, saveDocumentIndex } from './db';
 
 // Tab switching
 const tabButtons = document.querySelectorAll('.tab-button');
@@ -148,6 +149,182 @@ document.getElementById('autoFillBtn')?.addEventListener('click', async () => {
 document.getElementById('openOptionsBtn')?.addEventListener('click', () => {
   chrome.runtime.openOptionsPage();
 });
+
+// ============================================
+// DATABASE TAB - Knowledge Base Management
+// ============================================
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput') as HTMLInputElement;
+const documentsList = document.getElementById('documentsList');
+const docCountEl = document.getElementById('docCount');
+const chunkCountEl = document.getElementById('chunkCount');
+
+// Load and display documents
+async function loadDocuments() {
+  try {
+    const documents = await getAllDocuments();
+    const chunks = await getAllChunks();
+    
+    // Update counts
+    if (docCountEl) docCountEl.textContent = documents.length.toString();
+    if (chunkCountEl) chunkCountEl.textContent = chunks.length.toString();
+    
+    // Update documents list
+    if (documentsList) {
+      if (documents.length === 0) {
+        documentsList.innerHTML = `
+          <div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 12px;">
+            No documents uploaded yet.<br>
+            Upload .txt or .md files to get started.
+          </div>
+        `;
+      } else {
+        documentsList.innerHTML = documents.map(doc => `
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 10px; margin-bottom: 8px;">
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-size: 12px; font-weight: 500; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                ${doc.source_file || doc.name}
+              </div>
+              <div style="font-size: 10px; color: var(--text-muted);">
+                ${doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString() : 'N/A'} • ${doc.chunk_count || 0} chunks
+              </div>
+            </div>
+            <button class="delete-doc-btn" data-id="${doc.document_id || doc.id}" data-source="${doc.source_file}" style="
+              background: none;
+              border: none;
+              color: #FF4757;
+              cursor: pointer;
+              padding: 4px 8px;
+              font-size: 16px;
+              opacity: 0.6;
+              transition: opacity 0.2s;
+            " title="Delete document">×</button>
+          </div>
+        `).join('');
+        
+        // Add delete handlers
+        documentsList.querySelectorAll('.delete-doc-btn').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const docId = (e.target as HTMLElement).dataset.id;
+            const sourceFile = (e.target as HTMLElement).dataset.source;
+            if (docId && sourceFile && confirm('Delete this document?')) {
+              await deleteDocument(docId, sourceFile);
+              loadDocuments();
+            }
+          });
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Error loading documents:', error);
+  }
+}
+
+// Handle file upload
+async function handleFileUpload(files: FileList) {
+  for (const file of Array.from(files)) {
+    if (!file.name.match(/\.(txt|md|json)$/i)) {
+      alert(`Skipping ${file.name} - only .txt, .md, and .json files are supported`);
+      continue;
+    }
+    
+    try {
+      const text = await file.text();
+      
+      // Send to backend for processing
+      const response = await fetch('http://localhost:8000/ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: text,
+          source_file_name: file.name
+        })
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        
+        // Save document index to IndexedDB
+        if (result.document_id) {
+          await saveDocumentIndex(result);
+        }
+        
+        console.log(`✅ Uploaded ${file.name}: ${result.chunks?.length || 0} chunks`);
+      } else {
+        throw new Error('Backend processing failed');
+      }
+    } catch (error) {
+      console.error(`Error uploading ${file.name}:`, error);
+      alert(`Failed to upload ${file.name}. Is the backend running?`);
+    }
+  }
+  
+  loadDocuments();
+}
+
+// Drag and drop handlers
+if (dropZone) {
+  dropZone.addEventListener('click', () => fileInput?.click());
+  
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.style.borderColor = 'var(--primary)';
+    dropZone.style.background = 'rgba(0, 212, 255, 0.05)';
+  });
+  
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.style.borderColor = 'var(--glass-border)';
+    dropZone.style.background = 'transparent';
+  });
+  
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.style.borderColor = 'var(--glass-border)';
+    dropZone.style.background = 'transparent';
+    
+    if (e.dataTransfer?.files.length) {
+      handleFileUpload(e.dataTransfer.files);
+    }
+  });
+}
+
+fileInput?.addEventListener('change', () => {
+  if (fileInput.files?.length) {
+    handleFileUpload(fileInput.files);
+  }
+});
+
+// Refresh button
+document.getElementById('refreshDbBtn')?.addEventListener('click', () => {
+  loadDocuments();
+});
+
+// Clear all button
+document.getElementById('clearDbBtn')?.addEventListener('click', async () => {
+  if (confirm('⚠️ This will delete ALL your documents and knowledge data.\n\nAre you sure?')) {
+    await clearAllChunks();
+    loadDocuments();
+  }
+});
+
+// Open full options page
+document.getElementById('openFullOptionsBtn')?.addEventListener('click', () => {
+  chrome.runtime.openOptionsPage();
+});
+
+// Load documents when switching to database tab
+tabButtons.forEach(button => {
+  button.addEventListener('click', () => {
+    const tabName = (button as HTMLElement).dataset.tab;
+    if (tabName === 'database') {
+      loadDocuments();
+    }
+  });
+});
+
+// Initial load
+loadDocuments();
 
 // Chat functionality (Note: Chat UI moved to floating panel, but keeping some logic for compatibility)
 let conversationHistory: Array<{role: string, content: string}> = [];
