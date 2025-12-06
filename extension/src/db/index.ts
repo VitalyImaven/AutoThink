@@ -31,6 +31,21 @@ export interface VisitedPage {
   thumbnail?: string;   // Optional: favicon or screenshot
 }
 
+// Smart Bookmarks - user-curated sites with ratings and categories
+export interface SmartBookmark {
+  id: string;           // URL hash as ID
+  url: string;
+  title: string;
+  domain: string;
+  favicon?: string;     // Site favicon URL
+  rating: number;       // User rating 1-10
+  comment?: string;     // Optional user comment
+  categories: string[]; // User-defined or AI-suggested categories
+  ai_summary?: string;  // AI-generated summary of the site
+  bookmarked_at: string; // When bookmarked
+  updated_at: string;   // Last update timestamp
+}
+
 interface KnowledgeDB extends DBSchema {
   semantic_chunks: {
     key: string;
@@ -68,6 +83,15 @@ interface KnowledgeDB extends DBSchema {
       'by-visited': string;
     };
   };
+  bookmarks: {
+    key: string;  // URL hash
+    value: SmartBookmark;
+    indexes: {
+      'by-domain': string;
+      'by-rating': number;
+      'by-bookmarked': string;
+    };
+  };
 }
 
 let dbInstance: IDBPDatabase<KnowledgeDB> | null = null;
@@ -77,9 +101,9 @@ export async function initDB(): Promise<IDBPDatabase<KnowledgeDB>> {
     return dbInstance;
   }
 
-  dbInstance = await openDB<KnowledgeDB>('ai-autofill-dynamic-kb', 5, {
+  dbInstance = await openDB<KnowledgeDB>('ai-autofill-dynamic-kb', 6, {
     upgrade(db, oldVersion) {
-      console.log(`Upgrading IndexedDB from version ${oldVersion} to 5`);
+      console.log(`Upgrading IndexedDB from version ${oldVersion} to 6`);
       
       // Create semantic_chunks store
       if (!db.objectStoreNames.contains('semantic_chunks')) {
@@ -112,6 +136,17 @@ export async function initDB(): Promise<IDBPDatabase<KnowledgeDB>> {
         pagesStore.createIndex('by-domain', 'domain', { unique: false });
         pagesStore.createIndex('by-visited', 'last_visited', { unique: false });
         console.log('Created visited_pages store for Web Memory');
+      }
+      
+      // Create bookmarks store for Smart Bookmarks feature (v6+)
+      if (!db.objectStoreNames.contains('bookmarks')) {
+        const bookmarksStore = db.createObjectStore('bookmarks', {
+          keyPath: 'id',
+        });
+        bookmarksStore.createIndex('by-domain', 'domain', { unique: false });
+        bookmarksStore.createIndex('by-rating', 'rating', { unique: false });
+        bookmarksStore.createIndex('by-bookmarked', 'bookmarked_at', { unique: false });
+        console.log('Created bookmarks store for Smart Bookmarks');
       }
     },
   });
@@ -299,56 +334,90 @@ export interface KnowledgeBaseBackup {
   documents: any[];
   chunks: SemanticChunk[];
   interviews: any[];
+  webMemory?: VisitedPage[];  // Optional web memory backup
+  bookmarks?: SmartBookmark[];  // Optional bookmarks backup
 }
 
-// Export entire knowledge base to JSON
-export async function exportKnowledgeBase(): Promise<KnowledgeBaseBackup> {
+export interface BackupOptions {
+  includeDocuments: boolean;
+  includeInterviews: boolean;
+  includeWebMemory: boolean;
+  includeBookmarks: boolean;
+}
+
+// Export knowledge base with options
+export async function exportKnowledgeBase(options?: BackupOptions): Promise<KnowledgeBaseBackup> {
   const db = await initDB();
   
-  const documents = await db.getAll('documents');
-  const chunks = await db.getAll('semantic_chunks');
-  const interviews = await db.getAll('interviews');
+  // Default: include everything except web memory and bookmarks (for backward compatibility)
+  const opts: BackupOptions = options || {
+    includeDocuments: true,
+    includeInterviews: true,
+    includeWebMemory: false,
+    includeBookmarks: false
+  };
+  
+  const documents = opts.includeDocuments ? await db.getAll('documents') : [];
+  const chunks = opts.includeDocuments ? await db.getAll('semantic_chunks') : [];
+  const interviews = opts.includeInterviews ? await db.getAll('interviews') : [];
+  const webMemory = opts.includeWebMemory ? await db.getAll('visited_pages') : undefined;
+  const bookmarks = opts.includeBookmarks ? await db.getAll('bookmarks') : undefined;
   
   const backup: KnowledgeBaseBackup = {
-    version: 1,
+    version: 3,  // Version 3 supports bookmarks
     exported_at: new Date().toISOString(),
     documents,
     chunks,
-    interviews
+    interviews,
+    ...(webMemory && { webMemory }),
+    ...(bookmarks && { bookmarks })
   };
   
-  console.log(`✅ Exported backup: ${documents.length} documents, ${chunks.length} chunks, ${interviews.length} interviews`);
+  const parts = [];
+  if (documents.length > 0) parts.push(`${documents.length} documents`);
+  if (chunks.length > 0) parts.push(`${chunks.length} chunks`);
+  if (interviews.length > 0) parts.push(`${interviews.length} interviews`);
+  if (webMemory && webMemory.length > 0) parts.push(`${webMemory.length} web pages`);
+  if (bookmarks && bookmarks.length > 0) parts.push(`${bookmarks.length} bookmarks`);
+  
+  console.log(`✅ Exported backup: ${parts.join(', ')}`);
   return backup;
 }
 
 // Import knowledge base from JSON backup
-export async function importKnowledgeBase(backup: KnowledgeBaseBackup): Promise<{ documents: number; chunks: number; interviews: number }> {
+export async function importKnowledgeBase(backup: KnowledgeBaseBackup): Promise<{ documents: number; chunks: number; interviews: number; webPages: number; bookmarks: number }> {
   const db = await initDB();
   
-  // Validate backup format
-  if (!backup.version || !backup.documents || !backup.chunks) {
+  // Validate backup format (allow empty arrays for selective backups)
+  if (!backup.version) {
     throw new Error('Invalid backup file format');
   }
   
   let docCount = 0;
   let chunkCount = 0;
   let interviewCount = 0;
+  let webPageCount = 0;
+  let bookmarkCount = 0;
   
   // Import documents
-  const docTx = db.transaction('documents', 'readwrite');
-  for (const doc of backup.documents) {
-    await docTx.store.put(doc);
-    docCount++;
+  if (backup.documents && backup.documents.length > 0) {
+    const docTx = db.transaction('documents', 'readwrite');
+    for (const doc of backup.documents) {
+      await docTx.store.put(doc);
+      docCount++;
+    }
+    await docTx.done;
   }
-  await docTx.done;
   
   // Import chunks
-  const chunkTx = db.transaction('semantic_chunks', 'readwrite');
-  for (const chunk of backup.chunks) {
-    await chunkTx.store.put(chunk);
-    chunkCount++;
+  if (backup.chunks && backup.chunks.length > 0) {
+    const chunkTx = db.transaction('semantic_chunks', 'readwrite');
+    for (const chunk of backup.chunks) {
+      await chunkTx.store.put(chunk);
+      chunkCount++;
+    }
+    await chunkTx.done;
   }
-  await chunkTx.done;
   
   // Import interviews if present
   if (backup.interviews && backup.interviews.length > 0) {
@@ -360,8 +429,35 @@ export async function importKnowledgeBase(backup: KnowledgeBaseBackup): Promise<
     await interviewTx.done;
   }
   
-  console.log(`✅ Imported: ${docCount} documents, ${chunkCount} chunks, ${interviewCount} interviews`);
-  return { documents: docCount, chunks: chunkCount, interviews: interviewCount };
+  // Import web memory if present (version 2+)
+  if (backup.webMemory && backup.webMemory.length > 0) {
+    const webTx = db.transaction('visited_pages', 'readwrite');
+    for (const page of backup.webMemory) {
+      await webTx.store.put(page);
+      webPageCount++;
+    }
+    await webTx.done;
+  }
+  
+  // Import bookmarks if present (version 3+)
+  if (backup.bookmarks && backup.bookmarks.length > 0) {
+    const bookmarkTx = db.transaction('bookmarks', 'readwrite');
+    for (const bookmark of backup.bookmarks) {
+      await bookmarkTx.store.put(bookmark);
+      bookmarkCount++;
+    }
+    await bookmarkTx.done;
+  }
+  
+  const parts = [];
+  if (docCount > 0) parts.push(`${docCount} documents`);
+  if (chunkCount > 0) parts.push(`${chunkCount} chunks`);
+  if (interviewCount > 0) parts.push(`${interviewCount} interviews`);
+  if (webPageCount > 0) parts.push(`${webPageCount} web pages`);
+  if (bookmarkCount > 0) parts.push(`${bookmarkCount} bookmarks`);
+  
+  console.log(`✅ Imported: ${parts.join(', ')}`);
+  return { documents: docCount, chunks: chunkCount, interviews: interviewCount, webPages: webPageCount, bookmarks: bookmarkCount };
 }
 
 // Check if knowledge base is empty
@@ -628,5 +724,263 @@ export async function autoCleanupWebMemory(
   const deletedOverLimit = await enforcePageLimit(maxPages);
   
   return { deletedOld, deletedOverLimit };
+}
+
+// ============================================
+// SMART BOOKMARKS FUNCTIONS
+// ============================================
+
+// Save or update a bookmark
+export async function saveBookmark(bookmarkData: {
+  url: string;
+  title: string;
+  rating: number;
+  comment?: string;
+  categories?: string[];
+  ai_summary?: string;
+  favicon?: string;
+}): Promise<SmartBookmark> {
+  const db = await initDB();
+  const id = hashUrl(bookmarkData.url);
+  const domain = extractDomain(bookmarkData.url);
+  const now = new Date().toISOString();
+  
+  // Check if already bookmarked
+  const existing = await db.get('bookmarks', id);
+  
+  const bookmark: SmartBookmark = {
+    id,
+    url: bookmarkData.url,
+    title: bookmarkData.title,
+    domain,
+    favicon: bookmarkData.favicon,
+    rating: bookmarkData.rating,
+    comment: bookmarkData.comment,
+    categories: bookmarkData.categories || [],
+    ai_summary: bookmarkData.ai_summary || existing?.ai_summary,
+    bookmarked_at: existing?.bookmarked_at || now,
+    updated_at: now
+  };
+  
+  await db.put('bookmarks', bookmark);
+  console.log(`🔖 Bookmark: ${existing ? 'Updated' : 'Saved'} "${bookmarkData.title}" with rating ${bookmarkData.rating}`);
+  
+  return bookmark;
+}
+
+// Get a single bookmark by URL
+export async function getBookmark(url: string): Promise<SmartBookmark | undefined> {
+  const db = await initDB();
+  const id = hashUrl(url);
+  return db.get('bookmarks', id);
+}
+
+// Check if URL is bookmarked
+export async function isBookmarked(url: string): Promise<boolean> {
+  const bookmark = await getBookmark(url);
+  return !!bookmark;
+}
+
+// Get all bookmarks
+export async function getAllBookmarks(): Promise<SmartBookmark[]> {
+  const db = await initDB();
+  return db.getAll('bookmarks');
+}
+
+// Get bookmarks count
+export async function getBookmarkCount(): Promise<number> {
+  const db = await initDB();
+  return db.count('bookmarks');
+}
+
+// Delete a bookmark
+export async function deleteBookmark(url: string): Promise<void> {
+  const db = await initDB();
+  const id = hashUrl(url);
+  await db.delete('bookmarks', id);
+  console.log(`🔖 Bookmark: Deleted ${url}`);
+}
+
+// Clear all bookmarks
+export async function clearAllBookmarks(): Promise<void> {
+  const db = await initDB();
+  await db.clear('bookmarks');
+  console.log('🔖 Bookmarks: Cleared all');
+}
+
+// Get bookmarks by rating range
+export async function getBookmarksByRating(minRating: number, maxRating: number = 10): Promise<SmartBookmark[]> {
+  const db = await initDB();
+  const all = await db.getAll('bookmarks');
+  return all.filter(b => b.rating >= minRating && b.rating <= maxRating)
+    .sort((a, b) => b.rating - a.rating);
+}
+
+// Get bookmarks by category
+export async function getBookmarksByCategory(category: string): Promise<SmartBookmark[]> {
+  const db = await initDB();
+  const all = await db.getAll('bookmarks');
+  const categoryLower = category.toLowerCase();
+  return all.filter(b => 
+    b.categories.some(c => c.toLowerCase().includes(categoryLower))
+  ).sort((a, b) => b.rating - a.rating);
+}
+
+// Search bookmarks by text (title, comment, categories, summary)
+export async function searchBookmarks(query: string): Promise<SmartBookmark[]> {
+  const db = await initDB();
+  const all = await db.getAll('bookmarks');
+  const queryLower = query.toLowerCase();
+  
+  return all.filter(b => 
+    b.title.toLowerCase().includes(queryLower) ||
+    b.domain.toLowerCase().includes(queryLower) ||
+    (b.comment && b.comment.toLowerCase().includes(queryLower)) ||
+    (b.ai_summary && b.ai_summary.toLowerCase().includes(queryLower)) ||
+    b.categories.some(c => c.toLowerCase().includes(queryLower))
+  ).sort((a, b) => b.rating - a.rating);
+}
+
+// Get all unique categories from bookmarks
+export async function getAllBookmarkCategories(): Promise<string[]> {
+  const db = await initDB();
+  const all = await db.getAll('bookmarks');
+  const categories = new Set<string>();
+  
+  for (const bookmark of all) {
+    for (const cat of bookmark.categories) {
+      categories.add(cat);
+    }
+  }
+  
+  return Array.from(categories).sort();
+}
+
+// Get bookmarks grouped by category
+export async function getBookmarksByCategories(): Promise<Map<string, SmartBookmark[]>> {
+  const db = await initDB();
+  const all = await db.getAll('bookmarks');
+  
+  const grouped = new Map<string, SmartBookmark[]>();
+  
+  for (const bookmark of all) {
+    if (bookmark.categories.length === 0) {
+      // Uncategorized
+      const existing = grouped.get('Uncategorized') || [];
+      existing.push(bookmark);
+      grouped.set('Uncategorized', existing);
+    } else {
+      for (const cat of bookmark.categories) {
+        const existing = grouped.get(cat) || [];
+        existing.push(bookmark);
+        grouped.set(cat, existing);
+      }
+    }
+  }
+  
+  return grouped;
+}
+
+// Get bookmark stats
+export async function getBookmarkStats(): Promise<{
+  totalBookmarks: number;
+  uniqueDomains: number;
+  averageRating: number;
+  categories: string[];
+  topRated: SmartBookmark[];
+}> {
+  const db = await initDB();
+  const all = await db.getAll('bookmarks');
+  
+  const domains = new Set(all.map(b => b.domain));
+  const categories = new Set<string>();
+  all.forEach(b => b.categories.forEach(c => categories.add(c)));
+  
+  const avgRating = all.length > 0 
+    ? all.reduce((sum, b) => sum + b.rating, 0) / all.length 
+    : 0;
+  
+  const topRated = [...all]
+    .sort((a, b) => b.rating - a.rating)
+    .slice(0, 5);
+  
+  return {
+    totalBookmarks: all.length,
+    uniqueDomains: domains.size,
+    averageRating: Math.round(avgRating * 10) / 10,
+    categories: Array.from(categories).sort(),
+    topRated
+  };
+}
+
+// Update bookmark AI summary and optionally add suggested categories
+export async function updateBookmarkSummary(url: string, aiSummary: string, suggestedCategories?: string[]): Promise<void> {
+  const db = await initDB();
+  const id = hashUrl(url);
+  const existing = await db.get('bookmarks', id);
+  
+  if (existing) {
+    existing.ai_summary = aiSummary;
+    existing.updated_at = new Date().toISOString();
+    
+    // Merge suggested categories with existing ones (avoid duplicates)
+    if (suggestedCategories && suggestedCategories.length > 0) {
+      const existingCategories = new Set(existing.categories || []);
+      suggestedCategories.forEach(cat => existingCategories.add(cat));
+      existing.categories = Array.from(existingCategories);
+    }
+    
+    await db.put('bookmarks', existing);
+    console.log(`🔖 Bookmark: Updated AI summary for ${url}`);
+  }
+}
+
+// Smart filter bookmarks with multiple criteria
+export async function filterBookmarks(filters: {
+  minRating?: number;
+  maxRating?: number;
+  categories?: string[];
+  searchQuery?: string;
+  domain?: string;
+}): Promise<SmartBookmark[]> {
+  const db = await initDB();
+  let results = await db.getAll('bookmarks');
+  
+  // Apply rating filter
+  if (filters.minRating !== undefined) {
+    results = results.filter(b => b.rating >= filters.minRating!);
+  }
+  if (filters.maxRating !== undefined) {
+    results = results.filter(b => b.rating <= filters.maxRating!);
+  }
+  
+  // Apply category filter
+  if (filters.categories && filters.categories.length > 0) {
+    const catsLower = filters.categories.map(c => c.toLowerCase());
+    results = results.filter(b => 
+      b.categories.some(bc => catsLower.includes(bc.toLowerCase()))
+    );
+  }
+  
+  // Apply domain filter
+  if (filters.domain) {
+    const domainLower = filters.domain.toLowerCase();
+    results = results.filter(b => b.domain.toLowerCase().includes(domainLower));
+  }
+  
+  // Apply search query
+  if (filters.searchQuery) {
+    const queryLower = filters.searchQuery.toLowerCase();
+    results = results.filter(b => 
+      b.title.toLowerCase().includes(queryLower) ||
+      b.domain.toLowerCase().includes(queryLower) ||
+      (b.comment && b.comment.toLowerCase().includes(queryLower)) ||
+      (b.ai_summary && b.ai_summary.toLowerCase().includes(queryLower)) ||
+      b.categories.some(c => c.toLowerCase().includes(queryLower))
+    );
+  }
+  
+  // Sort by rating descending
+  return results.sort((a, b) => b.rating - a.rating);
 }
 

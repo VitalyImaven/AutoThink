@@ -294,3 +294,4 @@ EXPLANATION: [why these might be helpful]
         print(f"❌ Error in web memory suggest: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+

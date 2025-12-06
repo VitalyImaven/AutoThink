@@ -489,19 +489,26 @@ document.getElementById('toggleSidePanelBtn')?.addEventListener('click', async (
   }
 });
 
-// Voice recording functions
+// Voice recording functions - Modern SVG icons like docked version
 function updateSendButton() {
+  const micIcon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>`;
+  const sendIcon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>`;
+  const stopIcon = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>`;
+  
   if (isRecording) {
-    sendBtn.textContent = '⏹️';
-    sendBtn.style.background = '#dc3545';
+    sendBtn.innerHTML = stopIcon;
+    sendBtn.style.background = 'linear-gradient(135deg, #FF4757, #FF006E)';
+    sendBtn.style.boxShadow = '0 0 20px rgba(255, 71, 87, 0.5)';
     sendBtn.style.animation = 'pulse 1.5s infinite';
   } else if (chatInput.value.trim()) {
-    sendBtn.textContent = 'Send';
-    sendBtn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+    sendBtn.innerHTML = sendIcon;
+    sendBtn.style.background = 'linear-gradient(135deg, var(--primary), var(--accent))';
+    sendBtn.style.boxShadow = '0 4px 15px rgba(0, 212, 255, 0.3)';
     sendBtn.style.animation = 'none';
   } else {
-    sendBtn.textContent = '🎤';
-    sendBtn.style.background = '#667eea';
+    sendBtn.innerHTML = micIcon;
+    sendBtn.style.background = 'linear-gradient(135deg, var(--primary), var(--accent))';
+    sendBtn.style.boxShadow = '0 4px 15px rgba(0, 212, 255, 0.3)';
     sendBtn.style.animation = 'none';
   }
 }
@@ -736,24 +743,6 @@ clearMemoryBtn?.addEventListener('click', () => {
   }
 });
 
-// Listen for memory results
-chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
-  if (message.type === 'CHAT_RESPONSE') {
-    removeTypingIndicator();
-    if (message.error) {
-      addMessage('Error: ' + message.error, 'system');
-    } else {
-      addMessage(message.response, 'assistant');
-    }
-    isProcessing = false;
-    sendBtn.disabled = false;
-  } else if (message.type === 'WEB_MEMORY_RESULT') {
-    handleMemoryResult(message);
-  } else if (message.type === 'WEB_MEMORY_STATS_RESULT') {
-    handleMemoryStats((message as any).stats);
-  }
-});
-
 function formatMemoryAnswer(text: string): string {
   let formatted = escapeHtml(text);
   // Handle bullet points
@@ -821,6 +810,168 @@ function escapeHtml(text: string): string {
   div.textContent = text;
   return div.innerHTML;
 }
+
+// ============================================
+// SMART BOOKMARKS TAB FUNCTIONALITY
+// ============================================
+
+const bookmarkSearchInput = document.getElementById('bookmarkSearchInput') as HTMLInputElement;
+const bookmarkSearchBtn = document.getElementById('bookmarkSearchBtn') as HTMLButtonElement;
+const bookmarkResults = document.getElementById('bookmarkResults') as HTMLElement;
+const bookmarkStats = document.getElementById('bookmarkStats') as HTMLElement;
+const bookmarkMinRating = document.getElementById('bookmarkMinRating') as HTMLSelectElement;
+const bookmarkCategoryFilter = document.getElementById('bookmarkCategoryFilter') as HTMLSelectElement;
+const manageBookmarksBtn = document.getElementById('manageBookmarksBtn') as HTMLButtonElement;
+
+// Load bookmark stats on startup
+chrome.runtime.sendMessage({ type: 'GET_BOOKMARK_STATS' });
+// Load all bookmarks initially
+chrome.runtime.sendMessage({ type: 'SEARCH_BOOKMARKS' });
+
+bookmarkSearchBtn?.addEventListener('click', performBookmarkSearch);
+bookmarkSearchInput?.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') performBookmarkSearch();
+});
+
+bookmarkMinRating?.addEventListener('change', performBookmarkSearch);
+bookmarkCategoryFilter?.addEventListener('change', performBookmarkSearch);
+
+function performBookmarkSearch() {
+  const query = bookmarkSearchInput?.value.trim() || '';
+  const minRating = bookmarkMinRating?.value ? parseInt(bookmarkMinRating.value) : undefined;
+  const category = bookmarkCategoryFilter?.value || undefined;
+  
+  console.log('🔖 Bookmark search:', { query, minRating, category });
+  
+  if (bookmarkResults) {
+    bookmarkResults.innerHTML = `
+      <div style="text-align: center; padding: 60px 20px;">
+        <div style="width: 40px; height: 40px; margin: 0 auto 16px; border: 3px solid rgba(0, 212, 255, 0.2); border-top-color: #00D4FF; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        <p style="color: rgba(255,255,255,0.6); font-size: 13px;">Searching bookmarks...</p>
+      </div>
+      <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+    `;
+  }
+  
+  chrome.runtime.sendMessage({ 
+    type: 'SEARCH_BOOKMARKS', 
+    query: query || undefined,
+    minRating,
+    categories: category ? [category] : undefined
+  });
+}
+
+manageBookmarksBtn?.addEventListener('click', () => {
+  chrome.runtime.openOptionsPage();
+});
+
+function handleBookmarksResult(message: any) {
+  if (!bookmarkResults) return;
+  
+  const bookmarks = message.bookmarks || [];
+  const answer = message.answer || '';
+  
+  let html = '';
+  
+  if (answer) {
+    html += `
+      <div style="background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(139, 92, 246, 0.1)); border: 1px solid rgba(0, 212, 255, 0.2); border-radius: 12px; padding: 14px; margin-bottom: 12px;">
+        <div style="font-weight: 600; color: #00D4FF; margin-bottom: 8px; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+          AI Search
+        </div>
+        <div style="color: rgba(255,255,255,0.9); font-size: 12px; line-height: 1.5;">${escapeHtml(answer)}</div>
+      </div>
+    `;
+  }
+  
+  if (bookmarks.length > 0) {
+    html += `<div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 10px;">${bookmarks.length} bookmark${bookmarks.length > 1 ? 's' : ''}</div>`;
+    
+    for (const bookmark of bookmarks) {
+      const date = new Date(bookmark.bookmarked_at).toLocaleDateString();
+      const categories = bookmark.categories.length > 0 
+        ? bookmark.categories.slice(0, 3).join(', ') 
+        : 'Uncategorized';
+      
+      html += `
+        <a href="${escapeHtml(bookmark.url)}" target="_blank" style="display: block; background: rgba(24,24,32,0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px; text-decoration: none; margin-bottom: 8px; transition: all 0.2s;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+            <div style="font-weight: 600; color: #fff; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">${escapeHtml(bookmark.title)}</div>
+            <div style="font-size: 11px; color: #00FF88; font-weight: 600; margin-left: 8px; white-space: nowrap;">${bookmark.rating}/10</div>
+          </div>
+          <div style="font-size: 10px; color: #00D4FF; margin-bottom: 4px;">${escapeHtml(bookmark.domain)}</div>
+          <div style="font-size: 10px; color: rgba(255,255,255,0.4); margin-bottom: 6px;">${escapeHtml(categories)}</div>
+          ${bookmark.ai_summary ? `<div style="font-size: 11px; color: rgba(255,255,255,0.6); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${escapeHtml(bookmark.ai_summary)}</div>` : ''}
+          ${bookmark.comment ? `<div style="font-size: 10px; color: rgba(139, 92, 246, 0.8); margin-top: 6px; font-style: italic;">"${escapeHtml(bookmark.comment)}"</div>` : ''}
+          <div style="font-size: 9px; color: rgba(255,255,255,0.4); margin-top: 6px;">Saved ${date}</div>
+        </a>
+      `;
+    }
+  } else if (!answer) {
+    html = `
+      <div style="text-align: center; padding: 40px;">
+        <div style="font-size: 40px; margin-bottom: 12px;">🔖</div>
+        <p style="color: rgba(255,255,255,0.6); font-size: 13px;">No bookmarks found</p>
+        <p style="color: rgba(255,255,255,0.4); font-size: 11px; margin-top: 8px;">Click the bookmark button on any page to add one!</p>
+      </div>
+    `;
+  }
+  
+  bookmarkResults.innerHTML = html;
+}
+
+function handleBookmarkStats(stats: any) {
+  if (!bookmarkStats) return;
+  
+  if (stats.totalBookmarks === 0) {
+    bookmarkStats.innerHTML = '<span style="color: rgba(255,255,255,0.5);">📊 No bookmarks yet</span>';
+  } else {
+    bookmarkStats.innerHTML = `
+      <span style="color: #00D4FF;">📊 ${stats.totalBookmarks} bookmarks</span> • 
+      <span style="color: rgba(255,255,255,0.5);">${stats.uniqueDomains} domains</span> •
+      <span style="color: #00FF88;">Avg: ${stats.averageRating}/10</span>
+    `;
+  }
+  
+  // Update category filter dropdown
+  if (bookmarkCategoryFilter && stats.categories) {
+    const currentValue = bookmarkCategoryFilter.value;
+    bookmarkCategoryFilter.innerHTML = '<option value="">All Categories</option>';
+    for (const cat of stats.categories) {
+      const option = document.createElement('option');
+      option.value = cat;
+      option.textContent = cat;
+      bookmarkCategoryFilter.appendChild(option);
+    }
+    bookmarkCategoryFilter.value = currentValue;
+  }
+}
+
+// Update message listener to handle bookmark messages
+chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
+  if (message.type === 'CHAT_RESPONSE') {
+    removeTypingIndicator();
+    if ((message as any).error) {
+      addMessage('Error: ' + (message as any).error, 'system');
+    } else {
+      addMessage((message as any).response, 'assistant');
+    }
+    isProcessing = false;
+    sendBtn.disabled = false;
+  } else if (message.type === 'WEB_MEMORY_RESULT') {
+    handleMemoryResult(message);
+  } else if (message.type === 'WEB_MEMORY_STATS_RESULT') {
+    handleMemoryStats((message as any).stats);
+  } else if (message.type === 'BOOKMARKS_RESULT') {
+    handleBookmarksResult(message);
+  } else if (message.type === 'BOOKMARK_STATS_RESULT') {
+    handleBookmarkStats((message as any).stats);
+  }
+});
+
+// Remove the old listener that was just for chat/memory
+// (We replaced it with the combined one above)
 
 // Initialize
 loadConversationHistory();

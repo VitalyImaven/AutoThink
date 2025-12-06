@@ -14,7 +14,14 @@ import {
   getAllVisitedPages,
   getWebMemoryStats,
   clearWebMemory,
-  enforcePageLimit 
+  enforcePageLimit,
+  // Smart Bookmarks
+  saveBookmark,
+  getBookmark,
+  deleteBookmark,
+  filterBookmarks,
+  getBookmarkStats,
+  updateBookmarkSummary
 } from './db';
 
 /**
@@ -434,6 +441,275 @@ async function handleSavePageToMemory(pageData: any) {
   }
 }
 
+// ============================================
+// SMART BOOKMARKS HANDLERS
+// ============================================
+
+/**
+ * Save a bookmark
+ */
+async function handleSaveBookmark(bookmarkData: any, sender: chrome.runtime.MessageSender) {
+  try {
+    console.log('🔖 Saving bookmark:', bookmarkData.title);
+    
+    const bookmark = await saveBookmark(bookmarkData);
+    
+    const response = {
+      type: 'BOOKMARK_RESULT',
+      bookmark,
+      saved: true
+    };
+    
+    chrome.runtime.sendMessage(response);
+    if (sender.tab?.id) {
+      chrome.tabs.sendMessage(sender.tab.id, response).catch(() => {});
+    }
+    
+    console.log('   ✅ Bookmark saved with rating', bookmark.rating);
+  } catch (error) {
+    console.error('❌ Error saving bookmark:', error);
+    chrome.runtime.sendMessage({
+      type: 'BOOKMARK_RESULT',
+      saved: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}
+
+/**
+ * Get a single bookmark
+ */
+async function handleGetBookmark(url: string, sender: chrome.runtime.MessageSender) {
+  try {
+    const bookmark = await getBookmark(url);
+    
+    const response = {
+      type: 'BOOKMARK_RESULT',
+      bookmark: bookmark || null
+    };
+    
+    chrome.runtime.sendMessage(response);
+    if (sender.tab?.id) {
+      chrome.tabs.sendMessage(sender.tab.id, response).catch(() => {});
+    }
+  } catch (error) {
+    console.error('❌ Error getting bookmark:', error);
+  }
+}
+
+/**
+ * Delete a bookmark
+ */
+async function handleDeleteBookmark(url: string, sender: chrome.runtime.MessageSender) {
+  try {
+    await deleteBookmark(url);
+    
+    const response = {
+      type: 'BOOKMARK_RESULT',
+      bookmark: null,
+      deleted: true
+    };
+    
+    chrome.runtime.sendMessage(response);
+    if (sender.tab?.id) {
+      chrome.tabs.sendMessage(sender.tab.id, response).catch(() => {});
+    }
+    
+    console.log('🔖 Bookmark deleted:', url);
+  } catch (error) {
+    console.error('❌ Error deleting bookmark:', error);
+  }
+}
+
+/**
+ * Search/filter bookmarks with optional AI-powered natural language query
+ */
+async function handleSearchBookmarks(params: any, sender: chrome.runtime.MessageSender) {
+  try {
+    console.log('🔖 Searching bookmarks:', params);
+    
+    let bookmarks = await filterBookmarks({
+      minRating: params.minRating,
+      maxRating: params.maxRating,
+      categories: params.categories,
+      searchQuery: params.query
+    });
+    
+    let answer = '';
+    
+    // If there's a natural language query, call AI for smart search
+    if (params.query && bookmarks.length > 0) {
+      try {
+        const response = await fetch(`${config.backendUrl}/bookmarks/search`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            query: params.query,
+            bookmarks: bookmarks.map(b => ({
+              url: b.url,
+              title: b.title,
+              domain: b.domain,
+              rating: b.rating,
+              comment: b.comment,
+              categories: b.categories,
+              ai_summary: b.ai_summary
+            })),
+            min_rating: params.minRating,
+            max_rating: params.maxRating
+          })
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          answer = result.answer || '';
+          // Reorder bookmarks based on AI relevance if provided
+          if (result.relevant_urls && result.relevant_urls.length > 0) {
+            const urlOrder = new Map<string, number>(result.relevant_urls.map((url: string, i: number) => [url, i]));
+            bookmarks.sort((a, b) => {
+              const aOrder: number = urlOrder.get(a.url) ?? 999;
+              const bOrder: number = urlOrder.get(b.url) ?? 999;
+              return aOrder - bOrder;
+            });
+          }
+        }
+      } catch (e) {
+        console.log('   AI search unavailable, using local search');
+      }
+    }
+    
+    const response = {
+      type: 'BOOKMARKS_RESULT',
+      bookmarks,
+      answer
+    };
+    
+    chrome.runtime.sendMessage(response);
+    if (sender.tab?.id) {
+      chrome.tabs.sendMessage(sender.tab.id, response).catch(() => {});
+    }
+    
+    console.log(`   ✅ Found ${bookmarks.length} bookmarks`);
+  } catch (error) {
+    console.error('❌ Error searching bookmarks:', error);
+    chrome.runtime.sendMessage({
+      type: 'BOOKMARKS_RESULT',
+      bookmarks: [],
+      answer: `Error searching bookmarks: ${error instanceof Error ? error.message : 'Unknown error'}`
+    });
+  }
+}
+
+/**
+ * Get bookmark statistics
+ */
+async function handleGetBookmarkStats(sender: chrome.runtime.MessageSender) {
+  try {
+    const stats = await getBookmarkStats();
+    
+    const response = {
+      type: 'BOOKMARK_STATS_RESULT',
+      stats: {
+        totalBookmarks: stats.totalBookmarks,
+        uniqueDomains: stats.uniqueDomains,
+        averageRating: stats.averageRating,
+        categories: stats.categories
+      }
+    };
+    
+    chrome.runtime.sendMessage(response);
+    if (sender.tab?.id) {
+      chrome.tabs.sendMessage(sender.tab.id, response).catch(() => {});
+    }
+  } catch (error) {
+    console.error('❌ Error getting bookmark stats:', error);
+  }
+}
+
+/**
+ * Generate AI summary for a bookmark
+ */
+async function handleGenerateBookmarkSummary(params: { url: string; title: string; content: string; favicon?: string }, sender: chrome.runtime.MessageSender) {
+  try {
+    console.log('🔖 Generating AI summary for:', params.title);
+    
+    // First, check if bookmark exists - if not, save it first
+    let existingBookmark = await getBookmark(params.url);
+    if (!existingBookmark) {
+      console.log('   📝 Bookmark not saved yet, creating it first...');
+      await saveBookmark({
+        url: params.url,
+        title: params.title,
+        rating: 5, // Default rating
+        categories: [],
+        favicon: params.favicon
+      });
+      existingBookmark = await getBookmark(params.url);
+      console.log('   ✅ Bookmark created');
+    }
+    
+    console.log('   📤 Calling backend...');
+    
+    const response = await fetch(`${config.backendUrl}/bookmarks/summarize`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: params.url,
+        title: params.title,
+        content: params.content.substring(0, 5000)  // Limit content length
+      })
+    });
+    
+    console.log('   📥 Backend response status:', response.status);
+    
+    if (response.ok) {
+      const result = await response.json();
+      console.log('   📝 Summary received:', result.summary?.substring(0, 50) + '...');
+      console.log('   📁 Categories:', result.suggested_categories);
+      
+      // Update the bookmark with the summary AND categories
+      console.log('   💾 Updating bookmark in DB...');
+      await updateBookmarkSummary(params.url, result.summary, result.suggested_categories);
+      
+      // Get updated bookmark
+      console.log('   🔍 Getting updated bookmark...');
+      const bookmark = await getBookmark(params.url);
+      console.log('   📖 Bookmark from DB:', bookmark ? 'found' : 'not found');
+      
+      const responseMsg = {
+        type: 'BOOKMARK_RESULT',
+        bookmark,
+        summarized: true
+      };
+      
+      console.log('   📨 Sending message to tab:', sender.tab?.id);
+      chrome.runtime.sendMessage(responseMsg);
+      if (sender.tab?.id) {
+        chrome.tabs.sendMessage(sender.tab.id, responseMsg).catch((err) => {
+          console.log('   ⚠️ Tab message error:', err);
+        });
+      }
+      
+      console.log('   ✅ AI summary generated and sent!');
+    } else {
+      const errorText = await response.text();
+      console.error('   ❌ Backend error:', errorText);
+      throw new Error('Failed to generate summary: ' + errorText);
+    }
+  } catch (error) {
+    console.error('❌ Error generating bookmark summary:', error);
+    chrome.runtime.sendMessage({
+      type: 'BOOKMARK_RESULT',
+      error: error instanceof Error ? error.message : 'Failed to generate summary'
+    });
+    if (sender.tab?.id) {
+      chrome.tabs.sendMessage(sender.tab.id, {
+        type: 'BOOKMARK_RESULT',
+        error: error instanceof Error ? error.message : 'Failed to generate summary'
+      }).catch(() => {});
+    }
+  }
+}
+
 /**
  * Message listener
  */
@@ -474,6 +750,22 @@ chrome.runtime.onMessage.addListener(
     } else if (message.type === 'OPEN_OPTIONS_PAGE') {
       // Open options page (for docked panel which can't call openOptionsPage directly)
       chrome.runtime.openOptionsPage();
+    } 
+    // ============================================
+    // SMART BOOKMARKS HANDLERS
+    // ============================================
+    else if (message.type === 'SAVE_BOOKMARK') {
+      handleSaveBookmark((message as any).bookmarkData, sender);
+    } else if (message.type === 'GET_BOOKMARK') {
+      handleGetBookmark((message as any).url, sender);
+    } else if (message.type === 'DELETE_BOOKMARK') {
+      handleDeleteBookmark((message as any).url, sender);
+    } else if (message.type === 'SEARCH_BOOKMARKS') {
+      handleSearchBookmarks(message as any, sender);
+    } else if (message.type === 'GET_BOOKMARK_STATS') {
+      handleGetBookmarkStats(sender);
+    } else if (message.type === 'GENERATE_BOOKMARK_SUMMARY') {
+      handleGenerateBookmarkSummary((message as any), sender);
     }
     // Don't return true - we're not sending a response back to content script
   }

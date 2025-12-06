@@ -1104,27 +1104,29 @@ function applyHighlight(element: HTMLElement, labelNumber: number, isImportant: 
   element.style.position = 'relative';
   element.style.zIndex = '9999';
   
-  // Add label
+  // Add label - positioned INSIDE the element so it doesn't get cut off
   const label = document.createElement('div');
   label.className = 'ai-highlight-label';
   label.textContent = `${labelNumber}`;
   label.style.cssText = `
     position: absolute;
-    top: -12px;
-    left: -12px;
+    top: 4px;
+    left: 4px;
     background: ${isImportant ? 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'};
     color: white;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 11px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: bold;
     z-index: 10000;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    pointer-events: none;
   `;
   
   element.style.position = 'relative';
@@ -2792,6 +2794,474 @@ function handleWebMemoryStats(stats: any) {
 
 // Initialize: listen to all focus events
 document.addEventListener('focusin', handleFieldFocus, true);
+
+// ============================================
+// SMART BOOKMARKS - Quick Bookmark Button
+// ============================================
+
+let bookmarkButton: HTMLElement | null = null;
+let bookmarkModal: HTMLElement | null = null;
+let currentBookmark: any = null;
+
+// Create the floating bookmark button (only in top frame)
+function createBookmarkButton() {
+  if (isInIframe || bookmarkButton) return;
+  
+  const btn = document.createElement('div');
+  btn.id = 'ai-bookmark-btn';
+  btn.innerHTML = `
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+    </svg>
+  `;
+  btn.style.cssText = `
+    position: fixed;
+    bottom: 100px;
+    right: 20px;
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #00D4FF, #8B5CF6);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 2147483640;
+    box-shadow: 0 4px 20px rgba(0, 212, 255, 0.4);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    color: white;
+  `;
+  
+  btn.addEventListener('mouseenter', () => {
+    btn.style.transform = 'scale(1.1)';
+    btn.style.boxShadow = '0 6px 30px rgba(0, 212, 255, 0.6)';
+  });
+  
+  btn.addEventListener('mouseleave', () => {
+    btn.style.transform = 'scale(1)';
+    btn.style.boxShadow = '0 4px 20px rgba(0, 212, 255, 0.4)';
+  });
+  
+  btn.addEventListener('click', () => {
+    showBookmarkModal();
+  });
+  
+  document.body.appendChild(btn);
+  bookmarkButton = btn;
+  
+  // Check if current page is already bookmarked
+  checkIfBookmarked();
+}
+
+// Check if current page is bookmarked and update button
+function checkIfBookmarked() {
+  chrome.runtime.sendMessage({
+    type: 'GET_BOOKMARK',
+    url: window.location.href
+  });
+}
+
+// Update bookmark button appearance
+function updateBookmarkButton(isBookmarked: boolean, rating?: number) {
+  if (!bookmarkButton) return;
+  
+  if (isBookmarked) {
+    bookmarkButton.innerHTML = `
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2">
+        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+      </svg>
+      ${rating ? `<span style="position: absolute; bottom: -2px; right: -2px; background: #00FF88; color: #000; font-size: 10px; font-weight: bold; padding: 2px 5px; border-radius: 8px;">${rating}</span>` : ''}
+    `;
+    bookmarkButton.style.background = 'linear-gradient(135deg, #00FF88, #00D4FF)';
+  } else {
+    bookmarkButton.innerHTML = `
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+      </svg>
+    `;
+    bookmarkButton.style.background = 'linear-gradient(135deg, #00D4FF, #8B5CF6)';
+  }
+}
+
+// Show the bookmark modal
+function showBookmarkModal() {
+  if (bookmarkModal) {
+    bookmarkModal.remove();
+  }
+  
+  const modal = document.createElement('div');
+  modal.id = 'ai-bookmark-modal';
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 2147483645;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  `;
+  
+  const isEdit = currentBookmark !== null;
+  const title = document.title || 'Untitled Page';
+  
+  modal.innerHTML = `
+    <div style="
+      background: #0A0A0F;
+      border: 1px solid rgba(0, 212, 255, 0.3);
+      border-radius: 20px;
+      width: 400px;
+      max-width: 90vw;
+      padding: 24px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    ">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin: 0; font-size: 18px; color: #fff; display: flex; align-items: center; gap: 10px;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="${isEdit ? 'currentColor' : 'none'}" stroke="#00D4FF" stroke-width="2">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+          </svg>
+          ${isEdit ? 'Edit Bookmark' : 'Add Bookmark'}
+        </h2>
+        <button id="ai-bookmark-close" style="
+          background: none;
+          border: none;
+          color: rgba(255,255,255,0.6);
+          cursor: pointer;
+          font-size: 24px;
+          padding: 4px;
+        ">×</button>
+      </div>
+      
+      <div style="margin-bottom: 16px;">
+        <div style="font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          ${title}
+        </div>
+        <div style="font-size: 11px; color: rgba(255,255,255,0.4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          ${window.location.href}
+        </div>
+      </div>
+      
+      <!-- Rating -->
+      <div style="margin-bottom: 16px;">
+        <label style="font-size: 12px; color: rgba(255,255,255,0.6); display: block; margin-bottom: 8px;">
+          Rating (1-10)
+        </label>
+        <div id="ai-bookmark-rating" style="display: flex; gap: 6px;">
+          ${[1,2,3,4,5,6,7,8,9,10].map(n => `
+            <button class="rating-btn" data-rating="${n}" style="
+              width: 32px;
+              height: 32px;
+              border-radius: 8px;
+              border: 1px solid ${currentBookmark?.rating === n ? '#00D4FF' : 'rgba(255,255,255,0.1)'};
+              background: ${currentBookmark?.rating === n ? 'rgba(0, 212, 255, 0.2)' : 'rgba(255,255,255,0.05)'};
+              color: ${currentBookmark?.rating === n ? '#00D4FF' : 'rgba(255,255,255,0.6)'};
+              font-size: 12px;
+              font-weight: 600;
+              cursor: pointer;
+              transition: all 0.2s;
+            ">${n}</button>
+          `).join('')}
+        </div>
+      </div>
+      
+      <!-- Categories -->
+      <div style="margin-bottom: 16px;">
+        <label style="font-size: 12px; color: rgba(255,255,255,0.6); display: block; margin-bottom: 8px;">
+          Categories (comma-separated)
+        </label>
+        <input type="text" id="ai-bookmark-categories" value="${currentBookmark?.categories?.join(', ') || ''}" placeholder="Shopping, Tech, News..." style="
+          width: 100%;
+          padding: 12px 16px;
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 12px;
+          background: rgba(255,255,255,0.05);
+          color: #fff;
+          font-size: 13px;
+          outline: none;
+          box-sizing: border-box;
+        ">
+      </div>
+      
+      <!-- Comment -->
+      <div style="margin-bottom: 20px;">
+        <label style="font-size: 12px; color: rgba(255,255,255,0.6); display: block; margin-bottom: 8px;">
+          Comment (optional)
+        </label>
+        <textarea id="ai-bookmark-comment" placeholder="Add a note about this site..." style="
+          width: 100%;
+          padding: 12px 16px;
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 12px;
+          background: rgba(255,255,255,0.05);
+          color: #fff;
+          font-size: 13px;
+          outline: none;
+          resize: none;
+          height: 60px;
+          box-sizing: border-box;
+        ">${currentBookmark?.comment || ''}</textarea>
+      </div>
+      
+      <!-- AI Summary -->
+      ${currentBookmark?.ai_summary ? `
+        <div style="margin-bottom: 20px; padding: 12px; background: rgba(0, 212, 255, 0.1); border: 1px solid rgba(0, 212, 255, 0.2); border-radius: 10px;">
+          <div style="font-size: 11px; color: #00D4FF; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10H12V2z"></path></svg>
+            AI Summary
+          </div>
+          <div style="font-size: 12px; color: rgba(255,255,255,0.8); line-height: 1.5;">${currentBookmark.ai_summary}</div>
+        </div>
+      ` : ''}
+      
+      <!-- Action Buttons -->
+      <div style="display: flex; gap: 10px;">
+        ${isEdit ? `
+          <button id="ai-bookmark-delete" style="
+            flex: 1;
+            padding: 12px;
+            border: 1px solid rgba(255, 71, 87, 0.3);
+            border-radius: 12px;
+            background: rgba(255, 71, 87, 0.1);
+            color: #FF4757;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+          ">🗑️ Delete</button>
+        ` : ''}
+        <button id="ai-bookmark-save" style="
+          flex: 2;
+          padding: 12px;
+          border: none;
+          border-radius: 12px;
+          background: linear-gradient(135deg, #00D4FF, #8B5CF6);
+          color: white;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
+        ">💾 ${isEdit ? 'Update' : 'Save'} Bookmark</button>
+      </div>
+      
+      <!-- Generate AI Summary -->
+      ${!currentBookmark?.ai_summary ? `
+        <button id="ai-bookmark-summarize" style="
+          width: 100%;
+          margin-top: 10px;
+          padding: 10px;
+          border: 1px solid rgba(0, 212, 255, 0.3);
+          border-radius: 10px;
+          background: rgba(0, 212, 255, 0.1);
+          color: #00D4FF;
+          font-size: 12px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+        ">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10H12V2z"></path></svg>
+          Generate AI Summary
+        </button>
+      ` : ''}
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  bookmarkModal = modal;
+  
+  // Selected rating
+  let selectedRating = currentBookmark?.rating || 5;
+  
+  // Rating button handlers
+  modal.querySelectorAll('.rating-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedRating = parseInt((btn as HTMLElement).dataset.rating || '5');
+      
+      // Update UI
+      modal.querySelectorAll('.rating-btn').forEach(b => {
+        const r = parseInt((b as HTMLElement).dataset.rating || '0');
+        (b as HTMLElement).style.borderColor = r === selectedRating ? '#00D4FF' : 'rgba(255,255,255,0.1)';
+        (b as HTMLElement).style.background = r === selectedRating ? 'rgba(0, 212, 255, 0.2)' : 'rgba(255,255,255,0.05)';
+        (b as HTMLElement).style.color = r === selectedRating ? '#00D4FF' : 'rgba(255,255,255,0.6)';
+      });
+    });
+  });
+  
+  // Close button
+  modal.querySelector('#ai-bookmark-close')?.addEventListener('click', closeBookmarkModal);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeBookmarkModal();
+  });
+  
+  // Save button
+  modal.querySelector('#ai-bookmark-save')?.addEventListener('click', () => {
+    const categoriesInput = modal.querySelector('#ai-bookmark-categories') as HTMLInputElement;
+    const commentInput = modal.querySelector('#ai-bookmark-comment') as HTMLTextAreaElement;
+    
+    const categories = categoriesInput.value
+      .split(',')
+      .map(c => c.trim())
+      .filter(c => c.length > 0);
+    
+    chrome.runtime.sendMessage({
+      type: 'SAVE_BOOKMARK',
+      bookmarkData: {
+        url: window.location.href,
+        title: document.title || 'Untitled',
+        rating: selectedRating,
+        comment: commentInput.value.trim() || undefined,
+        categories,
+        favicon: getFavicon()
+      }
+    });
+    
+    closeBookmarkModal();
+    showBookmarkToast('Bookmark saved! ⭐ ' + selectedRating + '/10');
+  });
+  
+  // Delete button
+  modal.querySelector('#ai-bookmark-delete')?.addEventListener('click', () => {
+    if (confirm('Delete this bookmark?')) {
+      chrome.runtime.sendMessage({
+        type: 'DELETE_BOOKMARK',
+        url: window.location.href
+      });
+      closeBookmarkModal();
+      showBookmarkToast('Bookmark deleted');
+      currentBookmark = null;
+      updateBookmarkButton(false);
+    }
+  });
+  
+  // Generate AI summary button
+  modal.querySelector('#ai-bookmark-summarize')?.addEventListener('click', () => {
+    const btn = modal.querySelector('#ai-bookmark-summarize') as HTMLButtonElement;
+    btn.innerHTML = '<span style="animation: spin 1s linear infinite; display: inline-block;">⏳</span> Generating...';
+    btn.disabled = true;
+    
+    chrome.runtime.sendMessage({
+      type: 'GENERATE_BOOKMARK_SUMMARY',
+      url: window.location.href,
+      title: document.title,
+      content: document.body.innerText.substring(0, 5000),
+      favicon: getFavicon()
+    });
+  });
+}
+
+// Close bookmark modal
+function closeBookmarkModal() {
+  if (bookmarkModal) {
+    bookmarkModal.remove();
+    bookmarkModal = null;
+  }
+}
+
+// Get page favicon
+function getFavicon(): string {
+  const link = document.querySelector('link[rel*="icon"]') as HTMLLinkElement;
+  return link?.href || `https://www.google.com/s2/favicons?domain=${window.location.hostname}`;
+}
+
+// Show toast notification
+function showBookmarkToast(message: string) {
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 160px;
+    right: 20px;
+    background: linear-gradient(135deg, #00D4FF, #8B5CF6);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 500;
+    z-index: 2147483646;
+    box-shadow: 0 4px 20px rgba(0, 212, 255, 0.4);
+    animation: slideIn 0.3s ease;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  `;
+  toast.textContent = message;
+  
+  // Add animation
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes slideIn {
+      from { transform: translateX(100px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+  `;
+  document.head.appendChild(style);
+  
+  document.body.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.style.animation = 'slideIn 0.3s ease reverse';
+    setTimeout(() => toast.remove(), 300);
+  }, 2500);
+}
+
+// Listen for bookmark responses
+chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
+  console.log('📬 Content script received message:', message.type);
+  
+  if (message.type === 'BOOKMARK_RESULT') {
+    const result = message as any;
+    console.log('   🔖 BOOKMARK_RESULT:', { 
+      hasBookmark: !!result.bookmark, 
+      summarized: result.summarized,
+      error: result.error,
+      modalOpen: !!bookmarkModal
+    });
+    
+    if (result.error) {
+      console.error('   ❌ Bookmark error:', result.error);
+      showBookmarkToast('Error: ' + result.error);
+      // Reset the summarize button if modal is open
+      if (bookmarkModal) {
+        const btn = bookmarkModal.querySelector('#ai-bookmark-summarize') as HTMLButtonElement;
+        if (btn) {
+          btn.innerHTML = '🔄 Retry Generate Summary';
+          btn.disabled = false;
+        }
+      }
+      return;
+    }
+    
+    if (result.bookmark) {
+      currentBookmark = result.bookmark;
+      updateBookmarkButton(true, result.bookmark.rating);
+      
+      // If modal is open and we got a summary, update it
+      if (bookmarkModal && result.summarized) {
+        console.log('   ✅ Re-rendering modal with summary!');
+        showBookmarkToast('AI Summary generated! ✨');
+        showBookmarkModal(); // Re-render modal with new summary
+      }
+    } else if (result.deleted) {
+      currentBookmark = null;
+      updateBookmarkButton(false);
+    } else {
+      // Not bookmarked
+      currentBookmark = null;
+      updateBookmarkButton(false);
+    }
+  }
+});
+
+// Initialize bookmark button after page load (only in top frame)
+if (!isInIframe) {
+  if (document.readyState === 'complete') {
+    setTimeout(createBookmarkButton, 1000);
+  } else {
+    window.addEventListener('load', () => {
+      setTimeout(createBookmarkButton, 1000);
+    });
+  }
+}
 
 console.log('AI Smart Autofill content script loaded');
 

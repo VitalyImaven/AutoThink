@@ -1,12 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app import routes_dynamic, routes_chat, routes_interview, routes_web_memory
+from app import routes_dynamic, routes_chat, routes_interview, routes_web_memory, routes_bookmarks
 
 app = FastAPI(
     title="AI Smart Autofill Backend - Dynamic Categorization",
-    description="Backend API for AI-powered form autofill with dynamic AI-discovered categorization and Web Memory",
-    version="3.1.0"
+    description="Backend API for AI-powered form autofill with dynamic AI-discovered categorization, Web Memory, and Smart Bookmarks",
+    version="1.2.0"
 )
 
 # CORS middleware for Chrome extension
@@ -30,21 +30,25 @@ app.include_router(routes_interview.router, tags=["Interactive Interview"])
 # Include web memory routes (save & search visited websites)
 app.include_router(routes_web_memory.router, tags=["Web Memory"])
 
+# Include smart bookmarks routes (rate, categorize, and search bookmarks)
+app.include_router(routes_bookmarks.router, tags=["Smart Bookmarks"])
+
 
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
     return {
         "status": "ok",
-        "version": "3.1.0",
-        "system": "Dynamic AI Categorization + Web Memory",
-        "description": "AI discovers semantic topics from your documents. Web Memory remembers every site you visit.",
+        "version": "1.2.0",
+        "system": "Dynamic AI Categorization + Web Memory + Smart Bookmarks",
+        "description": "AI discovers semantic topics from your documents. Web Memory remembers sites. Smart Bookmarks help you organize favorites.",
         "features": [
             "Form Autofill",
             "Chat Assistant",
             "Page Summarization",
             "Element Highlighting",
-            "Web Memory - Search your browsing history with AI"
+            "Web Memory - Search your browsing history with AI",
+            "Smart Bookmarks - Rate, categorize, and search your bookmarks with AI"
         ]
     }
 

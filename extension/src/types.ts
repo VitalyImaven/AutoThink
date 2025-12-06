@@ -185,6 +185,89 @@ export interface OpenOptionsPageMessage {
   type: "OPEN_OPTIONS_PAGE";
 }
 
+// Smart Bookmarks types
+export interface SaveBookmarkMessage {
+  type: "SAVE_BOOKMARK";
+  bookmarkData: {
+    url: string;
+    title: string;
+    rating: number;
+    comment?: string;
+    categories?: string[];
+    favicon?: string;
+  };
+}
+
+export interface GetBookmarkMessage {
+  type: "GET_BOOKMARK";
+  url: string;
+}
+
+export interface BookmarkResultMessage {
+  type: "BOOKMARK_RESULT";
+  bookmark?: {
+    id: string;
+    url: string;
+    title: string;
+    rating: number;
+    comment?: string;
+    categories: string[];
+    ai_summary?: string;
+    bookmarked_at: string;
+  };
+  saved?: boolean;
+}
+
+export interface DeleteBookmarkMessage {
+  type: "DELETE_BOOKMARK";
+  url: string;
+}
+
+export interface SearchBookmarksMessage {
+  type: "SEARCH_BOOKMARKS";
+  query?: string;
+  minRating?: number;
+  maxRating?: number;
+  categories?: string[];
+}
+
+export interface BookmarksResultMessage {
+  type: "BOOKMARKS_RESULT";
+  bookmarks: Array<{
+    id: string;
+    url: string;
+    title: string;
+    domain: string;
+    rating: number;
+    comment?: string;
+    categories: string[];
+    ai_summary?: string;
+    bookmarked_at: string;
+  }>;
+  answer?: string;  // AI-generated answer for search
+}
+
+export interface GetBookmarkStatsMessage {
+  type: "GET_BOOKMARK_STATS";
+}
+
+export interface BookmarkStatsResultMessage {
+  type: "BOOKMARK_STATS_RESULT";
+  stats: {
+    totalBookmarks: number;
+    uniqueDomains: number;
+    averageRating: number;
+    categories: string[];
+  };
+}
+
+export interface GenerateBookmarkSummaryMessage {
+  type: "GENERATE_BOOKMARK_SUMMARY";
+  url: string;
+  title: string;
+  content: string;
+}
+
 export type ExtensionMessage =
   | FieldFocusedMessage
   | ManualSuggestMessage
@@ -205,7 +288,16 @@ export type ExtensionMessage =
   | GetWebMemoryStatsMessage
   | WebMemoryStatsResultMessage
   | ClearWebMemoryMessage
-  | OpenOptionsPageMessage;
+  | OpenOptionsPageMessage
+  | SaveBookmarkMessage
+  | GetBookmarkMessage
+  | BookmarkResultMessage
+  | DeleteBookmarkMessage
+  | SearchBookmarksMessage
+  | BookmarksResultMessage
+  | GetBookmarkStatsMessage
+  | BookmarkStatsResultMessage
+  | GenerateBookmarkSummaryMessage;
 
 // Configuration
 export interface ExtensionConfig {

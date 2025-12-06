@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { config } from '../config';
-import { saveDocumentIndex, getAllChunks, getAllDocuments, clearAllChunks, deleteDocument, getChunkCount, getDocumentCount, getAllTags, saveInterview, exportInterviewAsText, exportKnowledgeBase, importKnowledgeBase, KnowledgeBaseBackup, getAllVisitedPages, getWebMemoryStats, clearWebMemory, deleteVisitedPage, VisitedPage, deleteOldPages, enforcePageLimit, deletePagesByDomain, getPagesByDomain } from '../db';
+import { saveDocumentIndex, getAllChunks, getAllDocuments, clearAllChunks, deleteDocument, getChunkCount, getDocumentCount, getAllTags, saveInterview, exportInterviewAsText, exportKnowledgeBase, importKnowledgeBase, KnowledgeBaseBackup, BackupOptions, getAllVisitedPages, getWebMemoryStats, clearWebMemory, deleteVisitedPage, VisitedPage, deleteOldPages, enforcePageLimit, deletePagesByDomain, getPagesByDomain, getVisitedPageCount } from '../db';
 
 interface StatusMessage {
   type: 'success' | 'error' | 'info';
@@ -51,6 +51,15 @@ const App: React.FC = () => {
   const [lastInterviewActivity, setLastInterviewActivity] = useState<Date>(new Date());
   const [pendingIndexCount, setPendingIndexCount] = useState(0);
   const inactivityTimerRef = useRef<number | null>(null);
+  
+  // Backup options state
+  const [backupOptions, setBackupOptions] = useState<BackupOptions>({
+    includeDocuments: true,
+    includeInterviews: true,
+    includeWebMemory: true,
+    includeBookmarks: true
+  });
+  const [webMemoryPageCount, setWebMemoryPageCount] = useState(0);
 
   useEffect(() => {
     loadKnowledgeBase();
@@ -62,9 +71,11 @@ const App: React.FC = () => {
       const pages = await getAllVisitedPages();
       const stats = await getWebMemoryStats();
       const domainGroups = await getPagesByDomain();
+      const pageCount = await getVisitedPageCount();
       setVisitedPages(pages.sort((a, b) => new Date(b.last_visited).getTime() - new Date(a.last_visited).getTime()));
       setWebMemoryStats(stats);
       setPagesByDomain(domainGroups);
+      setWebMemoryPageCount(pageCount);
       setDisplayLimit(50); // Reset pagination on reload
       console.log(`Web Memory: ${stats.totalPages} pages, ${stats.uniqueDomains} domains`);
     } catch (error) {
@@ -653,13 +664,19 @@ const App: React.FC = () => {
     }
   };
 
-  // Backup knowledge base to JSON file
+  // Backup knowledge base to JSON file with options
   const handleBackupKnowledgeBase = async () => {
     try {
+      // Check if at least one option is selected
+      if (!backupOptions.includeDocuments && !backupOptions.includeInterviews && !backupOptions.includeWebMemory && !backupOptions.includeBookmarks) {
+        showStatus('error', 'Please select at least one item to backup');
+        return;
+      }
+      
       addLog('📦 Creating backup...', 'info');
       showStatus('info', 'Creating backup...');
       
-      const backup = await exportKnowledgeBase();
+      const backup = await exportKnowledgeBase(backupOptions);
       
       // Download as JSON file
       const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
@@ -672,8 +689,16 @@ const App: React.FC = () => {
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
       
-      addLog(`✅ Backup created: ${backup.documents.length} documents, ${backup.chunks.length} chunks`, 'success');
-      showStatus('success', `Backup saved! ${backup.documents.length} documents, ${backup.chunks.length} chunks`);
+      // Build summary message
+      const parts = [];
+      if (backup.documents.length > 0) parts.push(`${backup.documents.length} documents`);
+      if (backup.chunks.length > 0) parts.push(`${backup.chunks.length} chunks`);
+      if (backup.interviews.length > 0) parts.push(`${backup.interviews.length} interviews`);
+      if (backup.webMemory && backup.webMemory.length > 0) parts.push(`${backup.webMemory.length} web pages`);
+      
+      const summary = parts.length > 0 ? parts.join(', ') : 'empty backup';
+      addLog(`✅ Backup created: ${summary}`, 'success');
+      showStatus('success', `Backup saved! ${summary}`);
     } catch (error) {
       addLog(`❌ Backup failed: ${(error as Error).message}`, 'error');
       showStatus('error', 'Backup failed: ' + (error as Error).message);
@@ -692,16 +717,25 @@ const App: React.FC = () => {
       const text = await file.text();
       const backup: KnowledgeBaseBackup = JSON.parse(text);
       
-      // Validate
-      if (!backup.version || !backup.documents || !backup.chunks) {
+      // Validate - version is required, but allow empty arrays for selective backups
+      if (!backup.version) {
         throw new Error('Invalid backup file format');
       }
       
       const result = await importKnowledgeBase(backup);
       await loadKnowledgeBase();
+      await loadWebMemory(); // Also reload web memory if restored
       
-      addLog(`✅ Restored: ${result.documents} documents, ${result.chunks} chunks, ${result.interviews} interviews`, 'success');
-      showStatus('success', `Restored ${result.documents} documents and ${result.chunks} chunks!`);
+      // Build summary message
+      const parts = [];
+      if (result.documents > 0) parts.push(`${result.documents} documents`);
+      if (result.chunks > 0) parts.push(`${result.chunks} chunks`);
+      if (result.interviews > 0) parts.push(`${result.interviews} interviews`);
+      if (result.webPages > 0) parts.push(`${result.webPages} web pages`);
+      
+      const summary = parts.length > 0 ? parts.join(', ') : 'nothing to restore';
+      addLog(`✅ Restored: ${summary}`, 'success');
+      showStatus('success', `Restored: ${summary}`);
       
       // Reset file input
       event.target.value = '';
@@ -921,6 +955,120 @@ const App: React.FC = () => {
           </div>
         </div>
 
+        {/* Backup Options */}
+        <div style={{
+          marginBottom: '16px',
+          padding: '16px',
+          background: 'rgba(0, 212, 255, 0.05)',
+          border: '1px solid rgba(0, 212, 255, 0.15)',
+          borderRadius: '12px'
+        }}>
+          <div style={{ 
+            fontSize: '13px', 
+            fontWeight: '600', 
+            color: '#00D4FF', 
+            marginBottom: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            Backup Options
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+            <label style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px', 
+              cursor: 'pointer',
+              fontSize: '13px',
+              color: 'rgba(255, 255, 255, 0.8)'
+            }}>
+              <input
+                type="checkbox"
+                checked={backupOptions.includeDocuments}
+                onChange={(e) => setBackupOptions(prev => ({ ...prev, includeDocuments: e.target.checked }))}
+                style={{ 
+                  width: '18px', 
+                  height: '18px', 
+                  accentColor: '#00D4FF',
+                  cursor: 'pointer'
+                }}
+              />
+              <span>📚 Documents & Chunks</span>
+              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px' }}>({chunkCount})</span>
+            </label>
+            <label style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px', 
+              cursor: 'pointer',
+              fontSize: '13px',
+              color: 'rgba(255, 255, 255, 0.8)'
+            }}>
+              <input
+                type="checkbox"
+                checked={backupOptions.includeInterviews}
+                onChange={(e) => setBackupOptions(prev => ({ ...prev, includeInterviews: e.target.checked }))}
+                style={{ 
+                  width: '18px', 
+                  height: '18px', 
+                  accentColor: '#8B5CF6',
+                  cursor: 'pointer'
+                }}
+              />
+              <span>🎤 Interview Profiles</span>
+            </label>
+            <label style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px', 
+              cursor: 'pointer',
+              fontSize: '13px',
+              color: 'rgba(255, 255, 255, 0.8)'
+            }}>
+              <input
+                type="checkbox"
+                checked={backupOptions.includeWebMemory}
+                onChange={(e) => setBackupOptions(prev => ({ ...prev, includeWebMemory: e.target.checked }))}
+                style={{ 
+                  width: '18px', 
+                  height: '18px', 
+                  accentColor: '#00FF88',
+                  cursor: 'pointer'
+                }}
+              />
+              <span>🧠 Web Memory</span>
+              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px' }}>({webMemoryPageCount} pages)</span>
+            </label>
+            <label style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px', 
+              cursor: 'pointer',
+              fontSize: '13px',
+              color: 'rgba(255, 255, 255, 0.8)'
+            }}>
+              <input
+                type="checkbox"
+                checked={backupOptions.includeBookmarks}
+                onChange={(e) => setBackupOptions(prev => ({ ...prev, includeBookmarks: e.target.checked }))}
+                style={{ 
+                  width: '18px', 
+                  height: '18px', 
+                  accentColor: '#FFB800',
+                  cursor: 'pointer'
+                }}
+              />
+              <span>🔖 Smart Bookmarks</span>
+            </label>
+          </div>
+        </div>
+
         <div className="actions" style={{ flexWrap: 'wrap' }}>
           <button className="btn btn-primary" onClick={loadKnowledgeBase} disabled={loading}>
             {loading ? 'Loading...' : '🔄 Refresh'}
@@ -928,10 +1076,10 @@ const App: React.FC = () => {
           <button 
             className="btn btn-primary" 
             onClick={handleBackupKnowledgeBase}
-            disabled={loading || chunkCount === 0}
+            disabled={loading || (!backupOptions.includeDocuments && !backupOptions.includeInterviews && !backupOptions.includeWebMemory && !backupOptions.includeBookmarks)}
             style={{ background: 'linear-gradient(135deg, #00FF88, #00D4FF)' }}
           >
-            💾 Backup
+            💾 Backup Selected
           </button>
           <label className="btn btn-secondary" style={{ cursor: 'pointer', margin: 0 }}>
             📥 Restore
@@ -960,8 +1108,7 @@ const App: React.FC = () => {
           fontSize: '12px',
           color: 'rgba(255, 255, 255, 0.7)'
         }}>
-          <strong style={{ color: '#00D4FF' }}>💡 Tip:</strong> Before uninstalling the extension, click <strong>"Backup"</strong> to save your knowledge base. 
-          After reinstalling, click <strong>"Restore"</strong> to load it back!
+          <strong style={{ color: '#00D4FF' }}>💡 Tip:</strong> Select what you want to backup using the checkboxes above. Web Memory includes all your visited sites history!
         </div>
       </div>
 
