@@ -742,6 +742,21 @@ chrome.runtime.onMessage.addListener(
           chrome.tabs.sendMessage(sender.tab.id, response).catch(() => {});
         }
       });
+    } else if (message.type === 'GET_RECENT_PAGES') {
+      // Handle recent pages request
+      import('./db').then(({ getRecentVisitedPages }) => {
+        const limit = (message as any).limit || 20;
+        getRecentVisitedPages(limit).then(pages => {
+          const response = {
+            type: 'RECENT_PAGES_RESULT',
+            pages
+          };
+          chrome.runtime.sendMessage(response);
+          if (sender.tab?.id) {
+            chrome.tabs.sendMessage(sender.tab.id, response).catch(() => {});
+          }
+        });
+      });
     } else if (message.type === 'CLEAR_WEB_MEMORY') {
       // Clear all web memory
       clearWebMemory().then(() => {

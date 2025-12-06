@@ -181,6 +181,21 @@ export interface ClearWebMemoryMessage {
   type: "CLEAR_WEB_MEMORY";
 }
 
+export interface GetRecentPagesMessage {
+  type: "GET_RECENT_PAGES";
+  limit?: number;
+}
+
+export interface RecentPagesResultMessage {
+  type: "RECENT_PAGES_RESULT";
+  pages: Array<{
+    url: string;
+    title: string;
+    domain: string;
+    visited_at: string;
+  }>;
+}
+
 export interface OpenOptionsPageMessage {
   type: "OPEN_OPTIONS_PAGE";
 }
@@ -288,6 +303,8 @@ export type ExtensionMessage =
   | GetWebMemoryStatsMessage
   | WebMemoryStatsResultMessage
   | ClearWebMemoryMessage
+  | GetRecentPagesMessage
+  | RecentPagesResultMessage
   | OpenOptionsPageMessage
   | SaveBookmarkMessage
   | GetBookmarkMessage

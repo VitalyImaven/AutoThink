@@ -896,12 +896,26 @@ function showAboutModal() {
 
 const memorySearchInput = document.getElementById('memorySearchInput') as HTMLInputElement;
 const memorySearchBtn = document.getElementById('memorySearchBtn') as HTMLButtonElement;
-const memoryResults = document.getElementById('memoryResults') as HTMLElement;
-const memoryStats = document.getElementById('memoryStats') as HTMLElement;
+const memorySearchResults = document.getElementById('memorySearchResults') as HTMLElement;
+const recentPagesList = document.getElementById('recentPagesList') as HTMLElement;
+const memoryPageCount = document.getElementById('memoryPageCount') as HTMLElement;
+const memoryDomainCount = document.getElementById('memoryDomainCount') as HTMLElement;
+const memoryVisitCount = document.getElementById('memoryVisitCount') as HTMLElement;
 const clearMemoryBtn = document.getElementById('clearMemoryBtn') as HTMLButtonElement;
+const refreshMemoryBtn = document.getElementById('refreshMemoryBtn') as HTMLButtonElement;
 
-// Load memory stats on startup
-chrome.runtime.sendMessage({ type: 'GET_WEB_MEMORY_STATS' });
+// Load memory data on startup
+loadMemoryData();
+
+async function loadMemoryData() {
+  console.log('🧠 Loading memory data...');
+  
+  // Request stats
+  chrome.runtime.sendMessage({ type: 'GET_WEB_MEMORY_STATS' });
+  
+  // Request recent pages
+  chrome.runtime.sendMessage({ type: 'GET_RECENT_PAGES', limit: 20 });
+}
 
 memorySearchBtn?.addEventListener('click', performMemorySearch);
 memorySearchInput?.addEventListener('keypress', (e) => {
@@ -910,15 +924,19 @@ memorySearchInput?.addEventListener('keypress', (e) => {
 
 function performMemorySearch() {
   const query = memorySearchInput?.value.trim();
-  if (!query) return;
+  if (!query) {
+    if (memorySearchResults) memorySearchResults.style.display = 'none';
+    return;
+  }
   
   console.log('🧠 Memory search:', query);
   
-  if (memoryResults) {
-    memoryResults.innerHTML = `
-      <div style="text-align: center; padding: 60px 20px;">
-        <div style="width: 40px; height: 40px; margin: 0 auto 16px; border: 3px solid rgba(0, 212, 255, 0.2); border-top-color: #00D4FF; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-        <p style="color: rgba(255,255,255,0.6); font-size: 13px;">Searching your web memory...</p>
+  if (memorySearchResults) {
+    memorySearchResults.style.display = 'block';
+    memorySearchResults.innerHTML = `
+      <div style="text-align: center; padding: 20px;">
+        <div style="width: 24px; height: 24px; margin: 0 auto 8px; border: 2px solid rgba(0, 212, 255, 0.2); border-top-color: #00D4FF; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        <p style="color: rgba(255,255,255,0.6); font-size: 11px;">Searching...</p>
       </div>
       <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
     `;
@@ -930,14 +948,62 @@ function performMemorySearch() {
 clearMemoryBtn?.addEventListener('click', () => {
   if (confirm('Clear all Web Memory? This cannot be undone.')) {
     chrome.runtime.sendMessage({ type: 'CLEAR_WEB_MEMORY' });
-    if (memoryResults) {
-      memoryResults.innerHTML = '<div style="text-align: center; padding: 40px;"><div style="font-size: 40px; margin-bottom: 12px;">✅</div><p style="color: #00D4FF;">Web Memory Cleared</p></div>';
-    }
-    if (memoryStats) {
-      memoryStats.textContent = '📊 0 pages saved';
-    }
+    loadMemoryData();
   }
 });
+
+refreshMemoryBtn?.addEventListener('click', () => {
+  loadMemoryData();
+});
+
+// Open full memory options
+document.getElementById('openMemoryOptionsBtn')?.addEventListener('click', () => {
+  // Open options page and navigate to memory tab
+  chrome.runtime.openOptionsPage();
+  // Note: We could pass a parameter to jump to memory tab, but for now just open options
+});
+
+// Handle recent pages response
+function handleRecentPages(pages: any[]) {
+  if (!recentPagesList) return;
+  
+  if (!pages || pages.length === 0) {
+    recentPagesList.innerHTML = `
+      <div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 12px;">
+        No pages in memory yet.<br>
+        Browse the web and I'll remember!
+      </div>
+    `;
+    return;
+  }
+  
+  recentPagesList.innerHTML = pages.slice(0, 10).map(page => `
+    <a href="${escapeHtml(page.url)}" target="_blank" style="
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 10px;
+      margin-bottom: 8px;
+      text-decoration: none;
+      transition: all 0.2s;
+    ">
+      <img src="https://www.google.com/s2/favicons?domain=${page.domain}&sz=32" 
+           style="width: 20px; height: 20px; border-radius: 4px; flex-shrink: 0;"
+           onerror="this.style.display='none'">
+      <div style="flex: 1; min-width: 0;">
+        <div style="font-size: 11px; font-weight: 500; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+          ${escapeHtml(page.title || 'Untitled')}
+        </div>
+        <div style="font-size: 10px; color: var(--text-muted);">
+          ${escapeHtml(page.domain)} • ${new Date(page.visited_at).toLocaleDateString()}
+        </div>
+      </div>
+    </a>
+  `).join('');
+}
 
 function formatMemoryAnswer(text: string): string {
   let formatted = escapeHtml(text);
@@ -954,50 +1020,51 @@ function formatMemoryAnswer(text: string): string {
 }
 
 function handleMemoryResult(message: any) {
-  if (!memoryResults) return;
+  if (!memorySearchResults) return;
   
   const results = message.results || [];
   const answer = message.answer || '';
   
+  memorySearchResults.style.display = 'block';
   let html = '';
   
   if (answer) {
     html += `
-      <div style="background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(139, 92, 246, 0.1)); border: 1px solid rgba(0, 212, 255, 0.2); border-radius: 12px; padding: 14px; margin-bottom: 12px;">
-        <div style="font-weight: 600; color: #00D4FF; margin-bottom: 8px; font-size: 13px;">🧠 Web Memory</div>
-        <div style="color: rgba(255,255,255,0.9); font-size: 12px; line-height: 1.5;">${formatMemoryAnswer(answer)}</div>
+      <div style="background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(139, 92, 246, 0.1)); border: 1px solid rgba(0, 212, 255, 0.2); border-radius: 10px; padding: 12px; margin-bottom: 10px;">
+        <div style="font-weight: 600; color: #00D4FF; margin-bottom: 6px; font-size: 11px;">🧠 AI Answer</div>
+        <div style="color: rgba(255,255,255,0.9); font-size: 11px; line-height: 1.5;">${formatMemoryAnswer(answer)}</div>
       </div>
     `;
   }
   
   if (results.length > 0) {
-    html += `<div style="font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 10px;">Found ${results.length} page${results.length > 1 ? 's' : ''}:</div>`;
+    html += `<div style="font-size: 10px; color: rgba(255,255,255,0.5); margin-bottom: 8px;">Found ${results.length} page${results.length > 1 ? 's' : ''}:</div>`;
     
-    for (const result of results) {
+    for (const result of results.slice(0, 5)) {
       const date = new Date(result.visited_at).toLocaleDateString();
       html += `
-        <a href="${escapeHtml(result.url)}" target="_blank" style="display: block; background: rgba(24,24,32,0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px; text-decoration: none; margin-bottom: 8px; transition: all 0.2s;">
-          <div style="font-weight: 600; color: #fff; font-size: 12px; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(result.title)}</div>
-          <div style="font-size: 10px; color: #00D4FF; margin-bottom: 6px;">${escapeHtml(result.domain)}</div>
-          <div style="font-size: 11px; color: rgba(255,255,255,0.6); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${escapeHtml(result.snippet)}</div>
-          <div style="font-size: 9px; color: rgba(255,255,255,0.4); margin-top: 6px;">Visited ${date}</div>
+        <a href="${escapeHtml(result.url)}" target="_blank" style="display: block; background: rgba(24,24,32,0.8); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px; text-decoration: none; margin-bottom: 6px; transition: all 0.2s;">
+          <div style="font-weight: 500; color: #fff; font-size: 11px; margin-bottom: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(result.title)}</div>
+          <div style="font-size: 9px; color: #00D4FF;">${escapeHtml(result.domain)} • ${date}</div>
         </a>
       `;
     }
   } else if (!answer) {
-    html = '<div style="text-align: center; padding: 40px;"><div style="font-size: 40px; margin-bottom: 12px;">🔍</div><p style="color: rgba(255,255,255,0.6); font-size: 13px;">No matching websites found</p></div>';
+    html = '<div style="text-align: center; padding: 16px;"><p style="color: rgba(255,255,255,0.6); font-size: 11px;">No matching websites found</p></div>';
   }
   
-  memoryResults.innerHTML = html;
+  memorySearchResults.innerHTML = html;
 }
 
 function handleMemoryStats(stats: any) {
-  if (!memoryStats) return;
+  // Update stat counters
+  if (memoryPageCount) memoryPageCount.textContent = stats.totalPages?.toString() || '0';
+  if (memoryDomainCount) memoryDomainCount.textContent = stats.uniqueDomains?.toString() || '0';
+  if (memoryVisitCount) memoryVisitCount.textContent = stats.totalVisits?.toString() || '0';
   
-  if (stats.totalPages === 0) {
-    memoryStats.innerHTML = '<span style="color: rgba(255,255,255,0.5);">📊 No pages saved yet</span>';
-  } else {
-    memoryStats.innerHTML = `<span style="color: #00D4FF;">📊 ${stats.totalPages} pages</span> • <span style="color: rgba(255,255,255,0.5);">${stats.uniqueDomains} domains</span>`;
+  // Also load recent pages when we get stats
+  if (stats.recentPages) {
+    handleRecentPages(stats.recentPages);
   }
 }
 
@@ -1159,6 +1226,8 @@ chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
     handleMemoryResult(message);
   } else if (message.type === 'WEB_MEMORY_STATS_RESULT') {
     handleMemoryStats((message as any).stats);
+  } else if (message.type === 'RECENT_PAGES_RESULT') {
+    handleRecentPages((message as any).pages);
   } else if (message.type === 'BOOKMARKS_RESULT') {
     handleBookmarksResult(message);
   } else if (message.type === 'BOOKMARK_STATS_RESULT') {

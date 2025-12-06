@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { config } from '../config';
-import { saveDocumentIndex, getAllChunks, getAllDocuments, clearAllChunks, deleteDocument, getChunkCount, getDocumentCount, getAllTags, saveInterview, exportInterviewAsText, exportKnowledgeBase, importKnowledgeBase, KnowledgeBaseBackup, BackupOptions, getAllVisitedPages, getWebMemoryStats, clearWebMemory, deleteVisitedPage, VisitedPage, deleteOldPages, enforcePageLimit, deletePagesByDomain, getPagesByDomain, getVisitedPageCount } from '../db';
+import { saveDocumentIndex, getAllChunks, getAllDocuments, clearAllChunks, deleteDocument, getChunkCount, getDocumentCount, getAllTags, saveInterview, exportInterviewAsText, exportKnowledgeBase, importKnowledgeBase, KnowledgeBaseBackup, BackupOptions, getAllVisitedPages, getWebMemoryStats, clearWebMemory, deleteVisitedPage, VisitedPage, deleteOldPages, enforcePageLimit, deletePagesByDomain, getPagesByDomain, getVisitedPageCount, getAllBookmarks, getBookmarkCount, getBookmarkStats, deleteBookmark, clearAllBookmarks, SmartBookmark } from '../db';
 
 interface StatusMessage {
   type: 'success' | 'error' | 'info';
@@ -14,13 +14,22 @@ interface ProcessingLog {
 }
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'upload' | 'interview' | 'webmemory'>('upload');
+  const [activeTab, setActiveTab] = useState<'overview' | 'personal' | 'webmemory' | 'bookmarks'>('overview');
   const [chunks, setChunks] = useState<any[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
   const [allTags, setAllTags] = useState<string[]>([]);
   const [chunkCount, setChunkCount] = useState(0);
   const [documentCount, setDocumentCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  
+  // Bookmarks state
+  const [bookmarks, setBookmarks] = useState<SmartBookmark[]>([]);
+  const [bookmarkCount, setBookmarkCount] = useState(0);
+  const [bookmarkStats, setBookmarkStats] = useState<{totalBookmarks: number, avgRating: number, categoriesCount: number}>({totalBookmarks: 0, avgRating: 0, categoriesCount: 0});
+  const [bookmarkFilter, setBookmarkFilter] = useState('');
+  const [bookmarkMinRating, setBookmarkMinRating] = useState(0);
+  const [bookmarkCategoryFilter, setBookmarkCategoryFilter] = useState('');
+  const [bookmarkSortBy, setBookmarkSortBy] = useState('date');
   
   // Web Memory state
   const [visitedPages, setVisitedPages] = useState<VisitedPage[]>([]);
@@ -64,7 +73,26 @@ const App: React.FC = () => {
   useEffect(() => {
     loadKnowledgeBase();
     loadWebMemory();
+    loadBookmarks();
   }, []);
+
+  const loadBookmarks = async () => {
+    try {
+      const allBookmarks = await getAllBookmarks();
+      const count = await getBookmarkCount();
+      const stats = await getBookmarkStats();
+      setBookmarks(allBookmarks.sort((a, b) => new Date(b.bookmarked_at).getTime() - new Date(a.bookmarked_at).getTime()));
+      setBookmarkCount(count);
+      setBookmarkStats({
+        totalBookmarks: stats.totalBookmarks,
+        avgRating: stats.averageRating,
+        categoriesCount: stats.categories.length
+      });
+      console.log(`Bookmarks: ${count} total`);
+    } catch (error) {
+      console.error('Failed to load bookmarks:', error);
+    }
+  };
 
   const loadWebMemory = async () => {
     try {
@@ -794,15 +822,15 @@ const App: React.FC = () => {
         padding: '0 8px'
       }}>
         <button
-          onClick={() => setActiveTab('upload')}
-          className={activeTab === 'upload' ? 'tab-button active' : 'tab-button'}
+          onClick={() => setActiveTab('overview')}
+          className={activeTab === 'overview' ? 'tab-button active' : 'tab-button'}
           style={{
-            padding: '14px 24px',
+            padding: '14px 20px',
             border: 'none',
             background: 'transparent',
-            color: activeTab === 'upload' ? '#00D4FF' : 'rgba(255, 255, 255, 0.4)',
+            color: activeTab === 'overview' ? '#00D4FF' : 'rgba(255, 255, 255, 0.4)',
             cursor: 'pointer',
-            fontSize: '14px',
+            fontSize: '13px',
             fontWeight: '500',
             transition: 'all 0.3s',
             position: 'relative',
@@ -811,19 +839,19 @@ const App: React.FC = () => {
             gap: '8px'
           }}
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><polyline points="9 15 12 12 15 15"></polyline></svg>
-          Upload Documents
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+          Overview
         </button>
         <button
-          onClick={() => setActiveTab('interview')}
-          className={activeTab === 'interview' ? 'tab-button active' : 'tab-button'}
+          onClick={() => setActiveTab('personal')}
+          className={activeTab === 'personal' ? 'tab-button active' : 'tab-button'}
           style={{
-            padding: '14px 24px',
+            padding: '14px 20px',
             border: 'none',
             background: 'transparent',
-            color: activeTab === 'interview' ? '#00D4FF' : 'rgba(255, 255, 255, 0.4)',
+            color: activeTab === 'personal' ? '#00D4FF' : 'rgba(255, 255, 255, 0.4)',
             cursor: 'pointer',
-            fontSize: '14px',
+            fontSize: '13px',
             fontWeight: '500',
             transition: 'all 0.3s',
             position: 'relative',
@@ -832,19 +860,19 @@ const App: React.FC = () => {
             gap: '8px'
           }}
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-          Interactive Interview
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          Personal Data
         </button>
         <button
           onClick={() => { setActiveTab('webmemory'); loadWebMemory(); }}
           className={activeTab === 'webmemory' ? 'tab-button active' : 'tab-button'}
           style={{
-            padding: '14px 24px',
+            padding: '14px 20px',
             border: 'none',
             background: 'transparent',
             color: activeTab === 'webmemory' ? '#00D4FF' : 'rgba(255, 255, 255, 0.4)',
             cursor: 'pointer',
-            fontSize: '14px',
+            fontSize: '13px',
             fontWeight: '500',
             transition: 'all 0.3s',
             position: 'relative',
@@ -856,6 +884,27 @@ const App: React.FC = () => {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
           Web Memory
         </button>
+        <button
+          onClick={() => { setActiveTab('bookmarks'); loadBookmarks(); }}
+          className={activeTab === 'bookmarks' ? 'tab-button active' : 'tab-button'}
+          style={{
+            padding: '14px 20px',
+            border: 'none',
+            background: 'transparent',
+            color: activeTab === 'bookmarks' ? '#00D4FF' : 'rgba(255, 255, 255, 0.4)',
+            cursor: 'pointer',
+            fontSize: '13px',
+            fontWeight: '500',
+            transition: 'all 0.3s',
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+          Bookmarks
+        </button>
       </div>
 
       {statusMessage && (
@@ -864,8 +913,245 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* Upload Tab */}
-      {activeTab === 'upload' && (
+      {/* Overview Tab */}
+      {activeTab === 'overview' && (
+        <div>
+          {/* Knowledge Base Stats */}
+          <div className="section">
+            <h2>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00D4FF" strokeWidth="2" style={{marginRight: '8px'}}><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+              Knowledge Base Overview
+            </h2>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+              gap: '16px',
+              marginTop: '16px'
+            }}>
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(139, 92, 246, 0.1))',
+                border: '1px solid rgba(0, 212, 255, 0.2)',
+                borderRadius: '12px',
+                padding: '20px',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '28px', fontWeight: '700', color: '#00D4FF' }}>{documentCount}</div>
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>Documents</div>
+              </div>
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(0, 212, 255, 0.1))',
+                border: '1px solid rgba(139, 92, 246, 0.2)',
+                borderRadius: '12px',
+                padding: '20px',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '28px', fontWeight: '700', color: '#8B5CF6' }}>{chunkCount}</div>
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>Knowledge Chunks</div>
+              </div>
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(0, 212, 255, 0.1))',
+                border: '1px solid rgba(34, 197, 94, 0.2)',
+                borderRadius: '12px',
+                padding: '20px',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '28px', fontWeight: '700', color: '#22C55E' }}>{allTags.length}</div>
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>Semantic Tags</div>
+              </div>
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(251, 146, 60, 0.1), rgba(139, 92, 246, 0.1))',
+                border: '1px solid rgba(251, 146, 60, 0.2)',
+                borderRadius: '12px',
+                padding: '20px',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '28px', fontWeight: '700', color: '#FB923C' }}>{webMemoryStats.totalPages}</div>
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>Web Memories</div>
+              </div>
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(236, 72, 153, 0.1), rgba(251, 146, 60, 0.1))',
+                border: '1px solid rgba(236, 72, 153, 0.2)',
+                borderRadius: '12px',
+                padding: '20px',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '28px', fontWeight: '700', color: '#EC4899' }}>{bookmarkCount}</div>
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>Bookmarks</div>
+              </div>
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(34, 197, 94, 0.1))',
+                border: '1px solid rgba(6, 182, 212, 0.2)',
+                borderRadius: '12px',
+                padding: '20px',
+                textAlign: 'center'
+              }}>
+                <div style={{ fontSize: '28px', fontWeight: '700', color: '#06B6D4' }}>{webMemoryStats.uniqueDomains}</div>
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>Unique Domains</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Backup & Restore Section */}
+          <div className="section">
+            <h2>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00D4FF" strokeWidth="2" style={{marginRight: '8px'}}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Backup & Restore
+            </h2>
+            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', marginBottom: '16px' }}>
+              Export your knowledge base to a file or restore from a previous backup.
+            </p>
+            
+            {/* Backup Options */}
+            <div style={{
+              background: 'rgba(255,255,255,0.03)',
+              borderRadius: '12px',
+              padding: '16px',
+              marginBottom: '16px'
+            }}>
+              <div style={{ fontSize: '13px', fontWeight: '500', marginBottom: '12px', color: 'rgba(255,255,255,0.8)' }}>
+                Select data to include in backup:
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={backupOptions.includeDocuments} 
+                    onChange={(e) => setBackupOptions({...backupOptions, includeDocuments: e.target.checked})}
+                    style={{ accentColor: '#00D4FF' }}
+                  />
+                  <span>Documents ({documentCount})</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={backupOptions.includeInterviews} 
+                    onChange={(e) => setBackupOptions({...backupOptions, includeInterviews: e.target.checked})}
+                    style={{ accentColor: '#00D4FF' }}
+                  />
+                  <span>Interviews</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={backupOptions.includeWebMemory} 
+                    onChange={(e) => setBackupOptions({...backupOptions, includeWebMemory: e.target.checked})}
+                    style={{ accentColor: '#00D4FF' }}
+                  />
+                  <span>Web Memory ({webMemoryStats.totalPages})</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={backupOptions.includeBookmarks} 
+                    onChange={(e) => setBackupOptions({...backupOptions, includeBookmarks: e.target.checked})}
+                    style={{ accentColor: '#00D4FF' }}
+                  />
+                  <span>Bookmarks ({bookmarkCount})</span>
+                </label>
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <button 
+                className="btn btn-primary" 
+                onClick={handleBackupKnowledgeBase}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Export Backup
+              </button>
+              <label className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                Import Backup
+                <input
+                  type="file"
+                  accept=".json"
+                  style={{ display: 'none' }}
+                  onChange={handleRestoreKnowledgeBase}
+                />
+              </label>
+              <button 
+                className="btn btn-secondary" 
+                onClick={loadKnowledgeBase}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                Refresh Stats
+              </button>
+            </div>
+          </div>
+
+          {/* Danger Zone */}
+          <div className="section" style={{ borderColor: 'rgba(239, 68, 68, 0.3)' }}>
+            <h2 style={{ color: '#EF4444' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2" style={{marginRight: '8px'}}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+              Danger Zone
+            </h2>
+            <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', marginBottom: '16px' }}>
+              These actions are permanent and cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <button 
+                className="btn"
+                onClick={() => {
+                  if (confirm('⚠️ Delete ALL documents and chunks?\n\nThis cannot be undone!')) {
+                    clearAllChunks().then(() => {
+                      loadKnowledgeBase();
+                      showStatus('success', 'All documents cleared');
+                    });
+                  }
+                }}
+                style={{ 
+                  background: 'rgba(239, 68, 68, 0.1)', 
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  color: '#EF4444'
+                }}
+              >
+                Clear Documents
+              </button>
+              <button 
+                className="btn"
+                onClick={() => {
+                  if (confirm('⚠️ Delete ALL web memory?\n\nThis cannot be undone!')) {
+                    clearWebMemory().then(() => {
+                      loadWebMemory();
+                      showStatus('success', 'Web memory cleared');
+                    });
+                  }
+                }}
+                style={{ 
+                  background: 'rgba(239, 68, 68, 0.1)', 
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  color: '#EF4444'
+                }}
+              >
+                Clear Web Memory
+              </button>
+              <button 
+                className="btn"
+                onClick={() => {
+                  if (confirm('⚠️ Delete ALL bookmarks?\n\nThis cannot be undone!')) {
+                    clearAllBookmarks().then(() => {
+                      loadBookmarks();
+                      showStatus('success', 'All bookmarks cleared');
+                    });
+                  }
+                }}
+                style={{ 
+                  background: 'rgba(239, 68, 68, 0.1)', 
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                  color: '#EF4444'
+                }}
+              >
+                Clear Bookmarks
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Personal Data Tab (Upload + Interview) */}
+      {activeTab === 'personal' && (
               <div>
       {/* Upload Section */}
       <div className="section">
@@ -1240,14 +1526,13 @@ const App: React.FC = () => {
               ))}
             </tbody>
           </table>
-        </div>
-      )}
       </div>
       )}
 
-      {/* Interview Tab */}
-      {activeTab === 'interview' && (
-      <div>
+      {/* Divider */}
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', margin: '32px 0' }} />
+
+      {/* Interview Section (merged into Personal Data tab) */}
         {/* Profile Selector */}
         <div className="section">
           <h2>👤 Select Profile</h2>
@@ -2199,6 +2484,431 @@ const App: React.FC = () => {
                 )}
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Bookmarks Tab */}
+      {activeTab === 'bookmarks' && (
+        <div>
+          {/* Bookmark Stats */}
+          <div className="section">
+            <h2>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00D4FF" strokeWidth="2" style={{marginRight: '8px'}}><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+              Smart Bookmarks
+            </h2>
+            <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.5)', marginBottom: '16px' }}>
+              All your bookmarked websites with ratings, categories, and AI-generated summaries. Use AI search to find bookmarks by any criteria.
+            </p>
+            
+            <div className="kb-stats">
+              <div className="stat-card">
+                <div className="stat-value">{bookmarkStats.totalBookmarks}</div>
+                <div className="stat-label">Total Bookmarks</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-value">{bookmarkStats.avgRating.toFixed(1)}</div>
+                <div className="stat-label">Avg Rating</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-value">{bookmarkStats.categoriesCount}</div>
+                <div className="stat-label">Categories</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-value">{bookmarks.filter(b => b.ai_summary).length}</div>
+                <div className="stat-label">With AI Summary</div>
+              </div>
+            </div>
+            
+            {/* Management Actions */}
+            <div style={{ display: 'flex', gap: '10px', marginTop: '16px', flexWrap: 'wrap' }}>
+              <button 
+                className="btn btn-secondary" 
+                onClick={loadBookmarks}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                Refresh
+              </button>
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => {
+                  if (confirm('⚠️ Clear ALL bookmarks?\n\nThis cannot be undone!')) {
+                    clearAllBookmarks().then(() => {
+                      loadBookmarks();
+                      showStatus('success', 'All bookmarks cleared');
+                    });
+                  }
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#EF4444' }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                Clear All
+              </button>
+            </div>
+          </div>
+
+          {/* AI Search */}
+          <div className="section">
+            <h2>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="2" style={{marginRight: '8px'}}><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+              AI-Powered Search
+            </h2>
+            <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)', marginBottom: '12px' }}>
+              Ask in natural language: "shopping sites rated 8+", "articles about AI", "entertainment sites from last week"
+            </p>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <input
+                type="text"
+                placeholder="Find bookmarks... e.g., 'shopping sites with rating above 7'"
+                value={bookmarkFilter}
+                onChange={(e) => setBookmarkFilter(e.target.value)}
+                style={{
+                  flex: 1,
+                  padding: '14px 18px',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(139, 92, 246, 0.3)',
+                  background: 'rgba(139, 92, 246, 0.05)',
+                  color: '#fff',
+                  fontSize: '14px',
+                  outline: 'none'
+                }}
+              />
+              <button 
+                className="btn btn-primary"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #8B5CF6, #00D4FF)' }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+                Search
+              </button>
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className="section">
+            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>Min Rating:</span>
+                <select
+                  value={bookmarkMinRating}
+                  onChange={(e) => setBookmarkMinRating(Number(e.target.value))}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    background: 'rgba(255,255,255,0.05)',
+                    color: '#fff',
+                    fontSize: '13px',
+                    outline: 'none'
+                  }}
+                >
+                  <option value={0}>All</option>
+                  <option value={6}>6+ ⭐⭐</option>
+                  <option value={7}>7+ ⭐⭐⭐</option>
+                  <option value={8}>8+ ⭐⭐⭐⭐</option>
+                  <option value={9}>9+ ⭐⭐⭐⭐⭐</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>Category:</span>
+                <select
+                  value={bookmarkCategoryFilter}
+                  onChange={(e) => setBookmarkCategoryFilter(e.target.value)}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    background: 'rgba(255,255,255,0.05)',
+                    color: '#fff',
+                    fontSize: '13px',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="">All Categories</option>
+                  {Array.from(new Set(bookmarks.flatMap(b => b.categories || []))).sort().map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)' }}>Sort:</span>
+                <select
+                  value={bookmarkSortBy}
+                  onChange={(e) => setBookmarkSortBy(e.target.value)}
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    background: 'rgba(255,255,255,0.05)',
+                    color: '#fff',
+                    fontSize: '13px',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="date">Most Recent</option>
+                  <option value="rating">Highest Rated</option>
+                  <option value="title">Alphabetical</option>
+                </select>
+              </div>
+              <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>
+                Showing {bookmarks.filter(bm => 
+                  (bookmarkFilter === '' || 
+                    bm.title.toLowerCase().includes(bookmarkFilter.toLowerCase()) ||
+                    bm.url.toLowerCase().includes(bookmarkFilter.toLowerCase()) ||
+                    bm.ai_summary?.toLowerCase().includes(bookmarkFilter.toLowerCase()) ||
+                    bm.comment?.toLowerCase().includes(bookmarkFilter.toLowerCase()) ||
+                    bm.categories?.some(c => c.toLowerCase().includes(bookmarkFilter.toLowerCase()))
+                  ) &&
+                  bm.rating >= bookmarkMinRating &&
+                  (bookmarkCategoryFilter === '' || bm.categories?.includes(bookmarkCategoryFilter))
+                ).length} of {bookmarks.length}
+              </span>
+            </div>
+          </div>
+
+          {/* Bookmarks List */}
+          <div className="section">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {bookmarks
+                .filter(bm => 
+                  (bookmarkFilter === '' || 
+                    bm.title.toLowerCase().includes(bookmarkFilter.toLowerCase()) ||
+                    bm.url.toLowerCase().includes(bookmarkFilter.toLowerCase()) ||
+                    bm.ai_summary?.toLowerCase().includes(bookmarkFilter.toLowerCase()) ||
+                    bm.comment?.toLowerCase().includes(bookmarkFilter.toLowerCase()) ||
+                    bm.categories?.some(c => c.toLowerCase().includes(bookmarkFilter.toLowerCase()))
+                  ) &&
+                  bm.rating >= bookmarkMinRating &&
+                  (bookmarkCategoryFilter === '' || bm.categories?.includes(bookmarkCategoryFilter))
+                )
+                .sort((a, b) => {
+                  if (bookmarkSortBy === 'rating') return b.rating - a.rating;
+                  if (bookmarkSortBy === 'title') return a.title.localeCompare(b.title);
+                  return new Date(b.bookmarked_at).getTime() - new Date(a.bookmarked_at).getTime();
+                })
+                .map((bookmark) => (
+                <div
+                  key={bookmark.url}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '16px',
+                    padding: '20px',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: '16px',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {/* Favicon */}
+                  <div style={{ 
+                    width: '48px', 
+                    height: '48px', 
+                    borderRadius: '12px', 
+                    background: 'rgba(0,0,0,0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <img 
+                      src={bookmark.favicon || `https://www.google.com/s2/favicons?domain=${new URL(bookmark.url).hostname}&sz=32`}
+                      style={{ width: '32px', height: '32px', borderRadius: '6px' }}
+                      onError={(e) => { (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%2300D4FF" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>'; }}
+                    />
+                  </div>
+                  
+                  {/* Content */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    {/* Title & Domain */}
+                    <a 
+                      href={bookmark.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      style={{ 
+                        color: '#fff', 
+                        textDecoration: 'none', 
+                        fontSize: '15px', 
+                        fontWeight: '600',
+                        display: 'block',
+                        marginBottom: '4px'
+                      }}
+                    >
+                      {bookmark.title}
+                    </a>
+                    <div style={{ fontSize: '12px', color: '#00D4FF', marginBottom: '10px' }}>
+                      {bookmark.domain} • {new Date(bookmark.bookmarked_at).toLocaleDateString()}
+                    </div>
+                    
+                    {/* Rating - Visual Stars */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                      <div style={{ 
+                        display: 'flex', 
+                        gap: '2px',
+                        padding: '4px 10px',
+                        background: 'rgba(255, 215, 0, 0.1)',
+                        borderRadius: '20px',
+                        border: '1px solid rgba(255, 215, 0, 0.2)'
+                      }}>
+                        {[...Array(10)].map((_, i) => (
+                          <span key={i} style={{ color: i < bookmark.rating ? '#FFD700' : 'rgba(255,255,255,0.2)', fontSize: '12px' }}>★</span>
+                        ))}
+                      </div>
+                      <span style={{ 
+                        fontSize: '13px', 
+                        fontWeight: '600',
+                        color: bookmark.rating >= 8 ? '#22C55E' : bookmark.rating >= 6 ? '#FFD700' : 'rgba(255,255,255,0.5)'
+                      }}>
+                        {bookmark.rating}/10
+                      </span>
+                    </div>
+                    
+                    {/* Categories */}
+                    {bookmark.categories && bookmark.categories.length > 0 && (
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                        {bookmark.categories.map((cat, idx) => (
+                          <span 
+                            key={idx}
+                            onClick={() => setBookmarkCategoryFilter(cat)}
+                            style={{
+                              padding: '4px 10px',
+                              background: 'rgba(0, 212, 255, 0.1)',
+                              border: '1px solid rgba(0, 212, 255, 0.3)',
+                              borderRadius: '16px',
+                              fontSize: '11px',
+                              color: '#00D4FF',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            {cat}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* AI Summary */}
+                    {bookmark.ai_summary && (
+                      <div style={{ 
+                        fontSize: '13px', 
+                        color: 'rgba(255,255,255,0.7)', 
+                        lineHeight: '1.5',
+                        padding: '12px',
+                        background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(0, 212, 255, 0.05))',
+                        borderRadius: '10px',
+                        border: '1px solid rgba(139, 92, 246, 0.2)',
+                        marginBottom: '10px'
+                      }}>
+                        <div style={{ fontSize: '10px', color: '#8B5CF6', marginBottom: '6px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          🤖 AI Summary
+                        </div>
+                        {bookmark.ai_summary}
+                      </div>
+                    )}
+                    
+                    {/* User Comment */}
+                    {bookmark.comment && (
+                      <div style={{ 
+                        fontSize: '13px', 
+                        color: 'rgba(255,255,255,0.6)', 
+                        fontStyle: 'italic',
+                        padding: '10px 12px',
+                        background: 'rgba(255,255,255,0.03)',
+                        borderRadius: '8px',
+                        borderLeft: '3px solid rgba(0, 212, 255, 0.5)'
+                      }}>
+                        <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: '4px' }}>💬 Your Note:</span>
+                        "{bookmark.comment}"
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Actions */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <button
+                      onClick={() => window.open(bookmark.url, '_blank')}
+                      style={{
+                        background: 'rgba(0, 212, 255, 0.1)',
+                        border: '1px solid rgba(0, 212, 255, 0.3)',
+                        borderRadius: '8px',
+                        color: '#00D4FF',
+                        cursor: 'pointer',
+                        padding: '8px',
+                        transition: 'all 0.2s'
+                      }}
+                      title="Open"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm('Delete this bookmark?')) {
+                          deleteBookmark(bookmark.url).then(() => loadBookmarks());
+                        }
+                      }}
+                      style={{
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        border: '1px solid rgba(239, 68, 68, 0.3)',
+                        borderRadius: '8px',
+                        color: '#EF4444',
+                        cursor: 'pointer',
+                        padding: '8px',
+                        transition: 'all 0.2s'
+                      }}
+                      title="Delete"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>
+                  </div>
+                </div>
+              ))}
+              
+              {bookmarks.length === 0 && (
+                <div style={{ 
+                  textAlign: 'center', 
+                  padding: '80px 20px',
+                  color: 'rgba(255, 255, 255, 0.4)'
+                }}>
+                  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" style={{ marginBottom: '20px', opacity: 0.3 }}><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+                  <p style={{ fontSize: '16px', marginBottom: '8px' }}>No bookmarks yet</p>
+                  <p style={{ fontSize: '13px' }}>
+                    Use the ⚡ floating button on any page to bookmark websites
+                  </p>
+                </div>
+              )}
+              
+              {bookmarks.length > 0 && bookmarks.filter(bm => 
+                (bookmarkFilter === '' || 
+                  bm.title.toLowerCase().includes(bookmarkFilter.toLowerCase()) ||
+                  bm.url.toLowerCase().includes(bookmarkFilter.toLowerCase()) ||
+                  bm.categories?.some(c => c.toLowerCase().includes(bookmarkFilter.toLowerCase()))
+                ) &&
+                bm.rating >= bookmarkMinRating &&
+                (bookmarkCategoryFilter === '' || bm.categories?.includes(bookmarkCategoryFilter))
+              ).length === 0 && (
+                <div style={{ 
+                  textAlign: 'center', 
+                  padding: '40px 20px',
+                  color: 'rgba(255, 255, 255, 0.4)'
+                }}>
+                  <p style={{ fontSize: '14px' }}>No bookmarks match your filters</p>
+                  <button 
+                    onClick={() => { setBookmarkFilter(''); setBookmarkMinRating(0); setBookmarkCategoryFilter(''); }}
+                    style={{ 
+                      marginTop: '12px', 
+                      padding: '8px 16px', 
+                      background: 'rgba(0, 212, 255, 0.1)', 
+                      border: '1px solid rgba(0, 212, 255, 0.3)', 
+                      borderRadius: '8px',
+                      color: '#00D4FF',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Clear Filters
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
