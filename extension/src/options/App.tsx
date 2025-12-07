@@ -72,7 +72,8 @@ const App: React.FC = () => {
     includeWebMemory: true,
     includeBookmarks: true
   });
-  const [webMemoryPageCount, setWebMemoryPageCount] = useState(0);
+  // @ts-ignore - used by setWebMemoryPageCount
+  const [_webMemoryPageCount, setWebMemoryPageCount] = useState(0);
 
   useEffect(() => {
     loadKnowledgeBase();
@@ -378,7 +379,8 @@ const App: React.FC = () => {
     }
   };
 
-  const handleAddProfile = () => {
+  // @ts-ignore - kept for potential future use
+  const _handleAddProfile = () => {
     if (!newProfileName.trim()) return;
     
     const profileId = newProfileName.toLowerCase().replace(/\s+/g, '-');
@@ -403,7 +405,8 @@ const App: React.FC = () => {
     }
   };
 
-  const handleExportInterview = async () => {
+  // @ts-ignore - kept for potential future use
+  const _handleExportInterview = async () => {
     try {
       // Export from LOCAL IndexedDB
       const text = await exportInterviewAsText(interviewProfile);
@@ -466,7 +469,8 @@ const App: React.FC = () => {
     }
   };
 
-  const handleUploadInterviewToKB = async () => {
+  // @ts-ignore - kept for potential future use
+  const _handleUploadInterviewToKB = async () => {
     // Manual upload - same as auto-index but with different messaging
     try {
       addLog(`📤 Manually indexing ${interviewProfile} interview...`, 'info');
@@ -1416,7 +1420,7 @@ const App: React.FC = () => {
             alignItems: 'center'
           }}>
             <button
-              onClick={isRecording ? stopRecording : startRecording}
+              onClick={isRecording ? handleStopRecording : handleStartRecording}
               disabled={interviewProcessing}
               style={{
                 width: '48px',
@@ -1443,7 +1447,7 @@ const App: React.FC = () => {
               type="text"
               value={interviewInput}
               onChange={(e) => setInterviewInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && !interviewProcessing && handleInterviewSubmit()}
+              onKeyPress={(e) => e.key === 'Enter' && !interviewProcessing && handleInterviewMessage()}
               placeholder={isRecording ? 'Recording...' : 'Type your message...'}
               disabled={isRecording || interviewProcessing}
               style={{
@@ -1458,7 +1462,7 @@ const App: React.FC = () => {
               }}
             />
             <button
-              onClick={handleInterviewSubmit}
+              onClick={handleInterviewMessage}
               disabled={!interviewInput.trim() || interviewProcessing}
               style={{
                 padding: '14px 24px',
@@ -1699,294 +1703,6 @@ const App: React.FC = () => {
       </div>
       )}
 
-      {/* PLACEHOLDER_MARKER */}
-          <p style={{ fontSize: '14px', color: '#666', marginBottom: '16px' }}>
-            Answer questions to build comprehensive knowledge. Use text or voice input. All answers are automatically saved to your knowledge base.
-          </p>
-          
-          {/* Chat Container */}
-          <div style={{
-            background: 'rgba(24, 24, 32, 0.9)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: '16px',
-            height: '400px',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            boxShadow: '0 4px 30px rgba(0, 0, 0, 0.3)'
-          }}>
-            {/* Messages */}
-            <div style={{
-              flex: 1,
-              overflowY: 'auto',
-              padding: '16px',
-              background: 'rgba(10, 10, 15, 0.5)'
-            }}>
-              {interviewMessages.length === 0 ? (
-                <div style={{
-                  textAlign: 'center',
-                  padding: '50px 20px',
-                  color: 'rgba(255, 255, 255, 0.4)'
-                }}>
-                  <div style={{ 
-                    width: '80px', 
-                    height: '80px', 
-                    margin: '0 auto 20px',
-                    background: 'linear-gradient(135deg, rgba(0, 212, 255, 0.2), rgba(139, 92, 246, 0.2))',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '1px solid rgba(0, 212, 255, 0.3)'
-                  }}>
-                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#00D4FF" strokeWidth="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                  </div>
-                  <p style={{ marginBottom: '20px', color: 'rgba(255, 255, 255, 0.6)' }}>No interview started yet</p>
-                  <button
-                    className="btn btn-primary"
-                    onClick={() => {
-                      setInterviewMessages([{
-                        role: 'assistant',
-                        content: `Hi! Let's gather information about ${interviewProfile === 'me' ? 'you' : interviewProfile}. I'll ask you questions to build a comprehensive profile. Ready to start?`
-                      }]);
-                    }}
-                    style={{ marginTop: '8px', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                    Start Interview
-                  </button>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {interviewMessages.map((msg, idx) => (
-                    msg.role === 'typing' ? (
-                      // Typing indicator
-                      <div
-                        key={idx}
-                        style={{
-                          maxWidth: '85%',
-                          alignSelf: 'flex-start',
-                          background: 'rgba(24, 24, 32, 0.9)',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
-                          padding: '14px 18px',
-                          borderRadius: '16px',
-                          display: 'flex',
-                          gap: '6px'
-                        }}
-                      >
-                        <span style={{
-                          display: 'inline-block',
-                          width: '8px',
-                          height: '8px',
-                          borderRadius: '50%',
-                          background: 'linear-gradient(135deg, #00D4FF, #8B5CF6)',
-                          animation: 'typing 1.4s infinite'
-                        }}></span>
-                        <span style={{
-                          display: 'inline-block',
-                          width: '8px',
-                          height: '8px',
-                          borderRadius: '50%',
-                          background: 'linear-gradient(135deg, #00D4FF, #8B5CF6)',
-                          animation: 'typing 1.4s infinite 0.2s'
-                        }}></span>
-                        <span style={{
-                          display: 'inline-block',
-                          width: '8px',
-                          height: '8px',
-                          borderRadius: '50%',
-                          background: 'linear-gradient(135deg, #00D4FF, #8B5CF6)',
-                          animation: 'typing 1.4s infinite 0.4s'
-                        }}></span>
-                        <style>{`
-                          @keyframes typing {
-                            0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
-                            30% { transform: translateY(-10px); opacity: 1; }
-                          }
-                        `}</style>
-                      </div>
-                    ) : (
-                      // Regular message
-                      <div
-                        key={idx}
-                        style={{
-                          maxWidth: '85%',
-                          alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                          background: msg.role === 'user' ? 
-                            'linear-gradient(135deg, #00D4FF 0%, #8B5CF6 100%)' : 
-                            'rgba(24, 24, 32, 0.9)',
-                          border: msg.role === 'assistant' ? '1px solid rgba(255, 255, 255, 0.1)' : 'none',
-                          color: msg.role === 'user' ? 'white' : 'rgba(255, 255, 255, 0.9)',
-                          padding: '12px 16px',
-                          borderRadius: '16px',
-                          borderBottomRightRadius: msg.role === 'user' ? '4px' : '16px',
-                          borderBottomLeftRadius: msg.role === 'assistant' ? '4px' : '16px',
-                          fontSize: '13px',
-                          lineHeight: '1.6',
-                          boxShadow: msg.role === 'user' ? '0 4px 15px rgba(0, 212, 255, 0.3)' : 'none'
-                        }}
-                      >
-                        {msg.content}
-                      </div>
-                    )
-                  ))}
-                </div>
-              )}
-            </div>
-            
-            {/* Input Area */}
-            {interviewMessages.length > 0 && (
-              <div style={{
-                padding: '12px 16px',
-                background: 'rgba(255, 255, 255, 0.03)',
-                borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-                display: 'flex',
-                gap: '10px',
-                alignItems: 'center'
-              }}>
-                <input
-                  type="text"
-                  value={interviewInput}
-                  onChange={(e) => setInterviewInput(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter' && !interviewProcessing && interviewInput.trim()) {
-                      handleInterviewMessage();
-                    }
-                  }}
-                  placeholder={isRecording ? "Recording... Click button to stop" : "Type your answer or click mic to speak..."}
-                  disabled={interviewProcessing || isRecording}
-                  style={{
-                    flex: 1,
-                    padding: '12px 16px',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '24px',
-                    fontSize: '13px',
-                    outline: 'none',
-                    fontFamily: 'inherit',
-                    background: 'rgba(24, 24, 32, 0.9)',
-                    color: '#fff',
-                    transition: 'all 0.3s'
-                  }}
-                />
-                
-                {/* Smart Button: Mic by default, Send when text entered, Stop when recording */}
-                <button
-                  onClick={() => {
-                    if (isRecording) {
-                      // Stop recording
-                      handleStopRecording();
-                    } else if (interviewInput.trim()) {
-                      // Send text message
-                      handleInterviewMessage();
-                    } else {
-                      // Start recording
-                      handleStartRecording();
-                    }
-                  }}
-                  disabled={interviewProcessing}
-                  style={{
-                    padding: '12px 20px',
-                    background: isRecording ? 'linear-gradient(135deg, #FF4757, #FF006E)' : 
-                               'linear-gradient(135deg, #00D4FF 0%, #8B5CF6 100%)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '24px',
-                    cursor: 'pointer',
-                    fontSize: '13px',
-                    fontWeight: '600',
-                    minWidth: interviewInput.trim() ? '80px' : '48px',
-                    transition: 'all 0.3s',
-                    boxShadow: isRecording ? '0 0 20px rgba(255, 71, 87, 0.5)' : '0 4px 15px rgba(0, 212, 255, 0.3)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px'
-                  }}
-                  title={
-                    isRecording ? 'Click to stop recording' :
-                    interviewInput.trim() ? 'Send message' :
-                    'Click to start voice input'
-                  }
-                >
-                  {isRecording ? (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>
-                  ) : interviewInput.trim() ? (
-                    <>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                      Send
-                    </>
-                  ) : (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                  )}
-                </button>
-              </div>
-            )}
-          </div>
-          
-          {/* Interview Actions */}
-          {interviewMessages.length > 0 && (
-            <div style={{
-              marginTop: '16px',
-              display: 'flex',
-              gap: '8px',
-              flexWrap: 'wrap'
-            }}>
-              <button
-                className="btn btn-primary"
-                onClick={handleUploadInterviewToKB}
-                style={{ fontSize: '13px' }}
-                title="Upload this interview to knowledge base for auto-fill"
-              >
-                📤 Upload to Knowledge Base
-              </button>
-              <button
-                className="btn btn-secondary"
-                onClick={handleExportInterview}
-                style={{ fontSize: '13px' }}
-                title="Download as .txt file"
-              >
-                💾 Export File
-              </button>
-              <button
-                className="btn btn-secondary"
-                onClick={() => {
-                  if (confirm('Restart interview? Current conversation will be saved first.')) {
-                    // Save before clearing
-                    autoSaveInterview(interviewMessages.filter(m => m.role !== 'typing'));
-                    setInterviewMessages([]);
-                    setInterviewInput('');
-                  }
-                }}
-                style={{ fontSize: '13px' }}
-              >
-                🔄 Restart
-              </button>
-            </div>
-          )}
-          
-          {/* Interview Info */}
-          {interviewMessages.length > 0 && (
-            <div style={{
-              marginTop: '16px',
-              padding: '16px',
-              background: 'rgba(255, 255, 255, 0.03)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              borderRadius: '12px',
-              fontSize: '12px',
-              color: 'rgba(255, 255, 255, 0.6)',
-              lineHeight: '1.7'
-            }}>
-              <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00D4FF" strokeWidth="2" style={{flexShrink: 0, marginTop: '2px'}}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                <div>
-                  <strong style={{color: '#00D4FF'}}>Auto-Indexing:</strong> Your answers are automatically indexed for auto-fill:
-                  <ul style={{ margin: '8px 0 0 16px', color: 'rgba(255, 255, 255, 0.5)' }}>
-                    <li>After every <strong style={{color: 'rgba(255, 255, 255, 0.7)'}}>5 Q&A pairs</strong></li>
-                    <li>After <strong style={{color: 'rgba(255, 255, 255, 0.7)'}}>10 minutes of inactivity</strong></li>
-                    <li>Or click "Upload to KB" to index immediately</li>
-                  </ul>
-                </div>
-              </div>
       {/* Web Memory Tab */}
       {activeTab === 'webmemory' && (
         <div>
