@@ -1157,9 +1157,347 @@ const App: React.FC = () => {
       {/* Personal Data Tab (Upload + Interview) */}
       {activeTab === 'personal' && (
               <div>
-      {/* Upload Section */}
+      {/* Knowledge Base Stats */}
       <div className="section">
-        <h2>📤 Upload Documents</h2>
+        <h2>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00D4FF" strokeWidth="2" style={{marginRight: '8px'}}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          Personal Data - Knowledge Base
+        </h2>
+        <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.5)', marginBottom: '16px' }}>
+          Your personal documents, interviews, and AI-powered knowledge system.
+        </p>
+        
+        <div className="kb-stats">
+          <div className="stat-card">
+            <div className="stat-value">{documentCount}</div>
+            <div className="stat-label">Documents</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value">{chunkCount}</div>
+            <div className="stat-label">Knowledge Chunks</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value">{allTags.length}</div>
+            <div className="stat-label">Semantic Tags</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-value">{customProfiles.length + 2}</div>
+            <div className="stat-label">Profiles</div>
+          </div>
+        </div>
+        
+        {/* Management Actions */}
+        <div style={{ display: 'flex', gap: '10px', marginTop: '16px', flexWrap: 'wrap' }}>
+          <button 
+            className="btn btn-secondary" 
+            onClick={loadKnowledgeBase}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+            Refresh
+          </button>
+          <button 
+            className="btn btn-secondary" 
+            onClick={handleClearKnowledgeBase}
+            disabled={loading || chunkCount === 0}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', color: chunkCount > 0 ? '#EF4444' : undefined }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            Clear All Data
+          </button>
+        </div>
+      </div>
+
+      {/* Profile Selection */}
+      <div className="section">
+        <h2>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" strokeWidth="2" style={{marginRight: '8px'}}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          Select Profile
+        </h2>
+        <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)', marginBottom: '16px' }}>
+          Create separate profiles for different people - gather information about yourself, family members, or anyone else.
+        </p>
+        
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
+          {/* Default profiles */}
+          {['me', 'spouse'].map(profile => (
+            <button
+              key={profile}
+              onClick={() => setInterviewProfile(profile)}
+              style={{
+                padding: '12px 18px',
+                border: interviewProfile === profile ? '2px solid #00D4FF' : '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '12px',
+                background: interviewProfile === profile ? 'rgba(0, 212, 255, 0.1)' : 'rgba(255, 255, 255, 0.03)',
+                color: interviewProfile === profile ? '#00D4FF' : 'rgba(255, 255, 255, 0.7)',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '500',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              {profile === 'me' ? '👤' : '👥'} {profile.charAt(0).toUpperCase() + profile.slice(1)}
+            </button>
+          ))}
+          
+          {/* Custom profiles */}
+          {customProfiles.map(profile => (
+            <button
+              key={profile}
+              onClick={() => setInterviewProfile(profile)}
+              style={{
+                padding: '12px 18px',
+                border: interviewProfile === profile ? '2px solid #8B5CF6' : '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '12px',
+                background: interviewProfile === profile ? 'rgba(139, 92, 246, 0.1)' : 'rgba(255, 255, 255, 0.03)',
+                color: interviewProfile === profile ? '#8B5CF6' : 'rgba(255, 255, 255, 0.7)',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '500',
+                transition: 'all 0.2s'
+              }}
+            >
+              👤 {profile}
+            </button>
+          ))}
+          
+          {/* Add profile button */}
+          {!showAddProfile ? (
+            <button
+              onClick={() => setShowAddProfile(true)}
+              style={{
+                padding: '12px 18px',
+                border: '1px dashed rgba(255, 255, 255, 0.2)',
+                borderRadius: '12px',
+                background: 'transparent',
+                color: 'rgba(255, 255, 255, 0.5)',
+                cursor: 'pointer',
+                fontSize: '14px',
+                transition: 'all 0.2s'
+              }}
+            >
+              + Add Profile
+            </button>
+          ) : (
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <input
+                type="text"
+                value={newProfileName}
+                onChange={(e) => setNewProfileName(e.target.value)}
+                placeholder="Profile name..."
+                style={{
+                  padding: '10px 14px',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '10px',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  color: '#fff',
+                  fontSize: '14px',
+                  outline: 'none',
+                  width: '150px'
+                }}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && newProfileName.trim()) {
+                    setCustomProfiles([...customProfiles, newProfileName.trim()]);
+                    setNewProfileName('');
+                    setShowAddProfile(false);
+                  }
+                }}
+              />
+              <button
+                onClick={() => {
+                  if (newProfileName.trim()) {
+                    setCustomProfiles([...customProfiles, newProfileName.trim()]);
+                    setNewProfileName('');
+                    setShowAddProfile(false);
+                  }
+                }}
+                style={{
+                  padding: '10px 14px',
+                  background: '#00D4FF',
+                  border: 'none',
+                  borderRadius: '10px',
+                  color: '#000',
+                  cursor: 'pointer',
+                  fontWeight: '600'
+                }}
+              >
+                Add
+              </button>
+              <button
+                onClick={() => { setShowAddProfile(false); setNewProfileName(''); }}
+                style={{
+                  padding: '10px 14px',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: 'none',
+                  borderRadius: '10px',
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
+        
+        <div style={{ 
+          fontSize: '12px', 
+          color: 'rgba(255, 255, 255, 0.4)',
+          padding: '12px',
+          background: 'rgba(139, 92, 246, 0.05)',
+          borderRadius: '10px',
+          border: '1px solid rgba(139, 92, 246, 0.1)'
+        }}>
+          <strong style={{ color: '#8B5CF6' }}>Active Profile:</strong> {interviewProfile.charAt(0).toUpperCase() + interviewProfile.slice(1)}
+        </div>
+      </div>
+
+      {/* Interactive Interview */}
+      <div className="section">
+        <h2>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00D4FF" strokeWidth="2" style={{marginRight: '8px'}}><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+          Interactive Interview
+        </h2>
+        <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)', marginBottom: '16px' }}>
+          Chat with AI to build your knowledge base. Use voice or text to describe yourself, preferences, and personal details.
+        </p>
+        
+        {/* Interview Chat Interface */}
+        <div style={{
+          background: 'rgba(10, 10, 15, 0.6)',
+          borderRadius: '16px',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          overflow: 'hidden'
+        }}>
+          {/* Messages */}
+          <div style={{
+            height: '300px',
+            overflowY: 'auto',
+            padding: '16px'
+          }}>
+            {interviewMessages.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px 20px', color: 'rgba(255, 255, 255, 0.4)' }}>
+                <div style={{ fontSize: '40px', marginBottom: '12px' }}>🎙️</div>
+                <div style={{ fontSize: '14px' }}>Start the interview by typing or using voice input</div>
+                <div style={{ fontSize: '12px', marginTop: '8px' }}>Tell me about yourself, your preferences, or anything you'd like me to remember!</div>
+              </div>
+            ) : (
+              interviewMessages.map((msg, i) => (
+                <div key={i} style={{
+                  display: 'flex',
+                  justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                  marginBottom: '12px'
+                }}>
+                  <div style={{
+                    maxWidth: '80%',
+                    padding: '12px 16px',
+                    borderRadius: msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                    background: msg.role === 'user' ? 'linear-gradient(135deg, #00D4FF, #8B5CF6)' : 'rgba(255, 255, 255, 0.08)',
+                    color: '#fff',
+                    fontSize: '13px',
+                    lineHeight: '1.5'
+                  }}>
+                    {msg.content}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+          
+          {/* Input Area */}
+          <div style={{
+            padding: '16px',
+            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+            display: 'flex',
+            gap: '12px',
+            alignItems: 'center'
+          }}>
+            <button
+              onClick={isRecording ? stopRecording : startRecording}
+              disabled={interviewProcessing}
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                border: 'none',
+                background: isRecording ? '#EF4444' : 'rgba(255, 255, 255, 0.1)',
+                color: '#fff',
+                cursor: interviewProcessing ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s'
+              }}
+              title={isRecording ? 'Stop recording' : 'Start recording'}
+            >
+              {isRecording ? (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path></svg>
+              )}
+            </button>
+            <input
+              type="text"
+              value={interviewInput}
+              onChange={(e) => setInterviewInput(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && !interviewProcessing && handleInterviewSubmit()}
+              placeholder={isRecording ? 'Recording...' : 'Type your message...'}
+              disabled={isRecording || interviewProcessing}
+              style={{
+                flex: 1,
+                padding: '14px 18px',
+                borderRadius: '24px',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                background: 'rgba(255, 255, 255, 0.05)',
+                color: '#fff',
+                fontSize: '14px',
+                outline: 'none'
+              }}
+            />
+            <button
+              onClick={handleInterviewSubmit}
+              disabled={!interviewInput.trim() || interviewProcessing}
+              style={{
+                padding: '14px 24px',
+                borderRadius: '24px',
+                border: 'none',
+                background: interviewInput.trim() && !interviewProcessing ? 'linear-gradient(135deg, #00D4FF, #8B5CF6)' : 'rgba(255, 255, 255, 0.1)',
+                color: '#fff',
+                cursor: interviewInput.trim() && !interviewProcessing ? 'pointer' : 'not-allowed',
+                fontWeight: '600',
+                fontSize: '14px',
+                transition: 'all 0.2s'
+              }}
+            >
+              {interviewProcessing ? '...' : 'Send'}
+            </button>
+          </div>
+        </div>
+        
+        {/* Index Progress */}
+        {pendingIndexCount > 0 && (
+          <div style={{
+            marginTop: '12px',
+            padding: '12px',
+            background: 'rgba(0, 212, 255, 0.1)',
+            borderRadius: '10px',
+            fontSize: '12px',
+            color: '#00D4FF'
+          }}>
+            ⏳ {pendingIndexCount} messages pending indexing... (auto-indexes after 30s of inactivity)
+          </div>
+        )}
+      </div>
+
+      {/* Upload Documents Section */}
+      <div className="section">
+        <h2>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00D4FF" strokeWidth="2" style={{marginRight: '8px'}}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><polyline points="9 15 12 12 15 15"></polyline></svg>
+          Upload Documents
+        </h2>
         <div
           className={`upload-area ${dragging ? 'dragging' : ''}`}
           onClick={handleUploadClick}
@@ -1226,181 +1564,6 @@ const App: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* Knowledge Base Stats */}
-      <div className="section">
-        <h2>📊 Knowledge Base (Dynamic AI System)</h2>
-        <div className="kb-stats">
-          <div className="stat-card">
-            <div className="stat-value">{chunkCount}</div>
-            <div className="stat-label">Total Chunks</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-value">{documentCount}</div>
-            <div className="stat-label">Documents</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-value">{allTags.length}</div>
-            <div className="stat-label">Semantic Tags</div>
-          </div>
-        </div>
-
-        {/* Backup Options */}
-        <div style={{
-          marginBottom: '16px',
-          padding: '16px',
-          background: 'rgba(0, 212, 255, 0.05)',
-          border: '1px solid rgba(0, 212, 255, 0.15)',
-          borderRadius: '12px'
-        }}>
-          <div style={{ 
-            fontSize: '13px', 
-            fontWeight: '600', 
-            color: '#00D4FF', 
-            marginBottom: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="17 8 12 3 7 8"></polyline>
-              <line x1="12" y1="3" x2="12" y2="15"></line>
-            </svg>
-            Backup Options
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
-            <label style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '8px', 
-              cursor: 'pointer',
-              fontSize: '13px',
-              color: 'rgba(255, 255, 255, 0.8)'
-            }}>
-              <input
-                type="checkbox"
-                checked={backupOptions.includeDocuments}
-                onChange={(e) => setBackupOptions(prev => ({ ...prev, includeDocuments: e.target.checked }))}
-                style={{ 
-                  width: '18px', 
-                  height: '18px', 
-                  accentColor: '#00D4FF',
-                  cursor: 'pointer'
-                }}
-              />
-              <span>📚 Documents & Chunks</span>
-              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px' }}>({chunkCount})</span>
-            </label>
-            <label style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '8px', 
-              cursor: 'pointer',
-              fontSize: '13px',
-              color: 'rgba(255, 255, 255, 0.8)'
-            }}>
-              <input
-                type="checkbox"
-                checked={backupOptions.includeInterviews}
-                onChange={(e) => setBackupOptions(prev => ({ ...prev, includeInterviews: e.target.checked }))}
-                style={{ 
-                  width: '18px', 
-                  height: '18px', 
-                  accentColor: '#8B5CF6',
-                  cursor: 'pointer'
-                }}
-              />
-              <span>🎤 Interview Profiles</span>
-            </label>
-            <label style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '8px', 
-              cursor: 'pointer',
-              fontSize: '13px',
-              color: 'rgba(255, 255, 255, 0.8)'
-            }}>
-              <input
-                type="checkbox"
-                checked={backupOptions.includeWebMemory}
-                onChange={(e) => setBackupOptions(prev => ({ ...prev, includeWebMemory: e.target.checked }))}
-                style={{ 
-                  width: '18px', 
-                  height: '18px', 
-                  accentColor: '#00FF88',
-                  cursor: 'pointer'
-                }}
-              />
-              <span>🧠 Web Memory</span>
-              <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px' }}>({webMemoryPageCount} pages)</span>
-            </label>
-            <label style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '8px', 
-              cursor: 'pointer',
-              fontSize: '13px',
-              color: 'rgba(255, 255, 255, 0.8)'
-            }}>
-              <input
-                type="checkbox"
-                checked={backupOptions.includeBookmarks}
-                onChange={(e) => setBackupOptions(prev => ({ ...prev, includeBookmarks: e.target.checked }))}
-                style={{ 
-                  width: '18px', 
-                  height: '18px', 
-                  accentColor: '#FFB800',
-                  cursor: 'pointer'
-                }}
-              />
-              <span>🔖 Smart Bookmarks</span>
-            </label>
-          </div>
-        </div>
-
-        <div className="actions" style={{ flexWrap: 'wrap' }}>
-          <button className="btn btn-primary" onClick={loadKnowledgeBase} disabled={loading}>
-            {loading ? 'Loading...' : '🔄 Refresh'}
-          </button>
-          <button 
-            className="btn btn-primary" 
-            onClick={handleBackupKnowledgeBase}
-            disabled={loading || (!backupOptions.includeDocuments && !backupOptions.includeInterviews && !backupOptions.includeWebMemory && !backupOptions.includeBookmarks)}
-            style={{ background: 'linear-gradient(135deg, #00FF88, #00D4FF)' }}
-          >
-            💾 Backup Selected
-          </button>
-          <label className="btn btn-secondary" style={{ cursor: 'pointer', margin: 0 }}>
-            📥 Restore
-            <input
-              type="file"
-              accept=".json"
-              onChange={handleRestoreKnowledgeBase}
-              style={{ display: 'none' }}
-            />
-          </label>
-          <button
-            className="btn btn-danger"
-            onClick={handleClearKnowledgeBase}
-            disabled={loading || chunkCount === 0}
-          >
-            🗑️ Clear All
-          </button>
-        </div>
-        
-        <div style={{ 
-          marginTop: '16px', 
-          padding: '12px', 
-          background: 'rgba(0, 212, 255, 0.1)', 
-          border: '1px solid rgba(0, 212, 255, 0.2)',
-          borderRadius: '8px',
-          fontSize: '12px',
-          color: 'rgba(255, 255, 255, 0.7)'
-        }}>
-          <strong style={{ color: '#00D4FF' }}>💡 Tip:</strong> Select what you want to backup using the checkboxes above. Web Memory includes all your visited sites history!
-        </div>
-      </div>
 
       {/* Documents Section */}
       <div className="section">
@@ -1533,178 +1696,10 @@ const App: React.FC = () => {
       </div>
       )}
 
-      {/* Divider */}
-      <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', margin: '32px 0' }} />
+      </div>
+      )}
 
-      {/* Interview Section (merged into Personal Data tab) */}
-        {/* Profile Selector */}
-        <div className="section">
-          <h2>👤 Select Profile</h2>
-          <p style={{ fontSize: '14px', color: '#666', marginBottom: '16px' }}>
-            Create separate profiles for different people - gather information about yourself, family members, or anyone else.
-          </p>
-          
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
-            {/* Default profiles */}
-            {['me', 'spouse'].map(profile => (
-              <button
-                key={profile}
-                onClick={() => setInterviewProfile(profile)}
-                style={{
-                  padding: '12px 18px',
-                  border: interviewProfile === profile ? '1px solid #00D4FF' : '1px solid rgba(255, 255, 255, 0.1)',
-                  background: interviewProfile === profile ? 'rgba(0, 212, 255, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                  color: interviewProfile === profile ? '#00D4FF' : 'rgba(255, 255, 255, 0.6)',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  transition: 'all 0.3s',
-                  boxShadow: interviewProfile === profile ? '0 0 20px rgba(0, 212, 255, 0.3)' : 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                {profile === 'me' ? 'Me' : 'Spouse'}
-              </button>
-            ))}
-            
-            {/* Custom profiles */}
-            {customProfiles.map(profile => (
-              <button
-                key={profile}
-                onClick={() => setInterviewProfile(profile)}
-                style={{
-                  padding: '12px 18px',
-                  border: interviewProfile === profile ? '1px solid #00D4FF' : '1px solid rgba(255, 255, 255, 0.1)',
-                  background: interviewProfile === profile ? 'rgba(0, 212, 255, 0.15)' : 'rgba(255, 255, 255, 0.05)',
-                  color: interviewProfile === profile ? '#00D4FF' : 'rgba(255, 255, 255, 0.6)',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  transition: 'all 0.3s',
-                  boxShadow: interviewProfile === profile ? '0 0 20px rgba(0, 212, 255, 0.3)' : 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                {profile.split('-').map(word => 
-                  word.charAt(0).toUpperCase() + word.slice(1)
-                ).join(' ')}
-                <span
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (confirm(`Delete profile "${profile}"?`)) {
-                      setCustomProfiles(prev => prev.filter(p => p !== profile));
-                      if (interviewProfile === profile) {
-                        setInterviewProfile('me');
-                      }
-                    }
-                  }}
-                  style={{
-                    marginLeft: '4px',
-                    opacity: 0.6,
-                    fontSize: '14px',
-                    color: '#FF4757'
-                  }}
-                >
-                  ×
-                </span>
-              </button>
-            ))}
-            
-            {/* Add Profile Button */}
-            {!showAddProfile ? (
-              <button
-                onClick={() => setShowAddProfile(true)}
-                style={{
-                  padding: '12px 18px',
-                  border: '2px dashed rgba(0, 212, 255, 0.5)',
-                  background: 'transparent',
-                  color: '#00D4FF',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  transition: 'all 0.3s',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
-                Add Person
-              </button>
-            ) : (
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <input
-                  type="text"
-                  value={newProfileName}
-                  onChange={(e) => setNewProfileName(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddProfile()}
-                  placeholder="Name (e.g., Jan, Mom)"
-                  style={{
-                    padding: '10px 14px',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '10px',
-                    fontSize: '13px',
-                    outline: 'none',
-                    width: '160px',
-                    background: 'rgba(24, 24, 32, 0.9)',
-                    color: '#fff'
-                  }}
-                  autoFocus
-                />
-                <button
-                  onClick={handleAddProfile}
-                  className="btn btn-primary"
-                  style={{ padding: '10px 14px', fontSize: '12px' }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                </button>
-                <button
-                  onClick={() => {
-                    setShowAddProfile(false);
-                    setNewProfileName('');
-                  }}
-                  className="btn btn-secondary"
-                  style={{ padding: '10px 14px', fontSize: '12px' }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-              </div>
-            )}
-          </div>
-          
-          <div style={{
-            background: 'rgba(0, 212, 255, 0.08)',
-            border: '1px solid rgba(0, 212, 255, 0.2)',
-            padding: '14px 16px',
-            borderRadius: '12px',
-            fontSize: '13px',
-            color: 'rgba(255, 255, 255, 0.7)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px'
-          }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00D4FF" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-            <span><strong style={{color: '#00D4FF'}}>Current Profile:</strong> {
-              interviewProfile === 'me' ? 'Information about yourself' :
-              interviewProfile === 'spouse' ? 'Information about your spouse/partner' :
-              interviewProfile.startsWith('kid') ? `Information about ${interviewProfile.replace('kid-', 'child ')}` :
-              'Information about another person'
-            }</span>
-          </div>
-        </div>
-
-        {/* Interview Chat */}
-        <div className="section">
-          <h2>🎙️ Interactive Interview</h2>
+      {/* PLACEHOLDER_MARKER */}
           <p style={{ fontSize: '14px', color: '#666', marginBottom: '16px' }}>
             Answer questions to build comprehensive knowledge. Use text or voice input. All answers are automatically saved to your knowledge base.
           </p>
@@ -1992,42 +1987,6 @@ const App: React.FC = () => {
                   </ul>
                 </div>
               </div>
-              {pendingIndexCount > 0 && (
-                <div style={{ 
-                  marginTop: '12px', 
-                  padding: '10px 12px', 
-                  background: 'rgba(255, 184, 0, 0.1)', 
-                  border: '1px solid rgba(255, 184, 0, 0.3)',
-                  borderRadius: '8px',
-                  color: '#FFB800',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                  <strong>{pendingIndexCount} Q&A pair(s)</strong> pending indexing (auto-indexes at 5)
-                </div>
-              )}
-              <div style={{ marginTop: '12px', fontSize: '11px', color: 'rgba(255, 255, 255, 0.4)', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                <span style={{display: 'flex', alignItems: 'center', gap: '4px'}}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                  Stored locally
-                </span>
-                <span style={{display: 'flex', alignItems: 'center', gap: '4px'}}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                  Export to backup
-                </span>
-                <span style={{display: 'flex', alignItems: 'center', gap: '4px'}}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                  Private & secure
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
-        </div>
-      )}
-
       {/* Web Memory Tab */}
       {activeTab === 'webmemory' && (
         <div>
