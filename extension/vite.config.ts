@@ -31,6 +31,18 @@ export default defineConfig({
             copyFileSync(iconPath, resolve(distDir, iconFile));
           }
         });
+        
+        // Create games directory in dist
+        const gamesDistDir = resolve(distDir, 'src/games');
+        if (!existsSync(gamesDistDir)) {
+          mkdirSync(gamesDistDir, { recursive: true });
+        }
+        
+        // Copy IQ Arena CSS
+        const cssPath = resolve(__dirname, 'src/games/iq-arena.css');
+        if (existsSync(cssPath)) {
+          copyFileSync(cssPath, resolve(gamesDistDir, 'iq-arena.css'));
+        }
       }
     }
   ],
@@ -44,16 +56,25 @@ export default defineConfig({
         'main-panel': resolve(__dirname, 'src/main-panel.ts'),
         options: resolve(__dirname, 'src/options/index.html'),
         'main-panel-page': resolve(__dirname, 'src/main-panel.html'),
+        'iq-arena-page': resolve(__dirname, 'src/games/iq-arena.html'),
       },
       output: {
-        entryFileNames: '[name].js',
+        entryFileNames: (chunkInfo) => {
+          if (chunkInfo.name === 'iq-arena-page') {
+            return 'src/games/iq-arena.js';
+          }
+          return '[name].js';
+        },
         chunkFileNames: '[name].js',
         assetFileNames: (assetInfo) => {
           if (assetInfo.name === 'main-panel-page.html') {
-            return 'main-panel.html';
+            return 'src/main-panel.html';
+          }
+          if (assetInfo.name === 'iq-arena-page.html') {
+            return 'src/games/iq-arena.html';
           }
           if (assetInfo.name === 'index.html') {
-            return 'options/index.html';
+            return 'src/options/index.html';
           }
           return '[name].[ext]';
         },
@@ -66,4 +87,3 @@ export default defineConfig({
     },
   },
 });
-

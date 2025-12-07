@@ -722,6 +722,9 @@ chrome.runtime.onMessage.addListener(
     } else if (message.type === 'OPEN_OPTIONS_PAGE') {
       // Open options page (for docked panel which can't call openOptionsPage directly)
       chrome.runtime.openOptionsPage();
+    } else if (message.type === 'OPEN_IQ_ARENA') {
+      // Open IQ Arena brain games window
+      openIQArena();
     } 
     // ============================================
     // SMART BOOKMARKS HANDLERS
@@ -906,6 +909,58 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 
 // Track open panel windows
 let panelWindowId: number | null = null;
+let iqArenaWindowId: number | null = null;
+
+// ============================================
+// IQ ARENA - Brain Games Window
+// ============================================
+
+async function openIQArena() {
+  // Check if window already exists
+  if (iqArenaWindowId !== null) {
+    try {
+      await chrome.windows.get(iqArenaWindowId);
+      // Window exists, focus it
+      chrome.windows.update(iqArenaWindowId, { focused: true });
+      return;
+    } catch (e) {
+      // Window was closed, create new one
+      iqArenaWindowId = null;
+    }
+  }
+  
+  // Get current window to determine screen position
+  const currentWindow = await chrome.windows.getCurrent();
+  
+  // IQ Arena dimensions (larger for games)
+  const arenaWidth = 520;
+  const arenaHeight = 700;
+  
+  // Calculate center position
+  const left = Math.round((currentWindow.left || 0) + ((currentWindow.width || 1200) - arenaWidth) / 2);
+  const top = Math.round((currentWindow.top || 0) + ((currentWindow.height || 800) - arenaHeight) / 2);
+  
+  // Create new window for IQ Arena
+  const window = await chrome.windows.create({
+    url: chrome.runtime.getURL('src/games/iq-arena.html'),
+    type: 'popup',
+    width: arenaWidth,
+    height: arenaHeight,
+    left: Math.max(0, left),
+    top: Math.max(0, top),
+    focused: true
+  });
+  
+  iqArenaWindowId = window.id || null;
+  console.log('🏟️ IQ Arena opened!');
+}
+
+// Clean up IQ Arena window ID when closed
+chrome.windows.onRemoved.addListener((windowId) => {
+  if (windowId === iqArenaWindowId) {
+    iqArenaWindowId = null;
+  }
+});
 
 // Handle extension icon click - open draggable window in TOP-RIGHT corner
 chrome.action.onClicked.addListener(async () => {

@@ -150,6 +150,12 @@ document.getElementById('openOptionsBtn')?.addEventListener('click', () => {
   chrome.runtime.openOptionsPage();
 });
 
+// IQ Arena - Brain Games
+document.getElementById('iqArenaBtn')?.addEventListener('click', () => {
+  console.log('🏟️ Opening IQ Arena...');
+  chrome.runtime.sendMessage({ type: 'OPEN_IQ_ARENA' });
+});
+
 // ============================================
 // DATABASE TAB - Knowledge Base Management
 // ============================================

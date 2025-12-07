@@ -200,6 +200,11 @@ export interface OpenOptionsPageMessage {
   type: "OPEN_OPTIONS_PAGE";
 }
 
+// IQ Arena Brain Games
+export interface OpenIQArenaMessage {
+  type: "OPEN_IQ_ARENA";
+}
+
 // Smart Bookmarks types
 export interface SaveBookmarkMessage {
   type: "SAVE_BOOKMARK";
@@ -306,6 +311,7 @@ export type ExtensionMessage =
   | GetRecentPagesMessage
   | RecentPagesResultMessage
   | OpenOptionsPageMessage
+  | OpenIQArenaMessage
   | SaveBookmarkMessage
   | GetBookmarkMessage
   | BookmarkResultMessage

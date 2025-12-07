@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏟️ IQ Arena - Brain Games</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="iq-arena.css">
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="bg-animation">
+        <div class="bg-grid"></div>
+        <div class="bg-glow glow-1"></div>
+        <div class="bg-glow glow-2"></div>
+        <div class="bg-glow glow-3"></div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">
+                    <span class="logo-brain">🏟️</span>
+                </div>
+                <div class="logo-text">
+                    <h1>IQ Arena</h1>
+                    <span class="tagline">Train Your Brain</span>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="icon-btn" id="soundToggle" title="Toggle Sound">
+                    <svg class="sound-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                    </svg>
+                    <svg class="sound-off hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                        <line x1="23" y1="9" x2="17" y2="15"></line>
+                        <line x1="17" y1="9" x2="23" y2="15"></line>
+                    </svg>
+                </button>
+                <button class="icon-btn" id="statsBtn" title="Statistics">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 20V10M12 20V4M6 20v-6"></path>
+                    </svg>
+                </button>
+                <button class="icon-btn" id="achievementsBtn" title="Achievements">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="8" r="6"></circle>
+                        <path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"></path>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Home Screen -->
+            <section class="screen active" id="homeScreen">
+                <!-- Level Progress Card -->
+                <div class="level-card">
+                    <div class="level-header">
+                        <div class="level-info">
+                            <span class="level-icon" id="levelIcon">🧠</span>
+                            <div class="level-details">
+                                <span class="level-label">Level <span id="levelNumber">1</span></span>
+                                <span class="level-name" id="levelName">Beginner Brain</span>
+                            </div>
+                        </div>
+                        <div class="streak-badge" id="streakBadge">
+                            <span class="streak-icon">🔥</span>
+                            <span class="streak-count" id="streakCount">0</span>
+                        </div>
+                    </div>
+                    
+                    <div class="progress-section">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                            <div class="progress-glow"></div>
+                        </div>
+                        <div class="progress-text">
+                            <span id="progressText">0 / 5 wins to next level</span>
+                        </div>
+                    </div>
+                    
+                    <div class="quick-stats">
+                        <div class="stat">
+                            <span class="stat-value" id="totalWins">0</span>
+                            <span class="stat-label">Wins</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value" id="winRate">0%</span>
+                            <span class="stat-label">Win Rate</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value" id="totalGames">0</span>
+                            <span class="stat-label">Games</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Play Button -->
+                <button class="play-btn" id="playRandomBtn">
+                    <span class="play-btn-icon">▶</span>
+                    <span class="play-btn-text">PLAY RANDOM GAME</span>
+                    <div class="play-btn-glow"></div>
+                </button>
+
+                <!-- Game Selection -->
+                <div class="games-section">
+                    <h2 class="section-title">
+                        <span class="title-icon">🎮</span>
+                        Choose Your Challenge
+                    </h2>
+                    <div class="games-grid" id="gamesGrid">
+                        <!-- Games will be populated by JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Game Screen -->
+            <section class="screen" id="gameScreen">
+                <div class="game-header">
+                    <button class="back-btn" id="backToHome">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 12H5M12 19l-7-7 7-7"></path>
+                        </svg>
+                    </button>
+                    <div class="game-info">
+                        <span class="game-icon" id="currentGameIcon">🎮</span>
+                        <span class="game-name" id="currentGameName">Game</span>
+                    </div>
+                    <div class="game-timer">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M12 6v6l4 2"></path>
+                        </svg>
+                        <span id="gameTimer">00:00</span>
+                    </div>
+                </div>
+                
+                <div class="game-container" id="gameContainer">
+                    <!-- Game content will be loaded here -->
+                </div>
+            </section>
+
+            <!-- Result Screen -->
+            <section class="screen" id="resultScreen">
+                <div class="result-card">
+                    <div class="result-icon" id="resultIcon">🎉</div>
+                    <h2 class="result-title" id="resultTitle">Victory!</h2>
+                    <p class="result-message" id="resultMessage">Great job!</p>
+                    
+                    <div class="result-stats">
+                        <div class="result-stat">
+                            <span class="result-stat-value" id="resultTime">00:00</span>
+                            <span class="result-stat-label">Time</span>
+                        </div>
+                        <div class="result-stat">
+                            <span class="result-stat-value" id="resultScore">0</span>
+                            <span class="result-stat-label">Score</span>
+                        </div>
+                    </div>
+
+                    <!-- Level Up Animation -->
+                    <div class="level-up-banner hidden" id="levelUpBanner">
+                        <div class="level-up-glow"></div>
+                        <span class="level-up-icon">⬆️</span>
+                        <span class="level-up-text">LEVEL UP!</span>
+                        <span class="new-level-name" id="newLevelName">Quick Thinker</span>
+                    </div>
+
+                    <!-- New Achievements -->
+                    <div class="new-achievements hidden" id="newAchievements">
+                        <h3>🏆 New Achievements</h3>
+                        <div class="achievements-list" id="achievementsList">
+                            <!-- Achievements will be added here -->
+                        </div>
+                    </div>
+
+                    <!-- Quote/Joke -->
+                    <div class="result-quote" id="resultQuote">
+                        <p class="quote-text" id="quoteText">"The measure of intelligence is the ability to change."</p>
+                        <span class="quote-author" id="quoteAuthor">— Albert Einstein</span>
+                    </div>
+
+                    <div class="result-actions">
+                        <button class="result-btn primary" id="playAgainBtn">
+                            <span>Play Again</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M23 4v6h-6M1 20v-6h6"></path>
+                                <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"></path>
+                            </svg>
+                        </button>
+                        <button class="result-btn secondary" id="homeBtn">
+                            <span>Home</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Stats Modal -->
+            <div class="modal hidden" id="statsModal">
+                <div class="modal-overlay"></div>
+                <div class="modal-content">
+                    <button class="modal-close" id="closeStats">×</button>
+                    <h2 class="modal-title">📊 Your Statistics</h2>
+                    <div class="stats-grid" id="statsGrid">
+                        <!-- Stats will be populated -->
+                    </div>
+                    <div class="game-stats-section">
+                        <h3>Game Performance</h3>
+                        <div class="game-stats-list" id="gameStatsList">
+                            <!-- Per-game stats -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Achievements Modal -->
+            <div class="modal hidden" id="achievementsModal">
+                <div class="modal-overlay"></div>
+                <div class="modal-content">
+                    <button class="modal-close" id="closeAchievements">×</button>
+                    <h2 class="modal-title">🏆 Achievements</h2>
+                    <div class="achievements-progress" id="achievementsProgress">
+                        0 / 0 Unlocked
+                    </div>
+                    <div class="all-achievements" id="allAchievements">
+                        <!-- All achievements will be listed -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="iq-arena.ts"></script>
+</body>
+</html>
+
