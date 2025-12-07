@@ -1248,6 +1248,383 @@ body {
   font-weight: 700;
 }
 
+/* Simon Says Game */
+.simon-game {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  width: 100%;
+}
+
+.simon-info {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 300px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.simon-info strong {
+  color: var(--primary);
+  font-family: var(--font-display);
+}
+
+#simonStatus {
+  color: var(--accent);
+}
+
+.simon-board {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  max-width: 280px;
+}
+
+.simon-btn {
+  width: 120px;
+  height: 120px;
+  border-radius: var(--radius-xl);
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  background: var(--btn-color);
+  opacity: 0.6;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.simon-btn:hover:not(:disabled) {
+  opacity: 0.8;
+  transform: scale(1.02);
+}
+
+.simon-btn.active {
+  opacity: 1;
+  transform: scale(1.05);
+  box-shadow: 0 0 40px var(--btn-glow), inset 0 0 30px rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.simon-btn:disabled {
+  cursor: not-allowed;
+}
+
+/* Minesweeper Game */
+.mine-info {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  margin-bottom: 16px;
+  font-size: 16px;
+  font-family: var(--font-display);
+}
+
+.mine-grid {
+  display: grid;
+  gap: 2px;
+  background: var(--border-color);
+  padding: 4px;
+  border-radius: var(--radius-md);
+  max-width: fit-content;
+  margin: 0 auto;
+}
+
+.mine-cell {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: var(--font-display);
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.mine-cell:hover:not(.revealed) {
+  filter: brightness(1.2);
+  transform: scale(1.05);
+}
+
+.mine-cell.revealed {
+  background: var(--bg-surface);
+  cursor: default;
+}
+
+.mine-cell.mine {
+  background: var(--error);
+}
+
+.mine-cell.flagged {
+  background: linear-gradient(135deg, var(--warning), var(--error));
+}
+
+/* Sliding Puzzle Game */
+.sliding-info {
+  text-align: center;
+  margin-bottom: 16px;
+  font-size: 16px;
+  color: var(--text-secondary);
+}
+
+.sliding-info strong {
+  color: var(--primary);
+  font-family: var(--font-display);
+  font-size: 24px;
+}
+
+.sliding-grid {
+  display: grid;
+  gap: 8px;
+  max-width: fit-content;
+  margin: 0 auto;
+  padding: 12px;
+  background: var(--bg-glass);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+}
+
+.sliding-tile {
+  width: 70px;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  border-radius: var(--radius-md);
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--bg-dark);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.sliding-tile.empty {
+  background: transparent;
+  box-shadow: none;
+}
+
+.sliding-tile.movable {
+  cursor: pointer;
+}
+
+.sliding-tile.movable:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 25px var(--primary-glow);
+}
+
+/* Wordle Game */
+.wordle-game {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  width: 100%;
+}
+
+.wordle-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wordle-row {
+  display: flex;
+  gap: 8px;
+}
+
+.wordle-cell {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-glass);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  transition: all 0.3s;
+}
+
+.wordle-row.submitted .wordle-cell {
+  animation: flipCell 0.5s ease;
+}
+
+@keyframes flipCell {
+  0% { transform: rotateX(0); }
+  50% { transform: rotateX(90deg); }
+  100% { transform: rotateX(0); }
+}
+
+.wordle-cell.correct {
+  background: var(--success);
+  border-color: var(--success);
+  color: var(--bg-dark);
+}
+
+.wordle-cell.present {
+  background: var(--warning);
+  border-color: var(--warning);
+  color: var(--bg-dark);
+}
+
+.wordle-cell.absent {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.wordle-keyboard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 400px;
+}
+
+.keyboard-row {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+}
+
+.key {
+  min-width: 32px;
+  height: 48px;
+  padding: 0 8px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.key:hover {
+  background: rgba(0, 245, 255, 0.2);
+}
+
+.key.wide {
+  min-width: 56px;
+  font-size: 11px;
+}
+
+.key.correct {
+  background: var(--success);
+  color: var(--bg-dark);
+}
+
+.key.present {
+  background: var(--warning);
+  color: var(--bg-dark);
+}
+
+.key.absent {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-muted);
+}
+
+/* Number Sequence Game */
+.sequence-game {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  width: 100%;
+}
+
+.sequence-info {
+  font-size: 16px;
+  color: var(--text-secondary);
+  font-family: var(--font-display);
+}
+
+.sequence-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.seq-num {
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-card);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.seq-num.unknown {
+  background: linear-gradient(135deg, var(--primary-glow), var(--secondary-glow));
+  border-color: var(--primary);
+  color: var(--text-primary);
+  font-size: 24px;
+}
+
+.seq-arrow {
+  color: var(--text-muted);
+  font-size: 20px;
+}
+
+.sequence-options {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  max-width: 300px;
+}
+
+.seq-option {
+  padding: 20px;
+  background: var(--bg-card);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.seq-option:hover {
+  border-color: var(--primary);
+  background: rgba(0, 245, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.seq-option.correct {
+  border-color: var(--success);
+  background: rgba(0, 255, 136, 0.2);
+  color: var(--success);
+}
+
+.seq-option.wrong {
+  border-color: var(--error);
+  background: rgba(255, 51, 102, 0.2);
+  color: var(--error);
+}
+
 /* Responsive */
 @media (max-width: 600px) {
   .header {
