@@ -62,66 +62,142 @@
         <main class="main-content">
             <!-- Home Screen -->
             <section class="screen active" id="homeScreen">
-                <!-- Level Progress Card -->
-                <div class="level-card">
-                    <div class="level-header">
-                        <div class="level-info">
-                            <span class="level-icon" id="levelIcon">🧠</span>
-                            <div class="level-details">
-                                <span class="level-label">Level <span id="levelNumber">1</span></span>
-                                <span class="level-name" id="levelName">Beginner Brain</span>
+                <!-- Mode Selector -->
+                <div class="mode-selector">
+                    <button class="mode-btn active" id="careerModeBtn" data-mode="career">
+                        <span class="mode-icon">🎯</span>
+                        <span class="mode-label">Career Mode</span>
+                        <span class="mode-desc">Level up to Einstein</span>
+                    </button>
+                    <button class="mode-btn" id="freePlayModeBtn" data-mode="freeplay">
+                        <span class="mode-icon">🎮</span>
+                        <span class="mode-label">Free Play</span>
+                        <span class="mode-desc">Play any game</span>
+                    </button>
+                </div>
+
+                <!-- Career Mode Content -->
+                <div class="mode-content active" id="careerModeContent">
+                    <!-- Level Progress Card -->
+                    <div class="level-card">
+                        <div class="level-header">
+                            <div class="level-info">
+                                <span class="level-icon" id="levelIcon">🧠</span>
+                                <div class="level-details">
+                                    <span class="level-label">Level <span id="levelNumber">1</span></span>
+                                    <span class="level-name" id="levelName">Beginner Brain</span>
+                                </div>
+                            </div>
+                            <div class="streak-badge" id="streakBadge">
+                                <span class="streak-icon">🔥</span>
+                                <span class="streak-count" id="streakCount">0</span>
                             </div>
                         </div>
-                        <div class="streak-badge" id="streakBadge">
-                            <span class="streak-icon">🔥</span>
-                            <span class="streak-count" id="streakCount">0</span>
+                        
+                        <div class="progress-section">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                                <div class="progress-glow"></div>
+                            </div>
+                            <div class="progress-text">
+                                <span id="progressText">0 / 5 wins to next level</span>
+                            </div>
+                        </div>
+                        
+                        <div class="quick-stats">
+                            <div class="stat">
+                                <span class="stat-value" id="totalWins">0</span>
+                                <span class="stat-label">Wins</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-value" id="winRate">0%</span>
+                                <span class="stat-label">Win Rate</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-value" id="totalGames">0</span>
+                                <span class="stat-label">Games</span>
+                            </div>
                         </div>
                     </div>
-                    
-                    <div class="progress-section">
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
-                            <div class="progress-glow"></div>
-                        </div>
-                        <div class="progress-text">
-                            <span id="progressText">0 / 5 wins to next level</span>
-                        </div>
-                    </div>
-                    
-                    <div class="quick-stats">
-                        <div class="stat">
-                            <span class="stat-value" id="totalWins">0</span>
-                            <span class="stat-label">Wins</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-value" id="winRate">0%</span>
-                            <span class="stat-label">Win Rate</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-value" id="totalGames">0</span>
-                            <span class="stat-label">Games</span>
+
+                    <!-- Play Button -->
+                    <button class="play-btn" id="playRandomBtn">
+                        <span class="play-btn-icon">▶</span>
+                        <span class="play-btn-text">PLAY RANDOM GAME</span>
+                        <div class="play-btn-glow"></div>
+                    </button>
+
+                    <!-- Career Game Selection -->
+                    <div class="games-section">
+                        <h2 class="section-title">
+                            <span class="title-icon">🔒</span>
+                            Career Games
+                            <span class="title-hint">(unlock by leveling up)</span>
+                        </h2>
+                        <div class="games-grid" id="careerGamesGrid">
+                            <!-- Games will be populated by JS -->
                         </div>
                     </div>
                 </div>
 
-                <!-- Play Button -->
-                <button class="play-btn" id="playRandomBtn">
-                    <span class="play-btn-icon">▶</span>
-                    <span class="play-btn-text">PLAY RANDOM GAME</span>
-                    <div class="play-btn-glow"></div>
-                </button>
+                <!-- Free Play Mode Content -->
+                <div class="mode-content" id="freePlayModeContent">
+                    <!-- Free Play Header -->
+                    <div class="freeplay-header">
+                        <h2>🎮 Free Play Mode</h2>
+                        <p>Play any game with custom settings. Progress doesn't affect Career Mode.</p>
+                    </div>
 
-                <!-- Game Selection -->
-                <div class="games-section">
-                    <h2 class="section-title">
-                        <span class="title-icon">🎮</span>
-                        Choose Your Challenge
-                    </h2>
-                    <div class="games-grid" id="gamesGrid">
-                        <!-- Games will be populated by JS -->
+                    <!-- Difficulty Selector -->
+                    <div class="settings-card">
+                        <div class="setting-row">
+                            <label class="setting-label">
+                                <span class="setting-icon">⚡</span>
+                                Difficulty
+                            </label>
+                            <div class="difficulty-selector" id="difficultySelector">
+                                <button class="diff-btn" data-diff="easy">Easy</button>
+                                <button class="diff-btn active" data-diff="medium">Medium</button>
+                                <button class="diff-btn" data-diff="hard">Hard</button>
+                                <button class="diff-btn" data-diff="expert">Expert</button>
+                                <button class="diff-btn" data-diff="legendary">Legendary</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- All Games Grid -->
+                    <div class="games-section">
+                        <h2 class="section-title">
+                            <span class="title-icon">🎯</span>
+                            All Games
+                        </h2>
+                        <div class="games-grid freeplay-grid" id="freePlayGamesGrid">
+                            <!-- All games unlocked -->
+                        </div>
                     </div>
                 </div>
             </section>
+
+            <!-- Game Settings Modal (for Free Play) -->
+            <div class="modal hidden" id="gameSettingsModal">
+                <div class="modal-overlay"></div>
+                <div class="modal-content game-settings-content">
+                    <button class="modal-close" id="closeGameSettings">×</button>
+                    <div class="game-settings-header">
+                        <span class="game-settings-icon" id="settingsGameIcon">🎮</span>
+                        <h2 class="modal-title" id="settingsGameName">Game Settings</h2>
+                    </div>
+                    
+                    <div class="game-settings-body" id="gameSettingsBody">
+                        <!-- Dynamic settings based on game type -->
+                    </div>
+
+                    <button class="play-btn game-start-btn" id="startGameWithSettings">
+                        <span class="play-btn-icon">▶</span>
+                        <span class="play-btn-text">START GAME</span>
+                    </button>
+                </div>
+            </div>
 
             <!-- Game Screen -->
             <section class="screen" id="gameScreen">
@@ -134,6 +210,7 @@
                     <div class="game-info">
                         <span class="game-icon" id="currentGameIcon">🎮</span>
                         <span class="game-name" id="currentGameName">Game</span>
+                        <span class="game-mode-badge" id="gameModeLabel">Career</span>
                     </div>
                     <div class="game-timer">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -152,6 +229,7 @@
             <!-- Result Screen -->
             <section class="screen" id="resultScreen">
                 <div class="result-card">
+                    <div class="result-mode-badge" id="resultModeBadge">Career Mode</div>
                     <div class="result-icon" id="resultIcon">🎉</div>
                     <h2 class="result-title" id="resultTitle">Victory!</h2>
                     <p class="result-message" id="resultMessage">Great job!</p>
@@ -167,7 +245,7 @@
                         </div>
                     </div>
 
-                    <!-- Level Up Animation -->
+                    <!-- Level Up Animation (Career Mode only) -->
                     <div class="level-up-banner hidden" id="levelUpBanner">
                         <div class="level-up-glow"></div>
                         <span class="level-up-icon">⬆️</span>
@@ -245,4 +323,3 @@
     <script type="module" src="iq-arena.ts"></script>
 </body>
 </html>
-

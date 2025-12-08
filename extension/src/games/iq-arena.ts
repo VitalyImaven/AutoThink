@@ -1,6 +1,6 @@
 // IQ Arena - Main Controller
 
-import { GameType, PlayerProgress } from './types';
+import { GameType, PlayerProgress, GameDifficulty } from './types';
 import { 
   loadProgress, 
   getLevelInfo, 
@@ -16,7 +16,8 @@ import {
   getDifficultyParams,
   createGameSession,
   formatTime,
-  GameSession
+  GameSession,
+  DifficultyParams
 } from './game-controller';
 import { soundManager } from './sound-manager';
 import { 
@@ -28,10 +29,20 @@ import {
   getAchievementProgress 
 } from './data/achievements';
 
+// Backend API URL
+const BACKEND_URL = 'http://localhost:8000';
+
 // Current state
 let currentProgress: PlayerProgress;
 let currentSession: GameSession | null = null;
 let timerInterval: number | null = null;
+
+// Game mode state
+type GameMode = 'career' | 'freeplay';
+let currentMode: GameMode = 'career';
+let freePlayDifficulty: GameDifficulty = 'medium';
+let freePlayGameSettings: Record<string, any> = {};
+let selectedFreePlayGame: GameType | null = null;
 
 // DOM Elements
 const elements = {
@@ -39,6 +50,12 @@ const elements = {
   homeScreen: document.getElementById('homeScreen')!,
   gameScreen: document.getElementById('gameScreen')!,
   resultScreen: document.getElementById('resultScreen')!,
+  
+  // Mode Selector
+  careerModeBtn: document.getElementById('careerModeBtn')!,
+  freePlayModeBtn: document.getElementById('freePlayModeBtn')!,
+  careerModeContent: document.getElementById('careerModeContent')!,
+  freePlayModeContent: document.getElementById('freePlayModeContent')!,
   
   // Level Card
   levelIcon: document.getElementById('levelIcon')!,
@@ -58,14 +75,28 @@ const elements = {
   statsBtn: document.getElementById('statsBtn')!,
   achievementsBtn: document.getElementById('achievementsBtn')!,
   
+  // Game grids
+  careerGamesGrid: document.getElementById('careerGamesGrid')!,
+  freePlayGamesGrid: document.getElementById('freePlayGamesGrid')!,
+  difficultySelector: document.getElementById('difficultySelector')!,
+  
+  // Game Settings Modal
+  gameSettingsModal: document.getElementById('gameSettingsModal')!,
+  closeGameSettings: document.getElementById('closeGameSettings')!,
+  settingsGameIcon: document.getElementById('settingsGameIcon')!,
+  settingsGameName: document.getElementById('settingsGameName')!,
+  gameSettingsBody: document.getElementById('gameSettingsBody')!,
+  startGameWithSettings: document.getElementById('startGameWithSettings')!,
+  
   // Game Screen
-  gamesGrid: document.getElementById('gamesGrid')!,
   currentGameIcon: document.getElementById('currentGameIcon')!,
   currentGameName: document.getElementById('currentGameName')!,
+  gameModeLabel: document.getElementById('gameModeLabel')!,
   gameTimer: document.getElementById('gameTimer')!,
   gameContainer: document.getElementById('gameContainer')!,
   
   // Result Screen
+  resultModeBadge: document.getElementById('resultModeBadge')!,
   resultIcon: document.getElementById('resultIcon')!,
   resultTitle: document.getElementById('resultTitle')!,
   resultMessage: document.getElementById('resultMessage')!,
@@ -95,7 +126,8 @@ const elements = {
 async function init() {
   currentProgress = await loadProgress();
   updateUI();
-  renderGamesGrid();
+  renderCareerGamesGrid();
+  renderFreePlayGamesGrid();
   setupEventListeners();
   updateSoundButton();
 }
@@ -124,28 +156,258 @@ function updateUI() {
   elements.totalGames.textContent = String(currentProgress.totalGamesPlayed);
 }
 
-// Render games grid
-function renderGamesGrid() {
+// Render Career Mode games grid (with locks)
+function renderCareerGamesGrid() {
   const allGames = Object.values(GAME_CONFIGS);
   
-  elements.gamesGrid.innerHTML = allGames.map(game => {
+  elements.careerGamesGrid.innerHTML = allGames.map(game => {
     const unlocked = isGameUnlocked(game.type, currentProgress.level);
     return `
       <div class="game-card ${unlocked ? '' : 'locked'}" data-game="${game.type}">
         ${!unlocked ? '<span class="game-card-lock">🔒</span>' : ''}
         <span class="game-card-icon">${game.icon}</span>
         <span class="game-card-name">${game.name}</span>
+        ${!unlocked ? `<span class="game-card-level">Lvl ${game.minLevel}</span>` : ''}
       </div>
     `;
   }).join('');
   
-  // Add click handlers
-  elements.gamesGrid.querySelectorAll('.game-card:not(.locked)').forEach(card => {
+  // Add click handlers for unlocked games
+  elements.careerGamesGrid.querySelectorAll('.game-card:not(.locked)').forEach(card => {
     card.addEventListener('click', () => {
       const gameType = card.getAttribute('data-game') as GameType;
-      startGame(gameType);
+      startGame(gameType, 'career');
     });
   });
+}
+
+// Render Free Play games grid (all unlocked)
+function renderFreePlayGamesGrid() {
+  const allGames = Object.values(GAME_CONFIGS);
+  
+  elements.freePlayGamesGrid.innerHTML = allGames.map(game => `
+    <div class="game-card" data-game="${game.type}">
+      <span class="game-card-icon">${game.icon}</span>
+      <span class="game-card-name">${game.name}</span>
+      ${game.requiresAI ? '<span class="game-card-ai">AI</span>' : ''}
+    </div>
+  `).join('');
+  
+  // Add click handlers to show settings modal
+  elements.freePlayGamesGrid.querySelectorAll('.game-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const gameType = card.getAttribute('data-game') as GameType;
+      showGameSettingsModal(gameType);
+    });
+  });
+}
+
+// Show game settings modal for Free Play
+function showGameSettingsModal(gameType: GameType) {
+  selectedFreePlayGame = gameType;
+  const config = GAME_CONFIGS[gameType];
+  
+  elements.settingsGameIcon.textContent = config.icon;
+  elements.settingsGameName.textContent = config.name;
+  
+  // Build settings based on game type
+  let settingsHTML = '';
+  
+  // Difficulty is already selected in the main Free Play screen
+  settingsHTML += `
+    <div class="game-setting-group">
+      <div class="game-setting-label">Selected Difficulty</div>
+      <div class="selected-difficulty" style="font-family: var(--font-display); font-size: 18px; color: var(--primary);">
+        ${freePlayDifficulty.toUpperCase()}
+      </div>
+    </div>
+  `;
+  
+  // Game-specific settings
+  switch (gameType) {
+    case 'ai-trivia':
+      settingsHTML += `
+        <div class="game-setting-group">
+          <div class="game-setting-label">Category</div>
+          <div class="game-setting-options" id="triviaCategory">
+            <button class="setting-option-btn active" data-category="random">🎲 Random</button>
+            <button class="setting-option-btn" data-category="science">🔬 Science</button>
+            <button class="setting-option-btn" data-category="history">📜 History</button>
+            <button class="setting-option-btn" data-category="technology">💻 Technology</button>
+            <button class="setting-option-btn" data-category="geography">🌍 Geography</button>
+            <button class="setting-option-btn" data-category="nature">🌿 Nature</button>
+            <button class="setting-option-btn" data-category="space">🚀 Space</button>
+          </div>
+        </div>
+        <div class="game-setting-group">
+          <div class="game-setting-label">Number of Questions</div>
+          <div class="game-setting-options" id="triviaCount">
+            <button class="setting-option-btn" data-count="3">3</button>
+            <button class="setting-option-btn active" data-count="5">5</button>
+            <button class="setting-option-btn" data-count="7">7</button>
+            <button class="setting-option-btn" data-count="10">10</button>
+          </div>
+        </div>
+      `;
+      break;
+      
+    case 'fact-or-fiction':
+      settingsHTML += `
+        <div class="game-setting-group">
+          <div class="game-setting-label">Number of Statements</div>
+          <div class="game-setting-options" id="fofCount">
+            <button class="setting-option-btn" data-count="3">3</button>
+            <button class="setting-option-btn active" data-count="5">5</button>
+            <button class="setting-option-btn" data-count="7">7</button>
+            <button class="setting-option-btn" data-count="10">10</button>
+          </div>
+        </div>
+      `;
+      break;
+      
+    case 'memory-match':
+      settingsHTML += `
+        <div class="game-setting-group">
+          <div class="game-setting-label">Grid Size</div>
+          <div class="game-setting-options" id="memorySize">
+            <button class="setting-option-btn" data-size="3x4">3×4 (Easy)</button>
+            <button class="setting-option-btn active" data-size="4x4">4×4 (Medium)</button>
+            <button class="setting-option-btn" data-size="4x5">4×5 (Hard)</button>
+            <button class="setting-option-btn" data-size="5x6">5×6 (Expert)</button>
+          </div>
+        </div>
+      `;
+      break;
+      
+    case 'math-challenge':
+      settingsHTML += `
+        <div class="game-setting-group">
+          <div class="game-setting-label">Operations</div>
+          <div class="game-setting-options" id="mathOps">
+            <button class="setting-option-btn active" data-ops="+-">+ −</button>
+            <button class="setting-option-btn" data-ops="+-*">+ − ×</button>
+            <button class="setting-option-btn" data-ops="+-*/">+ − × ÷</button>
+          </div>
+        </div>
+        <div class="game-setting-group">
+          <div class="game-setting-label">Number of Questions</div>
+          <div class="game-setting-options" id="mathCount">
+            <button class="setting-option-btn active" data-count="5">5</button>
+            <button class="setting-option-btn" data-count="10">10</button>
+            <button class="setting-option-btn" data-count="15">15</button>
+          </div>
+        </div>
+      `;
+      break;
+      
+    case 'minesweeper':
+      settingsHTML += `
+        <div class="game-setting-group">
+          <div class="game-setting-label">Grid Size</div>
+          <div class="game-setting-options" id="mineSize">
+            <button class="setting-option-btn" data-size="8x8">8×8</button>
+            <button class="setting-option-btn active" data-size="9x9">9×9</button>
+            <button class="setting-option-btn" data-size="10x10">10×10</button>
+            <button class="setting-option-btn" data-size="12x12">12×12</button>
+          </div>
+        </div>
+        <div class="game-setting-group">
+          <div class="game-setting-label">Mines</div>
+          <div class="game-setting-options" id="mineCount">
+            <button class="setting-option-btn" data-mines="10">10</button>
+            <button class="setting-option-btn active" data-mines="15">15</button>
+            <button class="setting-option-btn" data-mines="20">20</button>
+            <button class="setting-option-btn" data-mines="30">30</button>
+          </div>
+        </div>
+      `;
+      break;
+      
+    case 'wordle':
+      settingsHTML += `
+        <div class="game-setting-group">
+          <div class="game-setting-label">Max Attempts</div>
+          <div class="game-setting-options" id="wordleAttempts">
+            <button class="setting-option-btn" data-attempts="4">4 (Hard)</button>
+            <button class="setting-option-btn" data-attempts="5">5 (Medium)</button>
+            <button class="setting-option-btn active" data-attempts="6">6 (Easy)</button>
+          </div>
+        </div>
+      `;
+      break;
+      
+    default:
+      settingsHTML += `
+        <div class="game-setting-group">
+          <p style="color: var(--text-muted); text-align: center;">No additional settings for this game.</p>
+        </div>
+      `;
+  }
+  
+  elements.gameSettingsBody.innerHTML = settingsHTML;
+  
+  // Add click handlers for setting options
+  elements.gameSettingsBody.querySelectorAll('.game-setting-options').forEach(group => {
+    group.querySelectorAll('.setting-option-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        group.querySelectorAll('.setting-option-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        soundManager.play('click');
+      });
+    });
+  });
+  
+  elements.gameSettingsModal.classList.remove('hidden');
+  soundManager.play('click');
+}
+
+// Collect settings from modal and start game
+function collectSettingsAndStart() {
+  if (!selectedFreePlayGame) return;
+  
+  freePlayGameSettings = {};
+  
+  // Collect game-specific settings
+  switch (selectedFreePlayGame) {
+    case 'ai-trivia':
+      const categoryBtn = elements.gameSettingsBody.querySelector('#triviaCategory .setting-option-btn.active');
+      const countBtn = elements.gameSettingsBody.querySelector('#triviaCount .setting-option-btn.active');
+      freePlayGameSettings.category = categoryBtn?.getAttribute('data-category') || 'random';
+      freePlayGameSettings.count = parseInt(countBtn?.getAttribute('data-count') || '5');
+      break;
+      
+    case 'fact-or-fiction':
+      const fofCountBtn = elements.gameSettingsBody.querySelector('#fofCount .setting-option-btn.active');
+      freePlayGameSettings.count = parseInt(fofCountBtn?.getAttribute('data-count') || '5');
+      break;
+      
+    case 'memory-match':
+      const memorySizeBtn = elements.gameSettingsBody.querySelector('#memorySize .setting-option-btn.active');
+      freePlayGameSettings.gridSize = memorySizeBtn?.getAttribute('data-size') || '4x4';
+      break;
+      
+    case 'math-challenge':
+      const mathOpsBtn = elements.gameSettingsBody.querySelector('#mathOps .setting-option-btn.active');
+      const mathCountBtn = elements.gameSettingsBody.querySelector('#mathCount .setting-option-btn.active');
+      freePlayGameSettings.operations = mathOpsBtn?.getAttribute('data-ops') || '+-';
+      freePlayGameSettings.count = parseInt(mathCountBtn?.getAttribute('data-count') || '5');
+      break;
+      
+    case 'minesweeper':
+      const mineSizeBtn = elements.gameSettingsBody.querySelector('#mineSize .setting-option-btn.active');
+      const mineCountBtn = elements.gameSettingsBody.querySelector('#mineCount .setting-option-btn.active');
+      freePlayGameSettings.gridSize = mineSizeBtn?.getAttribute('data-size') || '9x9';
+      freePlayGameSettings.mines = parseInt(mineCountBtn?.getAttribute('data-mines') || '15');
+      break;
+      
+    case 'wordle':
+      const wordleAttemptsBtn = elements.gameSettingsBody.querySelector('#wordleAttempts .setting-option-btn.active');
+      freePlayGameSettings.maxAttempts = parseInt(wordleAttemptsBtn?.getAttribute('data-attempts') || '6');
+      break;
+  }
+  
+  elements.gameSettingsModal.classList.add('hidden');
+  startGame(selectedFreePlayGame, 'freeplay');
 }
 
 // Switch screens
@@ -167,13 +429,69 @@ function showScreen(screenId: 'home' | 'game' | 'result') {
   }
 }
 
+// Switch mode
+function switchMode(mode: GameMode) {
+  currentMode = mode;
+  
+  elements.careerModeBtn.classList.toggle('active', mode === 'career');
+  elements.freePlayModeBtn.classList.toggle('active', mode === 'freeplay');
+  elements.careerModeContent.classList.toggle('active', mode === 'career');
+  elements.freePlayModeContent.classList.toggle('active', mode === 'freeplay');
+  
+  soundManager.play('click');
+}
+
+// Get difficulty params for Free Play (based on selected difficulty or custom settings)
+function getFreePlayDifficultyParams(): DifficultyParams {
+  const baseParams = getDifficultyParams(
+    freePlayDifficulty === 'easy' ? 1 :
+    freePlayDifficulty === 'medium' ? 4 :
+    freePlayDifficulty === 'hard' ? 6 :
+    freePlayDifficulty === 'expert' ? 8 : 10
+  );
+  
+  // Apply custom settings
+  if (freePlayGameSettings.gridSize && selectedFreePlayGame === 'memory-match') {
+    const [rows, cols] = freePlayGameSettings.gridSize.split('x').map(Number);
+    baseParams.memoryGridSize = { rows, cols };
+  }
+  
+  if (freePlayGameSettings.gridSize && selectedFreePlayGame === 'minesweeper') {
+    const [rows, cols] = freePlayGameSettings.gridSize.split('x').map(Number);
+    baseParams.minesweeperSize = { rows, cols };
+  }
+  
+  if (freePlayGameSettings.mines) {
+    baseParams.minesweeperMines = freePlayGameSettings.mines;
+  }
+  
+  if (freePlayGameSettings.operations) {
+    baseParams.mathOperations = freePlayGameSettings.operations.split('').filter((c: string) => ['+', '-', '*', '/'].includes(c)) as ('+' | '-' | '*' | '/')[];
+  }
+  
+  if (freePlayGameSettings.count && selectedFreePlayGame === 'math-challenge') {
+    baseParams.mathQuestionCount = freePlayGameSettings.count;
+  }
+  
+  if (freePlayGameSettings.maxAttempts) {
+    baseParams.wordleMaxAttempts = freePlayGameSettings.maxAttempts;
+  }
+  
+  return baseParams;
+}
+
 // Start a game
-async function startGame(gameType: GameType) {
+async function startGame(gameType: GameType, mode: GameMode) {
+  currentMode = mode;
   soundManager.play('click');
   
   const config = GAME_CONFIGS[gameType];
   elements.currentGameIcon.textContent = config.icon;
   elements.currentGameName.textContent = config.name;
+  
+  // Update mode badge
+  elements.gameModeLabel.textContent = mode === 'career' ? 'Career' : 'Free Play';
+  elements.gameModeLabel.classList.toggle('freeplay', mode === 'freeplay');
   
   // Create session
   currentSession = await createGameSession(gameType);
@@ -188,7 +506,7 @@ async function startGame(gameType: GameType) {
   startTimer();
   
   // Load game module dynamically
-  loadGame(gameType);
+  loadGame(gameType, mode);
 }
 
 // Timer functions
@@ -210,8 +528,10 @@ function stopTimer() {
 }
 
 // Load game based on type
-async function loadGame(gameType: GameType) {
-  const params = getDifficultyParams(currentProgress.level);
+async function loadGame(gameType: GameType, mode: GameMode) {
+  const params = mode === 'career' 
+    ? getDifficultyParams(currentProgress.level)
+    : getFreePlayDifficultyParams();
   
   switch (gameType) {
     case 'memory-match':
@@ -256,11 +576,9 @@ function loadMemoryMatch(params: ReturnType<typeof getDifficultyParams>) {
   const totalCards = rows * cols;
   const pairCount = totalCards / 2;
   
-  // Emoji pairs - nice clear icons
   const emojis = ['🎮', '🎯', '⭐', '🎨', '🔥', '💎', '🎵', '🚀', '⚡', '🌟', '🎪', '🏆', '💡', '🎲', '🌈', '🎭', '🎸', '🎹', '🎺', '🎻'];
   const selectedEmojis = emojis.slice(0, pairCount);
   
-  // Create pairs and shuffle
   let cards = [...selectedEmojis, ...selectedEmojis]
     .map((emoji, index) => ({ id: index, emoji, isFlipped: false, isMatched: false }))
     .sort(() => Math.random() - 0.5);
@@ -269,13 +587,11 @@ function loadMemoryMatch(params: ReturnType<typeof getDifficultyParams>) {
   let matchedPairs = 0;
   let canFlip = true;
   
-  // Card back SVG icon
   const cardBackIcon = `<svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="2" style="color: white; opacity: 0.9;">
     <circle cx="12" cy="12" r="10"></circle>
     <path d="M12 16v-4M12 8h.01"></path>
   </svg>`;
   
-  // Render with proper spacing
   elements.gameContainer.innerHTML = `
     <div class="memory-grid" style="grid-template-columns: repeat(${cols}, 1fr); max-width: ${cols * 90}px; gap: 12px;">
       ${cards.map((card, i) => `
@@ -287,7 +603,6 @@ function loadMemoryMatch(params: ReturnType<typeof getDifficultyParams>) {
     </div>
   `;
   
-  // Add click handlers
   elements.gameContainer.querySelectorAll('.memory-card').forEach(cardEl => {
     cardEl.addEventListener('click', () => {
       if (!canFlip) return;
@@ -297,19 +612,16 @@ function loadMemoryMatch(params: ReturnType<typeof getDifficultyParams>) {
       
       if (card.isFlipped || card.isMatched) return;
       
-      // Flip card
       card.isFlipped = true;
       cardEl.classList.add('flipped');
       flippedCards.push(index);
       soundManager.play('flip');
       
-      // Check for match
       if (flippedCards.length === 2) {
         canFlip = false;
         const [first, second] = flippedCards;
         
         if (cards[first].emoji === cards[second].emoji) {
-          // Match!
           cards[first].isMatched = true;
           cards[second].isMatched = true;
           matchedPairs++;
@@ -323,12 +635,10 @@ function loadMemoryMatch(params: ReturnType<typeof getDifficultyParams>) {
           flippedCards = [];
           canFlip = true;
           
-          // Check win
           if (matchedPairs === pairCount) {
             endGame(true, matchedPairs * 10);
           }
         } else {
-          // No match
           setTimeout(() => {
             cards[first].isFlipped = false;
             cards[second].isFlipped = false;
@@ -381,7 +691,6 @@ function loadMathChallenge(params: ReturnType<typeof getDifficultyParams>) {
         answer = a + b;
     }
     
-    // Generate wrong answers
     const wrongAnswers = new Set<number>();
     while (wrongAnswers.size < 3) {
       const wrong = answer + (Math.floor(Math.random() * 20) - 10);
@@ -397,7 +706,6 @@ function loadMathChallenge(params: ReturnType<typeof getDifficultyParams>) {
   
   function showQuestion() {
     if (currentQuestion >= mathQuestionCount) {
-      // Game complete
       const finalScore = Math.round((score / mathQuestionCount) * 100);
       endGame(score >= mathQuestionCount / 2, finalScore);
       return;
@@ -419,7 +727,6 @@ function loadMathChallenge(params: ReturnType<typeof getDifficultyParams>) {
       </div>
     `;
     
-    // Timer
     if (questionTimer) clearInterval(questionTimer);
     questionTimer = window.setInterval(() => {
       timeLeft--;
@@ -434,7 +741,6 @@ function loadMathChallenge(params: ReturnType<typeof getDifficultyParams>) {
       }
     }, 1000);
     
-    // Option clicks
     elements.gameContainer.querySelectorAll('.math-option').forEach(btn => {
       btn.addEventListener('click', () => {
         if (questionTimer) clearInterval(questionTimer);
@@ -449,7 +755,6 @@ function loadMathChallenge(params: ReturnType<typeof getDifficultyParams>) {
           soundManager.play('correct');
         } else {
           soundManager.play('wrong');
-          // Show correct answer
           elements.gameContainer.querySelectorAll('.math-option').forEach(b => {
             if (parseInt(b.getAttribute('data-value')!) === q.answer) {
               b.classList.add('correct');
@@ -499,7 +804,6 @@ function loadSimonSays(params: ReturnType<typeof getDifficultyParams>) {
       </div>
     `;
     
-    // Add click handlers
     if (!isShowingSequence) {
       elements.gameContainer.querySelectorAll('.simon-btn').forEach(btn => {
         btn.addEventListener('click', () => handlePlayerInput(parseInt(btn.getAttribute('data-index')!)));
@@ -548,29 +852,23 @@ function loadSimonSays(params: ReturnType<typeof getDifficultyParams>) {
     playerSequence.push(index);
     flashButton(index, 200);
     
-    // Check if correct
     const currentIndex = playerSequence.length - 1;
     if (playerSequence[currentIndex] !== sequence[currentIndex]) {
-      // Wrong!
       soundManager.play('wrong');
       endGame(currentRound > 0, currentRound * 10);
       return;
     }
     
-    // Correct so far
     soundManager.play('correct');
     
     if (playerSequence.length === sequence.length) {
-      // Completed round!
       currentRound++;
       
       if (currentRound >= simonMaxLength) {
-        // Won the game!
         endGame(true, currentRound * 15);
         return;
       }
       
-      // Next round
       setTimeout(() => {
         sequence.push(Math.floor(Math.random() * 4));
         showSequence();
@@ -578,7 +876,6 @@ function loadSimonSays(params: ReturnType<typeof getDifficultyParams>) {
     }
   }
   
-  // Start game
   currentRound = 1;
   sequence = [];
   for (let i = 0; i < simonStartLength; i++) {
@@ -609,7 +906,6 @@ function loadMinesweeper(params: ReturnType<typeof getDifficultyParams>) {
   const totalSafe = rows * cols - mineCount;
   
   function initGrid(excludeRow: number, excludeCol: number) {
-    // Place mines avoiding first click area
     const positions: [number, number][] = [];
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
@@ -618,7 +914,6 @@ function loadMinesweeper(params: ReturnType<typeof getDifficultyParams>) {
       }
     }
     
-    // Shuffle and pick mine positions
     for (let i = positions.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [positions[i], positions[j]] = [positions[j], positions[i]];
@@ -626,7 +921,6 @@ function loadMinesweeper(params: ReturnType<typeof getDifficultyParams>) {
     
     const minePositions = new Set(positions.slice(0, mineCount).map(([r, c]) => `${r},${c}`));
     
-    // Create grid
     grid = [];
     for (let r = 0; r < rows; r++) {
       grid[r] = [];
@@ -640,7 +934,6 @@ function loadMinesweeper(params: ReturnType<typeof getDifficultyParams>) {
       }
     }
     
-    // Calculate adjacent mines
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         if (grid[r][c].isMine) continue;
@@ -666,7 +959,6 @@ function loadMinesweeper(params: ReturnType<typeof getDifficultyParams>) {
     revealedCount++;
     
     if (grid[r][c].adjacentMines === 0 && !grid[r][c].isMine) {
-      // Reveal neighbors
       for (let dr = -1; dr <= 1; dr++) {
         for (let dc = -1; dc <= 1; dc++) {
           reveal(r + dr, c + dc);
@@ -709,7 +1001,6 @@ function loadMinesweeper(params: ReturnType<typeof getDifficultyParams>) {
       </div>
     `;
     
-    // Add event handlers
     elements.gameContainer.querySelectorAll('.mine-cell:not(.revealed)').forEach(cell => {
       cell.addEventListener('click', (e) => {
         e.preventDefault();
@@ -736,7 +1027,6 @@ function loadMinesweeper(params: ReturnType<typeof getDifficultyParams>) {
     }
     
     if (grid[r][c].isMine) {
-      // Game over - hit a mine
       gameOver = true;
       grid[r][c].isRevealed = true;
       soundManager.play('explosion');
@@ -749,7 +1039,6 @@ function loadMinesweeper(params: ReturnType<typeof getDifficultyParams>) {
     soundManager.play('click');
     renderGrid();
     
-    // Check win
     if (revealedCount === totalSafe) {
       gameOver = true;
       soundManager.play('win');
@@ -766,7 +1055,6 @@ function loadMinesweeper(params: ReturnType<typeof getDifficultyParams>) {
     renderGrid();
   }
   
-  // Initialize empty grid (mines placed on first click)
   grid = [];
   for (let r = 0; r < rows; r++) {
     grid[r] = [];
@@ -786,15 +1074,13 @@ function loadSlidingPuzzle(params: ReturnType<typeof getDifficultyParams>) {
   let moves = 0;
   
   function initPuzzle() {
-    // Create solved state
     tiles = [];
     for (let i = 0; i < size * size - 1; i++) {
       tiles.push(i + 1);
     }
-    tiles.push(0); // Empty tile
+    tiles.push(0);
     emptyIndex = size * size - 1;
     
-    // Shuffle by making random valid moves
     const shuffleMoves = size * size * 20;
     for (let i = 0; i < shuffleMoves; i++) {
       const validMoves = getValidMoves();
@@ -810,10 +1096,10 @@ function loadSlidingPuzzle(params: ReturnType<typeof getDifficultyParams>) {
     const row = Math.floor(emptyIndex / size);
     const col = emptyIndex % size;
     
-    if (row > 0) moves.push(emptyIndex - size); // Up
-    if (row < size - 1) moves.push(emptyIndex + size); // Down
-    if (col > 0) moves.push(emptyIndex - 1); // Left
-    if (col < size - 1) moves.push(emptyIndex + 1); // Right
+    if (row > 0) moves.push(emptyIndex - size);
+    if (row < size - 1) moves.push(emptyIndex + size);
+    if (col > 0) moves.push(emptyIndex - 1);
+    if (col < size - 1) moves.push(emptyIndex + 1);
     
     return moves;
   }
@@ -845,7 +1131,6 @@ function loadSlidingPuzzle(params: ReturnType<typeof getDifficultyParams>) {
       </div>
     `;
     
-    // Add click handlers
     elements.gameContainer.querySelectorAll('.sliding-tile.movable').forEach(tile => {
       tile.addEventListener('click', () => {
         const index = parseInt(tile.getAttribute('data-index')!);
@@ -865,7 +1150,6 @@ function loadSlidingPuzzle(params: ReturnType<typeof getDifficultyParams>) {
     
     if (isSolved()) {
       soundManager.play('win');
-      // Score based on moves (fewer = better)
       const perfectMoves = size * size * 3;
       const score = Math.max(0, 100 - Math.floor((moves - perfectMoves) / 2));
       endGame(true, score);
@@ -880,14 +1164,13 @@ function loadSlidingPuzzle(params: ReturnType<typeof getDifficultyParams>) {
 function loadWordle(params: ReturnType<typeof getDifficultyParams>) {
   const maxAttempts = params.wordleMaxAttempts;
   
-  // Word list (5-letter words)
   const words = [
     'BRAIN', 'SMART', 'THINK', 'LOGIC', 'QUICK', 'SOLVE', 'LEARN', 'FOCUS',
     'SHARP', 'SKILL', 'POWER', 'LEVEL', 'SCORE', 'PRIZE', 'LIGHT', 'SPARK',
     'STORM', 'FLASH', 'SWIFT', 'RAPID', 'CLEAR', 'CRISP', 'EXACT', 'PRIME',
     'GREAT', 'SUPER', 'EXTRA', 'TURBO', 'BLAST', 'BOOST', 'CLIMB', 'REACH',
     'WORLD', 'SPACE', 'EARTH', 'OCEAN', 'RIVER', 'MOUNT', 'CLOUD', 'FROST',
-    'FLAME', 'BLAZE', 'SHINE', 'GLEAM', 'GLOW', 'DREAM', 'QUEST', 'CHASE'
+    'FLAME', 'BLAZE', 'SHINE', 'GLEAM', 'DREAM', 'QUEST', 'CHASE'
   ];
   
   const targetWord = words[Math.floor(Math.random() * words.length)];
@@ -899,7 +1182,6 @@ function loadWordle(params: ReturnType<typeof getDifficultyParams>) {
     const keyboard = 'QWERTYUIOPASDFGHJKLZXCVBNM'.split('');
     const usedLetters: Record<string, 'correct' | 'present' | 'absent'> = {};
     
-    // Track letter states from guesses
     guesses.forEach(guess => {
       for (let i = 0; i < guess.length; i++) {
         const letter = guess[i];
@@ -957,7 +1239,6 @@ function loadWordle(params: ReturnType<typeof getDifficultyParams>) {
       </div>
     `;
     
-    // Add keyboard handlers
     if (!gameEnded) {
       elements.gameContainer.querySelectorAll('.key').forEach(key => {
         key.addEventListener('click', () => {
@@ -989,7 +1270,6 @@ function loadWordle(params: ReturnType<typeof getDifficultyParams>) {
     guesses.push(currentGuess);
     
     if (currentGuess === targetWord) {
-      // Won!
       gameEnded = true;
       soundManager.play('win');
       renderGame();
@@ -1001,7 +1281,6 @@ function loadWordle(params: ReturnType<typeof getDifficultyParams>) {
     }
     
     if (guesses.length >= maxAttempts) {
-      // Lost
       gameEnded = true;
       soundManager.play('lose');
       renderGame();
@@ -1017,7 +1296,6 @@ function loadWordle(params: ReturnType<typeof getDifficultyParams>) {
     renderGame();
   }
   
-  // Handle physical keyboard
   const handleKeyDown = (e: KeyboardEvent) => {
     if (gameEnded) return;
     
@@ -1049,7 +1327,6 @@ function loadNumberSequence(params: ReturnType<typeof getDifficultyParams>) {
   };
   
   const patterns: SequencePattern[] = [
-    // Easy patterns
     {
       name: 'Add constant',
       generate: (start, length) => {
@@ -1066,7 +1343,6 @@ function loadNumberSequence(params: ReturnType<typeof getDifficultyParams>) {
       },
       nextValue: (seq) => seq[seq.length - 1] * 2
     },
-    // Medium patterns
     {
       name: 'Fibonacci-like',
       generate: (_start, length) => {
@@ -1086,7 +1362,6 @@ function loadNumberSequence(params: ReturnType<typeof getDifficultyParams>) {
         return n * n;
       }
     },
-    // Hard patterns
     {
       name: 'Triangular',
       generate: (_start, length) => Array.from({ length }, (_, i) => ((i + 1) * (i + 2)) / 2),
@@ -1104,7 +1379,6 @@ function loadNumberSequence(params: ReturnType<typeof getDifficultyParams>) {
     const sequence = pattern.generate(start, 5);
     const answer = pattern.nextValue(sequence);
     
-    // Generate wrong options
     const options = [answer];
     while (options.length < 4) {
       const wrong = answer + (Math.floor(Math.random() * 20) - 10);
@@ -1153,7 +1427,6 @@ function loadNumberSequence(params: ReturnType<typeof getDifficultyParams>) {
           soundManager.play('correct');
         } else {
           soundManager.play('wrong');
-          // Show correct answer
           elements.gameContainer.querySelectorAll('.seq-option').forEach(b => {
             if (parseInt(b.getAttribute('data-value')!) === problem.answer) {
               b.classList.add('correct');
@@ -1169,9 +1442,6 @@ function loadNumberSequence(params: ReturnType<typeof getDifficultyParams>) {
   
   showProblem();
 }
-
-// Backend API URL
-const BACKEND_URL = 'http://localhost:8000';
 
 // Pattern Match Game (Visual patterns - no AI)
 function loadPatternMatch(params: ReturnType<typeof getDifficultyParams>) {
@@ -1290,7 +1560,9 @@ function loadPatternMatch(params: ReturnType<typeof getDifficultyParams>) {
 
 // AI Trivia Game
 async function loadAiTrivia(params: ReturnType<typeof getDifficultyParams>) {
-  const difficulty = params.triviaQuestionCount <= 5 ? 'easy' : params.triviaQuestionCount <= 8 ? 'medium' : 'hard';
+  const difficulty = freePlayDifficulty || (params.triviaQuestionCount <= 5 ? 'easy' : params.triviaQuestionCount <= 8 ? 'medium' : 'hard');
+  const category = freePlayGameSettings.category !== 'random' ? freePlayGameSettings.category : null;
+  const count = freePlayGameSettings.count || 5;
   
   elements.gameContainer.innerHTML = `
     <div class="loading-game">
@@ -1303,7 +1575,7 @@ async function loadAiTrivia(params: ReturnType<typeof getDifficultyParams>) {
     const response = await fetch(`${BACKEND_URL}/games/trivia`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ difficulty, count: 5 })
+      body: JSON.stringify({ difficulty, category, count })
     });
     
     if (!response.ok) throw new Error('Failed to fetch trivia');
@@ -1343,7 +1615,6 @@ async function loadAiTrivia(params: ReturnType<typeof getDifficultyParams>) {
           const value = btn.getAttribute('data-value')!;
           const isCorrect = value === q.correct_answer;
           
-          // Disable all buttons
           elements.gameContainer.querySelectorAll('.trivia-option').forEach(b => {
             (b as HTMLButtonElement).disabled = true;
             if (b.getAttribute('data-value') === q.correct_answer) {
@@ -1360,7 +1631,6 @@ async function loadAiTrivia(params: ReturnType<typeof getDifficultyParams>) {
             soundManager.play('wrong');
           }
           
-          // Show explanation
           const explanationEl = document.createElement('div');
           explanationEl.className = 'trivia-explanation';
           explanationEl.innerHTML = `<strong>💡</strong> ${q.explanation}`;
@@ -1389,7 +1659,7 @@ async function loadAiTrivia(params: ReturnType<typeof getDifficultyParams>) {
 
 // Word Association Game
 async function loadWordAssociation(params: ReturnType<typeof getDifficultyParams>) {
-  const difficulty = params.sequenceComplexity <= 2 ? 'easy' : params.sequenceComplexity <= 3 ? 'medium' : 'hard';
+  const difficulty = freePlayDifficulty || (params.sequenceComplexity <= 2 ? 'easy' : params.sequenceComplexity <= 3 ? 'medium' : 'hard');
   
   let currentRound = 0;
   let score = 0;
@@ -1543,7 +1813,8 @@ async function loadWordAssociation(params: ReturnType<typeof getDifficultyParams
 
 // Fact or Fiction Game
 async function loadFactOrFiction(params: ReturnType<typeof getDifficultyParams>) {
-  const difficulty = params.triviaQuestionCount <= 5 ? 'easy' : 'medium';
+  const difficulty = freePlayDifficulty || (params.triviaQuestionCount <= 5 ? 'easy' : 'medium');
+  const count = freePlayGameSettings.count || 5;
   
   elements.gameContainer.innerHTML = `
     <div class="loading-game">
@@ -1556,7 +1827,7 @@ async function loadFactOrFiction(params: ReturnType<typeof getDifficultyParams>)
     const response = await fetch(`${BACKEND_URL}/games/fact-or-fiction`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ difficulty, count: 5 })
+      body: JSON.stringify({ difficulty, count })
     });
     
     if (!response.ok) throw new Error('Failed to fetch statements');
@@ -1601,25 +1872,21 @@ async function loadFactOrFiction(params: ReturnType<typeof getDifficultyParams>)
           const answer = btn.getAttribute('data-answer') === 'true';
           const isCorrect = answer === s.is_fact;
           
-          // Disable buttons
           elements.gameContainer.querySelectorAll('.fof-btn').forEach(b => {
             (b as HTMLButtonElement).disabled = true;
           });
           
-          // Show result
           if (isCorrect) {
             btn.classList.add('correct');
             score++;
             soundManager.play('correct');
           } else {
             btn.classList.add('wrong');
-            // Highlight correct answer
             const correctBtn = elements.gameContainer.querySelector(`[data-answer="${s.is_fact}"]`);
             correctBtn?.classList.add('correct');
             soundManager.play('wrong');
           }
           
-          // Show explanation
           const explanationEl = document.createElement('div');
           explanationEl.className = 'fof-explanation';
           explanationEl.innerHTML = `
@@ -1659,10 +1926,46 @@ async function endGame(won: boolean, score: number) {
   
   if (!currentSession) return;
   
-  const result = await currentSession.end(won, score);
-  currentProgress = result.progress;
+  // Only process career progress in Career Mode
+  if (currentMode === 'career') {
+    const result = await currentSession.end(won, score);
+    currentProgress = result.progress;
+    
+    // Level up?
+    if (result.leveledUp) {
+      elements.levelUpBanner.classList.remove('hidden');
+      const newLevelInfo = getLevelInfo(result.progress.level);
+      elements.newLevelName.textContent = newLevelInfo.name;
+    } else {
+      elements.levelUpBanner.classList.add('hidden');
+    }
+    
+    // New achievements?
+    if (result.newAchievements.length > 0) {
+      elements.newAchievements.classList.remove('hidden');
+      elements.achievementsList.innerHTML = result.newAchievements.map(a => `
+        <div class="achievement-badge">
+          <span class="achievement-badge-icon">${a.icon}</span>
+          <span>${a.name}</span>
+        </div>
+      `).join('');
+    } else {
+      elements.newAchievements.classList.add('hidden');
+    }
+    
+    // Update home screen data
+    updateUI();
+    renderCareerGamesGrid();
+  } else {
+    // Free Play mode - no career progression
+    elements.levelUpBanner.classList.add('hidden');
+    elements.newAchievements.classList.add('hidden');
+  }
   
   // Update result screen
+  elements.resultModeBadge.textContent = currentMode === 'career' ? 'Career Mode' : 'Free Play';
+  elements.resultModeBadge.classList.toggle('freeplay', currentMode === 'freeplay');
+  
   const resultCard = elements.resultScreen.querySelector('.result-card');
   resultCard?.classList.remove('win', 'lose');
   resultCard?.classList.add(won ? 'win' : 'lose');
@@ -1676,28 +1979,6 @@ async function endGame(won: boolean, score: number) {
   elements.resultTime.textContent = formatTime(currentSession.getElapsedSeconds());
   elements.resultScore.textContent = String(score);
   
-  // Level up?
-  if (result.leveledUp) {
-    elements.levelUpBanner.classList.remove('hidden');
-    const newLevelInfo = getLevelInfo(result.progress.level);
-    elements.newLevelName.textContent = newLevelInfo.name;
-  } else {
-    elements.levelUpBanner.classList.add('hidden');
-  }
-  
-  // New achievements?
-  if (result.newAchievements.length > 0) {
-    elements.newAchievements.classList.remove('hidden');
-    elements.achievementsList.innerHTML = result.newAchievements.map(a => `
-      <div class="achievement-badge">
-        <span class="achievement-badge-icon">${a.icon}</span>
-        <span>${a.name}</span>
-      </div>
-    `).join('');
-  } else {
-    elements.newAchievements.classList.add('hidden');
-  }
-  
   // Quote/Joke
   const quote = getRandomJokeOrQuote();
   elements.quoteText.textContent = quote.type === 'quote' ? `"${quote.text}"` : quote.text;
@@ -1706,12 +1987,8 @@ async function endGame(won: boolean, score: number) {
   
   showScreen('result');
   
-  // Update home screen data for when we return
-  updateUI();
-  renderGamesGrid();
-  
-  // Auto-continue to next game if won
-  if (won) {
+  // Auto-continue to next game if won in Career mode
+  if (won && currentMode === 'career') {
     startAutoNextCountdown();
   }
 }
@@ -1719,8 +1996,6 @@ async function endGame(won: boolean, score: number) {
 // Start auto-continue countdown
 function startAutoNextCountdown() {
   autoNextCountdown = 4;
-  
-  // Update button text with countdown
   updateAutoNextButton();
   
   autoNextTimer = window.setInterval(() => {
@@ -1729,16 +2004,15 @@ function startAutoNextCountdown() {
     
     if (autoNextCountdown <= 0) {
       stopAutoNextCountdown();
-      // Start next random game
       const game = getRandomGame(currentProgress.level);
-      startGame(game.type);
+      startGame(game.type, 'career');
     }
   }, 1000);
 }
 
 // Update the play again button with countdown
 function updateAutoNextButton() {
-  if (autoNextCountdown > 0) {
+  if (autoNextCountdown > 0 && currentMode === 'career') {
     elements.playAgainBtn.innerHTML = `
       <span>Next Game in ${autoNextCountdown}...</span>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1806,7 +2080,6 @@ function showStatsModal() {
     </div>
   `;
   
-  // Game-specific stats
   const gameStats = Object.entries(progress.gamesStats) as [string, { played: number; won: number; bestTime?: number; bestScore?: number }][];
   if (gameStats.length > 0) {
     elements.gameStatsList.innerHTML = gameStats.map(([type, stats]) => {
@@ -1860,14 +2133,41 @@ function setupEventListeners() {
     await import('./level-system').then(m => m.saveProgress(currentProgress));
     soundManager.play('levelUp');
     updateUI();
-    renderGamesGrid();
+    renderCareerGamesGrid();
     alert('🔓 All games unlocked! Level set to 10 (Einstein Mode)');
   });
   
-  // Play random game
+  // Mode selector
+  elements.careerModeBtn.addEventListener('click', () => switchMode('career'));
+  elements.freePlayModeBtn.addEventListener('click', () => switchMode('freeplay'));
+  
+  // Difficulty selector in Free Play
+  elements.difficultySelector.querySelectorAll('.diff-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      elements.difficultySelector.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      freePlayDifficulty = btn.getAttribute('data-diff') as GameDifficulty;
+      soundManager.play('click');
+    });
+  });
+  
+  // Game settings modal
+  elements.closeGameSettings.addEventListener('click', () => {
+    elements.gameSettingsModal.classList.add('hidden');
+  });
+  
+  elements.gameSettingsModal.querySelector('.modal-overlay')?.addEventListener('click', () => {
+    elements.gameSettingsModal.classList.add('hidden');
+  });
+  
+  elements.startGameWithSettings.addEventListener('click', () => {
+    collectSettingsAndStart();
+  });
+  
+  // Play random game (Career mode)
   elements.playRandomBtn.addEventListener('click', () => {
     const game = getRandomGame(currentProgress.level);
-    startGame(game.type);
+    startGame(game.type, 'career');
   });
   
   // Back to home
@@ -1919,9 +2219,13 @@ function setupEventListeners() {
   // Result screen buttons
   elements.playAgainBtn.addEventListener('click', () => {
     stopAutoNextCountdown();
-    // Start next random game for variety
-    const game = getRandomGame(currentProgress.level);
-    startGame(game.type);
+    if (currentMode === 'career') {
+      const game = getRandomGame(currentProgress.level);
+      startGame(game.type, 'career');
+    } else {
+      // In Free Play, go back to game selection
+      showScreen('home');
+    }
   });
   
   elements.homeBtn.addEventListener('click', () => {
@@ -1933,4 +2237,3 @@ function setupEventListeners() {
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', init);
-
