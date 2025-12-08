@@ -1558,12 +1558,53 @@ function loadPatternMatch(params: ReturnType<typeof getDifficultyParams>) {
   startRound();
 }
 
-// AI Trivia Game
+// AI Trivia Game - Unlimited mode with 3 lives
 async function loadAiTrivia(params: ReturnType<typeof getDifficultyParams>) {
   const difficulty = freePlayDifficulty || (params.triviaQuestionCount <= 5 ? 'easy' : params.triviaQuestionCount <= 8 ? 'medium' : 'hard');
   const category = freePlayGameSettings.category !== 'random' ? freePlayGameSettings.category : null;
-  const count = freePlayGameSettings.count || 5;
   
+  const MAX_LIVES = 3;
+  let lives = MAX_LIVES;
+  let score = 0;
+  let questionNumber = 0;
+  let questions: any[] = [];
+  let isLoading = false;
+  let gameEnded = false;
+  
+  // Fetch questions from AI
+  async function fetchMoreQuestions() {
+    if (isLoading) return;
+    isLoading = true;
+    
+    try {
+      const response = await fetch(`${BACKEND_URL}/games/trivia`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ difficulty, category, count: 5 })
+      });
+      
+      if (!response.ok) throw new Error('Failed to fetch trivia');
+      
+      const data = await response.json();
+      questions.push(...data.questions);
+      console.log(`📚 Loaded ${data.questions.length} more questions. Total: ${questions.length}`);
+    } catch (error) {
+      console.error('Error fetching questions:', error);
+    } finally {
+      isLoading = false;
+    }
+  }
+  
+  // Render lives display
+  function renderLives() {
+    return `<div class="lives-display">
+      ${Array(MAX_LIVES).fill(0).map((_, i) => `
+        <span class="life-heart ${i < lives ? 'active' : 'lost'}">❤️</span>
+      `).join('')}
+    </div>`;
+  }
+  
+  // Show loading screen
   elements.gameContainer.innerHTML = `
     <div class="loading-game">
       <div class="loading-spinner">🧠</div>
@@ -1571,81 +1612,10 @@ async function loadAiTrivia(params: ReturnType<typeof getDifficultyParams>) {
     </div>
   `;
   
-  try {
-    const response = await fetch(`${BACKEND_URL}/games/trivia`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ difficulty, category, count })
-    });
-    
-    if (!response.ok) throw new Error('Failed to fetch trivia');
-    
-    const data = await response.json();
-    const questions = data.questions;
-    
-    let currentQuestion = 0;
-    let score = 0;
-    
-    function showQuestion() {
-      if (currentQuestion >= questions.length) {
-        endGame(score >= questions.length / 2, score * 20);
-        return;
-      }
-      
-      const q = questions[currentQuestion];
-      
-      elements.gameContainer.innerHTML = `
-        <div class="trivia-game">
-          <div class="trivia-info">
-            <span>Question ${currentQuestion + 1}/${questions.length}</span>
-            <span class="trivia-category">${q.category}</span>
-            <span>Score: ${score}</span>
-          </div>
-          <div class="trivia-question">${q.question}</div>
-          <div class="trivia-options">
-            ${q.options.map((opt: string, i: number) => `
-              <button class="trivia-option" data-value="${opt}">${String.fromCharCode(65 + i)}. ${opt}</button>
-            `).join('')}
-          </div>
-        </div>
-      `;
-      
-      elements.gameContainer.querySelectorAll('.trivia-option').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const value = btn.getAttribute('data-value')!;
-          const isCorrect = value === q.correct_answer;
-          
-          elements.gameContainer.querySelectorAll('.trivia-option').forEach(b => {
-            (b as HTMLButtonElement).disabled = true;
-            if (b.getAttribute('data-value') === q.correct_answer) {
-              b.classList.add('correct');
-            }
-          });
-          
-          if (isCorrect) {
-            btn.classList.add('correct');
-            score++;
-            soundManager.play('correct');
-          } else {
-            btn.classList.add('wrong');
-            soundManager.play('wrong');
-          }
-          
-          const explanationEl = document.createElement('div');
-          explanationEl.className = 'trivia-explanation';
-          explanationEl.innerHTML = `<strong>💡</strong> ${q.explanation}`;
-          elements.gameContainer.querySelector('.trivia-game')?.appendChild(explanationEl);
-          
-          currentQuestion++;
-          setTimeout(showQuestion, 2500);
-        });
-      });
-    }
-    
-    showQuestion();
-    
-  } catch (error) {
-    console.error('AI Trivia error:', error);
+  // Initial fetch
+  await fetchMoreQuestions();
+  
+  if (questions.length === 0) {
     elements.gameContainer.innerHTML = `
       <div class="error-message">
         <p style="font-size: 48px;">⚠️</p>
@@ -1654,7 +1624,102 @@ async function loadAiTrivia(params: ReturnType<typeof getDifficultyParams>) {
         <button class="retry-btn" onclick="location.reload()">Retry</button>
       </div>
     `;
+    return;
   }
+  
+  function showQuestion() {
+    if (gameEnded) return;
+    
+    // Check if game over
+    if (lives <= 0) {
+      gameEnded = true;
+      endGame(score > 0, score);
+      return;
+    }
+    
+    // Pre-fetch more questions when running low
+    if (questions.length - questionNumber <= 2 && !isLoading) {
+      fetchMoreQuestions();
+    }
+    
+    // Wait for questions if we ran out
+    if (questionNumber >= questions.length) {
+      elements.gameContainer.innerHTML = `
+        <div class="loading-game">
+          <div class="loading-spinner">🧠</div>
+          <p>Loading more questions...</p>
+        </div>
+      `;
+      setTimeout(showQuestion, 500);
+      return;
+    }
+    
+    const q = questions[questionNumber];
+    
+    elements.gameContainer.innerHTML = `
+      <div class="trivia-game unlimited">
+        <div class="trivia-header">
+          ${renderLives()}
+          <div class="trivia-score">
+            <span class="score-label">Score</span>
+            <span class="score-value">${score}</span>
+          </div>
+        </div>
+        <div class="trivia-info">
+          <span>Question ${questionNumber + 1}</span>
+          <span class="trivia-category">${q.category}</span>
+        </div>
+        <div class="trivia-question">${q.question}</div>
+        <div class="trivia-options">
+          ${q.options.map((opt: string, i: number) => `
+            <button class="trivia-option" data-value="${opt}">${String.fromCharCode(65 + i)}. ${opt}</button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+    
+    elements.gameContainer.querySelectorAll('.trivia-option').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (gameEnded) return;
+        
+        const value = btn.getAttribute('data-value')!;
+        const isCorrect = value === q.correct_answer;
+        
+        elements.gameContainer.querySelectorAll('.trivia-option').forEach(b => {
+          (b as HTMLButtonElement).disabled = true;
+          if (b.getAttribute('data-value') === q.correct_answer) {
+            b.classList.add('correct');
+          }
+        });
+        
+        if (isCorrect) {
+          btn.classList.add('correct');
+          score++;
+          soundManager.play('correct');
+        } else {
+          btn.classList.add('wrong');
+          lives--;
+          soundManager.play('wrong');
+          
+          // Update lives display
+          const livesDisplay = elements.gameContainer.querySelector('.lives-display');
+          if (livesDisplay) {
+            livesDisplay.innerHTML = renderLives().replace('<div class="lives-display">', '').replace('</div>', '');
+          }
+        }
+        
+        const explanationEl = document.createElement('div');
+        explanationEl.className = 'trivia-explanation';
+        explanationEl.innerHTML = `<strong>💡</strong> ${q.explanation}`;
+        elements.gameContainer.querySelector('.trivia-game')?.appendChild(explanationEl);
+        
+        questionNumber++;
+        setTimeout(showQuestion, 2000);
+      });
+    });
+  }
+  
+  showQuestion();
 }
 
 // Word Association Game
@@ -1811,11 +1876,52 @@ async function loadWordAssociation(params: ReturnType<typeof getDifficultyParams
   startRound();
 }
 
-// Fact or Fiction Game
+// Fact or Fiction Game - Unlimited mode with 3 lives
 async function loadFactOrFiction(params: ReturnType<typeof getDifficultyParams>) {
   const difficulty = freePlayDifficulty || (params.triviaQuestionCount <= 5 ? 'easy' : 'medium');
-  const count = freePlayGameSettings.count || 5;
   
+  const MAX_LIVES = 3;
+  let lives = MAX_LIVES;
+  let score = 0;
+  let statementNumber = 0;
+  let statements: any[] = [];
+  let isLoading = false;
+  let gameEnded = false;
+  
+  // Fetch statements from AI
+  async function fetchMoreStatements() {
+    if (isLoading) return;
+    isLoading = true;
+    
+    try {
+      const response = await fetch(`${BACKEND_URL}/games/fact-or-fiction`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ difficulty, count: 5 })
+      });
+      
+      if (!response.ok) throw new Error('Failed to fetch statements');
+      
+      const data = await response.json();
+      statements.push(...data.statements);
+      console.log(`📚 Loaded ${data.statements.length} more statements. Total: ${statements.length}`);
+    } catch (error) {
+      console.error('Error fetching statements:', error);
+    } finally {
+      isLoading = false;
+    }
+  }
+  
+  // Render lives display
+  function renderLives() {
+    return `<div class="lives-display">
+      ${Array(MAX_LIVES).fill(0).map((_, i) => `
+        <span class="life-heart ${i < lives ? 'active' : 'lost'}">❤️</span>
+      `).join('')}
+    </div>`;
+  }
+  
+  // Show loading screen
   elements.gameContainer.innerHTML = `
     <div class="loading-game">
       <div class="loading-spinner">🤔</div>
@@ -1823,88 +1929,10 @@ async function loadFactOrFiction(params: ReturnType<typeof getDifficultyParams>)
     </div>
   `;
   
-  try {
-    const response = await fetch(`${BACKEND_URL}/games/fact-or-fiction`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ difficulty, count })
-    });
-    
-    if (!response.ok) throw new Error('Failed to fetch statements');
-    
-    const data = await response.json();
-    const statements = data.statements;
-    
-    let currentStatement = 0;
-    let score = 0;
-    
-    function showStatement() {
-      if (currentStatement >= statements.length) {
-        endGame(score >= statements.length / 2, score * 20);
-        return;
-      }
-      
-      const s = statements[currentStatement];
-      
-      elements.gameContainer.innerHTML = `
-        <div class="fof-game">
-          <div class="fof-info">
-            <span>Statement ${currentStatement + 1}/${statements.length}</span>
-            <span class="fof-category">${s.category}</span>
-            <span>Score: ${score}</span>
-          </div>
-          <div class="fof-statement">"${s.statement}"</div>
-          <div class="fof-buttons">
-            <button class="fof-btn fact" data-answer="true">
-              <span class="fof-icon">✅</span>
-              <span>FACT</span>
-            </button>
-            <button class="fof-btn fiction" data-answer="false">
-              <span class="fof-icon">❌</span>
-              <span>FICTION</span>
-            </button>
-          </div>
-        </div>
-      `;
-      
-      elements.gameContainer.querySelectorAll('.fof-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const answer = btn.getAttribute('data-answer') === 'true';
-          const isCorrect = answer === s.is_fact;
-          
-          elements.gameContainer.querySelectorAll('.fof-btn').forEach(b => {
-            (b as HTMLButtonElement).disabled = true;
-          });
-          
-          if (isCorrect) {
-            btn.classList.add('correct');
-            score++;
-            soundManager.play('correct');
-          } else {
-            btn.classList.add('wrong');
-            const correctBtn = elements.gameContainer.querySelector(`[data-answer="${s.is_fact}"]`);
-            correctBtn?.classList.add('correct');
-            soundManager.play('wrong');
-          }
-          
-          const explanationEl = document.createElement('div');
-          explanationEl.className = 'fof-explanation';
-          explanationEl.innerHTML = `
-            <div class="fof-verdict">${s.is_fact ? '✅ This is a FACT!' : '❌ This is FICTION!'}</div>
-            <p>${s.explanation}</p>
-          `;
-          elements.gameContainer.querySelector('.fof-game')?.appendChild(explanationEl);
-          
-          currentStatement++;
-          setTimeout(showStatement, 3000);
-        });
-      });
-    }
-    
-    showStatement();
-    
-  } catch (error) {
-    console.error('Fact or Fiction error:', error);
+  // Initial fetch
+  await fetchMoreStatements();
+  
+  if (statements.length === 0) {
     elements.gameContainer.innerHTML = `
       <div class="error-message">
         <p style="font-size: 48px;">⚠️</p>
@@ -1913,18 +1941,184 @@ async function loadFactOrFiction(params: ReturnType<typeof getDifficultyParams>)
         <button class="retry-btn" onclick="location.reload()">Retry</button>
       </div>
     `;
+    return;
   }
+  
+  function showStatement() {
+    if (gameEnded) return;
+    
+    // Check if game over
+    if (lives <= 0) {
+      gameEnded = true;
+      endGame(score > 0, score);
+      return;
+    }
+    
+    // Pre-fetch more statements when running low
+    if (statements.length - statementNumber <= 2 && !isLoading) {
+      fetchMoreStatements();
+    }
+    
+    // Wait for statements if we ran out
+    if (statementNumber >= statements.length) {
+      elements.gameContainer.innerHTML = `
+        <div class="loading-game">
+          <div class="loading-spinner">🤔</div>
+          <p>Loading more statements...</p>
+        </div>
+      `;
+      setTimeout(showStatement, 500);
+      return;
+    }
+    
+    const s = statements[statementNumber];
+    
+    elements.gameContainer.innerHTML = `
+      <div class="fof-game unlimited">
+        <div class="fof-header">
+          ${renderLives()}
+          <div class="fof-score">
+            <span class="score-label">Score</span>
+            <span class="score-value">${score}</span>
+          </div>
+        </div>
+        <div class="fof-info">
+          <span>Statement ${statementNumber + 1}</span>
+          <span class="fof-category">${s.category}</span>
+        </div>
+        <div class="fof-statement">"${s.statement}"</div>
+        <div class="fof-buttons">
+          <button class="fof-btn fact" data-answer="true">
+            <span class="fof-icon">✅</span>
+            <span>FACT</span>
+          </button>
+          <button class="fof-btn fiction" data-answer="false">
+            <span class="fof-icon">❌</span>
+            <span>FICTION</span>
+          </button>
+        </div>
+      </div>
+    `;
+    
+    elements.gameContainer.querySelectorAll('.fof-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (gameEnded) return;
+        
+        const answer = btn.getAttribute('data-answer') === 'true';
+        const isCorrect = answer === s.is_fact;
+        
+        elements.gameContainer.querySelectorAll('.fof-btn').forEach(b => {
+          (b as HTMLButtonElement).disabled = true;
+        });
+        
+        if (isCorrect) {
+          btn.classList.add('correct');
+          score++;
+          soundManager.play('correct');
+        } else {
+          btn.classList.add('wrong');
+          lives--;
+          const correctBtn = elements.gameContainer.querySelector(`[data-answer="${s.is_fact}"]`);
+          correctBtn?.classList.add('correct');
+          soundManager.play('wrong');
+          
+          // Update lives display
+          const livesDisplay = elements.gameContainer.querySelector('.lives-display');
+          if (livesDisplay) {
+            livesDisplay.innerHTML = renderLives().replace('<div class="lives-display">', '').replace('</div>', '');
+          }
+        }
+        
+        const explanationEl = document.createElement('div');
+        explanationEl.className = 'fof-explanation';
+        explanationEl.innerHTML = `
+          <div class="fof-verdict">${s.is_fact ? '✅ This is a FACT!' : '❌ This is FICTION!'}</div>
+          <p>${s.explanation}</p>
+        `;
+        elements.gameContainer.querySelector('.fof-game')?.appendChild(explanationEl);
+        
+        statementNumber++;
+        setTimeout(showStatement, 2500);
+      });
+    });
+  }
+  
+  showStatement();
 }
 
 // Auto-continue timer
 let autoNextTimer: number | null = null;
 let autoNextCountdown = 3;
 
+// Last game info for sharing
+let lastGameInfo = {
+  gameName: '',
+  score: 0,
+  gameIcon: ''
+};
+
+// Chrome Web Store URL (replace with your actual extension URL when published)
+const EXTENSION_URL = 'https://chrome.google.com/webstore/detail/ai-smart-autofill/YOUR_EXTENSION_ID';
+const SHARE_HASHTAGS = '#IQArena #BrainGames #AI';
+
+// Generate share text
+function generateShareText(): string {
+  return `🧠 I scored ${lastGameInfo.score} points in ${lastGameInfo.gameName} on IQ Arena!\n\nCan you beat my score? Train your brain with AI-powered games!\n\n🎮 Get the extension: ${EXTENSION_URL}\n\n${SHARE_HASHTAGS}`;
+}
+
+// Share functions
+function shareToTwitter() {
+  const text = encodeURIComponent(generateShareText());
+  window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank', 'width=550,height=420');
+}
+
+function shareToLinkedIn() {
+  const text = encodeURIComponent(`I scored ${lastGameInfo.score} points in ${lastGameInfo.gameName} on IQ Arena! 🧠\n\nTrain your brain with AI-powered games: ${EXTENSION_URL}`);
+  window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(EXTENSION_URL)}&summary=${text}`, '_blank', 'width=550,height=420');
+}
+
+function shareToWhatsApp() {
+  const text = encodeURIComponent(generateShareText());
+  window.open(`https://wa.me/?text=${text}`, '_blank');
+}
+
+async function copyToClipboard() {
+  const text = generateShareText();
+  try {
+    await navigator.clipboard.writeText(text);
+    const copyBtn = document.getElementById('shareCopy');
+    if (copyBtn) {
+      copyBtn.classList.add('copied');
+      copyBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>`;
+      setTimeout(() => {
+        copyBtn.classList.remove('copied');
+        copyBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"></path>
+        </svg>`;
+      }, 2000);
+    }
+    soundManager.play('correct');
+  } catch (err) {
+    console.error('Failed to copy:', err);
+  }
+}
+
 // End game and show results
 async function endGame(won: boolean, score: number) {
   stopTimer();
   
   if (!currentSession) return;
+  
+  // Save last game info for sharing
+  const config = GAME_CONFIGS[currentSession.gameType];
+  lastGameInfo = {
+    gameName: config?.name || 'IQ Arena',
+    score: score,
+    gameIcon: config?.icon || '🧠'
+  };
   
   // Only process career progress in Career Mode
   if (currentMode === 'career') {
@@ -2232,6 +2426,26 @@ function setupEventListeners() {
     stopAutoNextCountdown();
     soundManager.play('click');
     showScreen('home');
+  });
+  
+  // Share buttons
+  document.getElementById('shareTwitter')?.addEventListener('click', () => {
+    soundManager.play('click');
+    shareToTwitter();
+  });
+  
+  document.getElementById('shareLinkedIn')?.addEventListener('click', () => {
+    soundManager.play('click');
+    shareToLinkedIn();
+  });
+  
+  document.getElementById('shareWhatsApp')?.addEventListener('click', () => {
+    soundManager.play('click');
+    shareToWhatsApp();
+  });
+  
+  document.getElementById('shareCopy')?.addEventListener('click', () => {
+    copyToClipboard();
   });
 }
 

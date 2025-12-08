@@ -284,15 +284,23 @@ export function getDifficultyParams(level: number): DifficultyParams {
 // Game session management
 export class GameSession {
   private startTime: number = 0;
-  private gameType: GameType;
-  private difficulty: GameDifficulty;
+  private _gameType: GameType;
+  private _difficulty: GameDifficulty;
   private isPaused: boolean = false;
   private pausedTime: number = 0;
   private totalPausedTime: number = 0;
 
   constructor(gameType: GameType, difficulty: GameDifficulty) {
-    this.gameType = gameType;
-    this.difficulty = difficulty;
+    this._gameType = gameType;
+    this._difficulty = difficulty;
+  }
+
+  get gameType(): GameType {
+    return this._gameType;
+  }
+
+  get difficulty(): GameDifficulty {
+    return this._difficulty;
   }
 
   start(): void {

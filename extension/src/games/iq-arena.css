@@ -2169,6 +2169,159 @@ body {
 }
 
 /* ==================== */
+/* LIVES DISPLAY        */
+/* ==================== */
+
+.lives-display {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.life-heart {
+  font-size: 24px;
+  transition: all 0.3s;
+}
+
+.life-heart.lost {
+  filter: grayscale(1);
+  opacity: 0.3;
+  transform: scale(0.8);
+}
+
+.life-heart.active {
+  animation: heartPulse 1s ease-in-out infinite;
+}
+
+@keyframes heartPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+/* Trivia/FOF Header with lives */
+.trivia-header,
+.fof-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  margin-bottom: 20px;
+}
+
+.trivia-score,
+.fof-score {
+  text-align: right;
+}
+
+.score-label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.score-value {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Unlimited mode styles */
+.trivia-game.unlimited .trivia-info,
+.fof-game.unlimited .fof-info {
+  justify-content: center;
+  gap: 20px;
+}
+
+/* ==================== */
+/* SHARE SECTION        */
+/* ==================== */
+
+.share-section {
+  margin-top: 24px;
+  padding: 20px;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.share-title {
+  font-family: var(--font-display);
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+.share-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.share-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 2px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.share-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+}
+
+.share-btn.twitter:hover {
+  background: #000;
+  border-color: #000;
+  color: #fff;
+}
+
+.share-btn.linkedin:hover {
+  background: #0077B5;
+  border-color: #0077B5;
+  color: #fff;
+}
+
+.share-btn.whatsapp:hover {
+  background: #25D366;
+  border-color: #25D366;
+  color: #fff;
+}
+
+.share-btn.copy:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #000;
+}
+
+.share-btn.copy.copied {
+  background: var(--success);
+  border-color: var(--success);
+  color: #000;
+}
+
+.share-promo {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* ==================== */
 /* MODE SELECTOR        */
 /* ==================== */
 
