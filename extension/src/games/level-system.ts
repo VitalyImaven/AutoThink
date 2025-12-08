@@ -9,92 +9,109 @@ import {
 } from './types';
 import { checkNewAchievements, Achievement } from './data/achievements';
 
-// Level definitions - now with 21 games total
-export const LEVELS: LevelInfo[] = [
-  {
-    level: 1,
-    name: 'Beginner Brain',
-    icon: '🧠',
-    winsRequired: 5,
-    difficulty: 'easy',
-    unlockedGames: ['memory-match', 'math-challenge', 'reaction-time'],
-  },
-  {
-    level: 2,
-    name: 'Quick Thinker',
-    icon: '💭',
-    winsRequired: 7,
-    difficulty: 'easy',
-    unlockedGames: ['memory-match', 'math-challenge', 'reaction-time', 'simon-says', 'speed-typing', 'emoji-decoder', 'spot-difference'],
-  },
-  {
-    level: 3,
-    name: 'Logic Apprentice',
-    icon: '🔮',
-    winsRequired: 10,
-    difficulty: 'medium',
-    unlockedGames: ['memory-match', 'math-challenge', 'reaction-time', 'simon-says', 'speed-typing', 'emoji-decoder', 'spot-difference', 'minesweeper', 'color-match', 'anagram', 'visual-memory', 'word-search'],
-  },
-  {
-    level: 4,
-    name: 'Pattern Seeker',
-    icon: '🔷',
-    winsRequired: 12,
-    difficulty: 'medium',
-    unlockedGames: ['memory-match', 'math-challenge', 'reaction-time', 'simon-says', 'speed-typing', 'emoji-decoder', 'spot-difference', 'minesweeper', 'color-match', 'anagram', 'visual-memory', 'word-search', 'sliding-puzzle', 'pattern-match', 'wordle'],
-  },
-  {
-    level: 5,
-    name: 'Mind Athlete',
-    icon: '🏃',
-    winsRequired: 15,
-    difficulty: 'medium',
-    unlockedGames: ['memory-match', 'math-challenge', 'reaction-time', 'simon-says', 'speed-typing', 'emoji-decoder', 'spot-difference', 'minesweeper', 'color-match', 'anagram', 'visual-memory', 'word-search', 'sliding-puzzle', 'pattern-match', 'wordle', 'number-sequence', 'mental-math', 'ai-trivia'],
-  },
-  {
-    level: 6,
-    name: 'Puzzle Wizard',
-    icon: '🧙',
-    winsRequired: 18,
-    difficulty: 'hard',
-    unlockedGames: ['memory-match', 'math-challenge', 'reaction-time', 'simon-says', 'speed-typing', 'emoji-decoder', 'spot-difference', 'minesweeper', 'color-match', 'anagram', 'visual-memory', 'word-search', 'sliding-puzzle', 'pattern-match', 'wordle', 'number-sequence', 'mental-math', 'ai-trivia', 'word-association'],
-  },
-  {
-    level: 7,
-    name: 'Neural Champion',
-    icon: '⚡',
-    winsRequired: 20,
-    difficulty: 'hard',
-    unlockedGames: ['memory-match', 'math-challenge', 'reaction-time', 'simon-says', 'speed-typing', 'emoji-decoder', 'spot-difference', 'minesweeper', 'color-match', 'anagram', 'visual-memory', 'word-search', 'sliding-puzzle', 'pattern-match', 'wordle', 'number-sequence', 'mental-math', 'ai-trivia', 'word-association', 'fact-or-fiction'],
-  },
-  {
-    level: 8,
-    name: 'Brain Surgeon',
-    icon: '🔬',
-    winsRequired: 25,
-    difficulty: 'expert',
-    unlockedGames: ['memory-match', 'math-challenge', 'reaction-time', 'simon-says', 'speed-typing', 'emoji-decoder', 'spot-difference', 'minesweeper', 'color-match', 'anagram', 'visual-memory', 'word-search', 'sliding-puzzle', 'pattern-match', 'wordle', 'number-sequence', 'mental-math', 'ai-trivia', 'word-association', 'fact-or-fiction', 'ai-riddles'],
-  },
-  {
-    level: 9,
-    name: 'Genius',
-    icon: '💎',
-    winsRequired: 30,
-    difficulty: 'expert',
-    unlockedGames: ['memory-match', 'math-challenge', 'reaction-time', 'simon-says', 'speed-typing', 'emoji-decoder', 'spot-difference', 'minesweeper', 'color-match', 'anagram', 'visual-memory', 'word-search', 'sliding-puzzle', 'pattern-match', 'wordle', 'number-sequence', 'mental-math', 'ai-trivia', 'word-association', 'fact-or-fiction', 'ai-riddles'],
-  },
-  {
-    level: 10,
-    name: 'Einstein Mode',
-    icon: '🌟',
-    winsRequired: Infinity, // Max level
-    difficulty: 'legendary',
-    unlockedGames: ['memory-match', 'math-challenge', 'reaction-time', 'simon-says', 'speed-typing', 'emoji-decoder', 'spot-difference', 'minesweeper', 'color-match', 'anagram', 'visual-memory', 'word-search', 'sliding-puzzle', 'pattern-match', 'wordle', 'number-sequence', 'mental-math', 'ai-trivia', 'word-association', 'fact-or-fiction', 'ai-riddles'],
-  },
+// All available games
+const ALL_GAMES: GameType[] = [
+  'memory-match', 'math-challenge', 'reaction-time', 'simon-says', 'speed-typing', 
+  'emoji-decoder', 'spot-difference', 'minesweeper', 'color-match', 'anagram', 
+  'visual-memory', 'word-search', 'sliding-puzzle', 'pattern-match', 'wordle', 
+  'number-sequence', 'mental-math', 'ai-trivia', 'word-association', 'fact-or-fiction', 
+  'ai-riddles'
 ];
+
+// Milestone names every 10 levels
+const MILESTONE_NAMES: { [key: number]: { name: string; icon: string } } = {
+  10: { name: 'Quick Thinker', icon: '💭' },
+  20: { name: 'Logic Apprentice', icon: '🔮' },
+  30: { name: 'Mind Athlete', icon: '🏃' },
+  40: { name: 'Puzzle Master', icon: '🧩' },
+  50: { name: 'Brain Surgeon', icon: '🔬' },
+  60: { name: 'Neural Champion', icon: '⚡' },
+  70: { name: 'Cognitive Elite', icon: '👑' },
+  80: { name: 'Genius', icon: '💎' },
+  90: { name: 'Mastermind', icon: '🧠' },
+  100: { name: 'Einstein Mode', icon: '🌟' },
+};
+
+// Generate level info dynamically for 100 levels
+function generateLevelInfo(level: number): LevelInfo {
+  // Determine difficulty based on level
+  let difficulty: GameDifficulty;
+  if (level <= 20) difficulty = 'easy';
+  else if (level <= 40) difficulty = 'medium';
+  else if (level <= 60) difficulty = 'hard';
+  else if (level <= 80) difficulty = 'expert';
+  else difficulty = 'legendary';
+  
+  // Wins required increases gradually (3-12 wins per level)
+  const baseWins = 3;
+  const winsRequired = level === 100 ? Infinity : baseWins + Math.floor(level / 10);
+  
+  // Unlock games progressively across 100 levels (36 total games)
+  const gameUnlockSchedule: { [key: number]: GameType[] } = {
+    1: ['memory-match', 'math-challenge', 'reaction-time', 'snake'],
+    5: ['simon-says', 'speed-typing', 'hangman', 'tetris'],
+    10: ['spot-difference', 'emoji-decoder', 'aim-trainer', 'game-2048'],
+    15: ['color-match', 'anagram', 'match-three', 'jigsaw'],
+    20: ['visual-memory', 'word-search', 'boggle', 'solitaire'],
+    25: ['sudoku', 'crossword'],
+    30: ['minesweeper', 'sliding-puzzle', 'n-back'],
+    35: ['connections'],
+    40: ['pattern-match', 'wordle'],
+    45: ['google-feud'],
+    50: ['number-sequence', 'mental-math'],
+    55: ['quick-draw'],
+    60: ['ai-trivia'],
+    70: ['word-association'],
+    80: ['fact-or-fiction'],
+    90: ['ai-riddles'],
+  };
+  
+  // Collect all unlocked games up to this level
+  const unlockedGames: GameType[] = [];
+  for (const [unlockLevel, games] of Object.entries(gameUnlockSchedule)) {
+    if (level >= parseInt(unlockLevel)) {
+      unlockedGames.push(...games);
+    }
+  }
+  
+  // Get name and icon - use milestone names or generate
+  let name: string;
+  let icon: string;
+  
+  if (MILESTONE_NAMES[level]) {
+    name = MILESTONE_NAMES[level].name;
+    icon = MILESTONE_NAMES[level].icon;
+  } else {
+    // Generate name based on level range
+    const tier = Math.floor((level - 1) / 10);
+    const tierNames = [
+      'Beginner', 'Thinker', 'Apprentice', 'Athlete', 'Master',
+      'Surgeon', 'Champion', 'Elite', 'Genius', 'Einstein'
+    ];
+    const tierIcons = ['🧒', '💭', '🔮', '🏃', '🧩', '🔬', '⚡', '👑', '💎', '🌟'];
+    name = `${tierNames[Math.min(tier, 9)]} Lv.${level}`;
+    icon = tierIcons[Math.min(tier, 9)];
+  }
+  
+  return {
+    level,
+    name,
+    icon,
+    winsRequired,
+    difficulty,
+    unlockedGames,
+  };
+}
+
+// Generate all 100 levels dynamically
+export const LEVELS: LevelInfo[] = Array.from({ length: 100 }, (_, i) => generateLevelInfo(i + 1));
+
+// Export ALL_GAMES for use elsewhere
+export { ALL_GAMES };
 
 const STORAGE_KEY = 'iq-arena-progress';
 const BACKUP_STORAGE_KEY = 'iq-arena-progress-backup';
+const SYNC_STORAGE_KEY = 'iq-arena-progress-sync'; // For cloud sync
 
 // Create default progress
 export function createDefaultProgress(): PlayerProgress {
@@ -139,7 +156,7 @@ export function getUnlockedGames(level: number): GameType[] {
 // Load progress from storage
 export async function loadProgress(): Promise<PlayerProgress> {
   try {
-    // Try Chrome storage first
+    // Try Chrome local storage first
     if (typeof chrome !== 'undefined' && chrome.storage?.local) {
       const result = await chrome.storage.local.get([STORAGE_KEY, BACKUP_STORAGE_KEY]);
       if (result[STORAGE_KEY]) {
@@ -148,6 +165,22 @@ export async function loadProgress(): Promise<PlayerProgress> {
       // Try backup
       if (result[BACKUP_STORAGE_KEY]) {
         return result[BACKUP_STORAGE_KEY];
+      }
+    }
+    
+    // Try Chrome sync storage (cloud backup - survives reinstall if signed in)
+    if (typeof chrome !== 'undefined' && chrome.storage?.sync) {
+      try {
+        const syncResult = await chrome.storage.sync.get([SYNC_STORAGE_KEY]);
+        if (syncResult[SYNC_STORAGE_KEY]) {
+          console.log('✅ Restored progress from cloud backup!');
+          // Also save to local storage for faster access
+          const progress = syncResult[SYNC_STORAGE_KEY];
+          await chrome.storage.local.set({ [STORAGE_KEY]: progress });
+          return progress;
+        }
+      } catch (syncErr) {
+        console.log('Sync storage not available:', syncErr);
       }
     }
     
@@ -174,12 +207,37 @@ export async function saveProgress(progress: PlayerProgress): Promise<void> {
   try {
     progress.lastPlayedDate = new Date().toISOString();
     
-    // Save to Chrome storage
+    // Save to Chrome local storage
     if (typeof chrome !== 'undefined' && chrome.storage?.local) {
       await chrome.storage.local.set({ 
         [STORAGE_KEY]: progress,
         [BACKUP_STORAGE_KEY]: progress 
       });
+    }
+    
+    // Save to Chrome sync storage (cloud backup - survives reinstall if signed in)
+    if (typeof chrome !== 'undefined' && chrome.storage?.sync) {
+      try {
+        // Sync storage has 100KB limit, so only save essential data
+        const syncData = {
+          level: progress.level,
+          winsAtCurrentLevel: progress.winsAtCurrentLevel,
+          totalGamesPlayed: progress.totalGamesPlayed,
+          totalWins: progress.totalWins,
+          totalLosses: progress.totalLosses,
+          currentStreak: progress.currentStreak,
+          bestStreak: progress.bestStreak,
+          totalTimePlayedSeconds: progress.totalTimePlayedSeconds,
+          achievements: progress.achievements,
+          lastPlayedDate: progress.lastPlayedDate,
+          createdAt: progress.createdAt,
+          gamesStats: progress.gamesStats,
+        };
+        await chrome.storage.sync.set({ [SYNC_STORAGE_KEY]: syncData });
+      } catch (syncErr) {
+        // Sync storage might fail if quota exceeded
+        console.log('Could not save to sync storage:', syncErr);
+      }
     }
     
     // Also save to localStorage as backup

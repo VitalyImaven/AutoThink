@@ -38,7 +38,7 @@
                         <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
                         <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
                     </svg>
-                    <svg class="sound-off hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg class="sound-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
                         <line x1="23" y1="9" x2="17" y2="15"></line>
                         <line x1="17" y1="9" x2="23" y2="15"></line>
@@ -179,13 +179,25 @@
                             <span class="cat-icon">⚡</span>
                             <span class="cat-name">Speed</span>
                         </button>
-                        <button class="category-btn" data-category="logic">
+                        <button class="category-btn" data-category="math">
                             <span class="cat-icon">🔢</span>
-                            <span class="cat-name">Logic</span>
+                            <span class="cat-name">Math</span>
+                        </button>
+                        <button class="category-btn" data-category="logic">
+                            <span class="cat-icon">🧩</span>
+                            <span class="cat-name">Puzzles</span>
                         </button>
                         <button class="category-btn" data-category="words">
                             <span class="cat-icon">📝</span>
                             <span class="cat-name">Words</span>
+                        </button>
+                        <button class="category-btn" data-category="visual">
+                            <span class="cat-icon">👁️</span>
+                            <span class="cat-name">Visual</span>
+                        </button>
+                        <button class="category-btn" data-category="trivia">
+                            <span class="cat-icon">❓</span>
+                            <span class="cat-name">Trivia</span>
                         </button>
                         <button class="category-btn" data-category="ai">
                             <span class="cat-icon">🤖</span>
@@ -357,6 +369,28 @@
                         <div class="game-stats-list" id="gameStatsList">
                             <!-- Per-game stats -->
                         </div>
+                    </div>
+                    
+                    <!-- Backup Section -->
+                    <div class="backup-section">
+                        <h3>💾 Backup & Restore</h3>
+                        <p class="backup-desc">Save your progress to a file. Restore it anytime, even after reinstalling.</p>
+                        <div class="backup-buttons">
+                            <button class="backup-btn export" id="exportProgress">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                                </svg>
+                                Export Backup
+                            </button>
+                            <label class="backup-btn import">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                                </svg>
+                                Import Backup
+                                <input type="file" id="importProgress" accept=".json" style="display: none;">
+                            </label>
+                        </div>
+                        <div class="backup-status" id="backupStatus"></div>
                     </div>
                 </div>
             </div>

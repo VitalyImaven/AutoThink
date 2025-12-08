@@ -3,6 +3,7 @@
 import { GameType, PlayerProgress, GameDifficulty, GameCategory } from './types';
 import { 
   loadProgress, 
+  saveProgress,
   getLevelInfo, 
   getProgressToNextLevel,
   getWinsNeededForNextLevel,
@@ -194,8 +195,11 @@ function renderFreePlayGamesGrid() {
     'all': 'All Games',
     'memory': 'Memory Games',
     'speed': 'Speed Games',
-    'logic': 'Logic Games',
+    'math': 'Math Games',
+    'logic': 'Puzzle Games',
     'words': 'Word Games',
+    'visual': 'Visual Games',
+    'trivia': 'Trivia Games',
     'ai': 'AI-Powered Games'
   };
   
@@ -616,6 +620,53 @@ async function loadGame(gameType: GameType, mode: GameMode) {
       break;
     case 'word-search':
       loadWordSearch(params);
+      break;
+    // New classic games
+    case 'tetris':
+      loadTetris();
+      break;
+    case 'game-2048':
+      load2048();
+      break;
+    case 'sudoku':
+      loadSudoku();
+      break;
+    case 'hangman':
+      loadHangman();
+      break;
+    case 'connections':
+      loadConnections();
+      break;
+    case 'snake':
+      loadSnake();
+      break;
+    case 'match-three':
+      loadMatchThree();
+      break;
+    case 'google-feud':
+      loadGoogleFeud();
+      break;
+    case 'boggle':
+      loadBoggle();
+      break;
+    case 'aim-trainer':
+      loadAimTrainer();
+      break;
+    // Additional popular games
+    case 'jigsaw':
+      loadJigsaw();
+      break;
+    case 'n-back':
+      loadNBack();
+      break;
+    case 'crossword':
+      loadCrossword();
+      break;
+    case 'solitaire':
+      loadSolitaire();
+      break;
+    case 'quick-draw':
+      loadQuickDraw();
       break;
   }
 }
@@ -2943,6 +2994,1795 @@ async function loadAiRiddles(_params: ReturnType<typeof getDifficultyParams>) {
   showRiddle();
 }
 
+// ==================== CLASSIC POPULAR GAMES ====================
+
+// Game 1: TETRIS
+function loadTetris() {
+  const COLS = 10;
+  const ROWS = 16;
+  const BLOCK_SIZE = 24;
+  
+  const SHAPES = [
+    [[1,1,1,1]], // I
+    [[1,1],[1,1]], // O
+    [[0,1,0],[1,1,1]], // T
+    [[1,0,0],[1,1,1]], // L
+    [[0,0,1],[1,1,1]], // J
+    [[0,1,1],[1,1,0]], // S
+    [[1,1,0],[0,1,1]], // Z
+  ];
+  
+  const COLORS = ['#00F5FF', '#FFE500', '#FF00E5', '#FF6B00', '#0066FF', '#00FF88', '#FF3366'];
+  
+  let board: number[][] = Array(ROWS).fill(null).map(() => Array(COLS).fill(0));
+  let currentPiece: { shape: number[][], x: number, y: number, color: number } | null = null;
+  let nextPieceIdx: number = Math.floor(Math.random() * SHAPES.length);
+  let score = 0;
+  let gameOver = false;
+  let gameInterval: number | null = null;
+  
+  function newPiece() {
+    const shapeIdx = nextPieceIdx;
+    nextPieceIdx = Math.floor(Math.random() * SHAPES.length);
+    currentPiece = {
+      shape: SHAPES[shapeIdx].map(row => [...row]),
+      x: Math.floor(COLS / 2) - 1,
+      y: 0,
+      color: shapeIdx + 1
+    };
+    if (collision()) {
+      gameOver = true;
+      if (gameInterval) clearInterval(gameInterval);
+      endGame(score > 50, score);
+    }
+    renderNextPiece();
+  }
+  
+  function renderNextPiece() {
+    const nextCanvas = document.getElementById('tetrisNextCanvas') as HTMLCanvasElement;
+    if (!nextCanvas) return;
+    const ctx = nextCanvas.getContext('2d')!;
+    const size = 16;
+    
+    ctx.fillStyle = '#0a0a14';
+    ctx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+    
+    const shape = SHAPES[nextPieceIdx];
+    const offsetX = (nextCanvas.width - shape[0].length * size) / 2;
+    const offsetY = (nextCanvas.height - shape.length * size) / 2;
+    
+    ctx.fillStyle = COLORS[nextPieceIdx];
+    for (let y = 0; y < shape.length; y++) {
+      for (let x = 0; x < shape[y].length; x++) {
+        if (shape[y][x]) {
+          ctx.fillRect(offsetX + x * size, offsetY + y * size, size - 1, size - 1);
+        }
+      }
+    }
+  }
+  
+  function collision(offsetX = 0, offsetY = 0, shape = currentPiece?.shape) {
+    if (!currentPiece || !shape) return false;
+    for (let y = 0; y < shape.length; y++) {
+      for (let x = 0; x < shape[y].length; x++) {
+        if (shape[y][x]) {
+          const newX = currentPiece.x + x + offsetX;
+          const newY = currentPiece.y + y + offsetY;
+          if (newX < 0 || newX >= COLS || newY >= ROWS) return true;
+          if (newY >= 0 && board[newY][newX]) return true;
+        }
+      }
+    }
+    return false;
+  }
+  
+  function merge() {
+    if (!currentPiece) return;
+    for (let y = 0; y < currentPiece.shape.length; y++) {
+      for (let x = 0; x < currentPiece.shape[y].length; x++) {
+        if (currentPiece.shape[y][x]) {
+          const boardY = currentPiece.y + y;
+          if (boardY >= 0) board[boardY][currentPiece.x + x] = currentPiece.color;
+        }
+      }
+    }
+  }
+  
+  function clearLines() {
+    let lines = 0;
+    for (let y = ROWS - 1; y >= 0; y--) {
+      if (board[y].every(cell => cell !== 0)) {
+        board.splice(y, 1);
+        board.unshift(Array(COLS).fill(0));
+        lines++;
+        y++;
+      }
+    }
+    if (lines > 0) {
+      score += lines * 10 * lines;
+      soundManager.play('correct');
+    }
+  }
+  
+  function rotate() {
+    if (!currentPiece) return;
+    const rotated = currentPiece.shape[0].map((_, i) => 
+      currentPiece!.shape.map(row => row[i]).reverse()
+    );
+    if (!collision(0, 0, rotated)) {
+      currentPiece.shape = rotated;
+    }
+  }
+  
+  function drop() {
+    if (gameOver || !currentPiece) return;
+    if (!collision(0, 1)) {
+      currentPiece.y++;
+    } else {
+      merge();
+      clearLines();
+      newPiece();
+    }
+    render();
+  }
+  
+  function render() {
+    const canvas = document.getElementById('tetrisCanvas') as HTMLCanvasElement;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d')!;
+    
+    ctx.fillStyle = '#0a0a14';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw board
+    for (let y = 0; y < ROWS; y++) {
+      for (let x = 0; x < COLS; x++) {
+        if (board[y][x]) {
+          ctx.fillStyle = COLORS[board[y][x] - 1];
+          ctx.fillRect(x * BLOCK_SIZE, y * BLOCK_SIZE, BLOCK_SIZE - 1, BLOCK_SIZE - 1);
+        }
+      }
+    }
+    
+    // Draw current piece
+    if (currentPiece) {
+      ctx.fillStyle = COLORS[currentPiece.color - 1];
+      for (let y = 0; y < currentPiece.shape.length; y++) {
+        for (let x = 0; x < currentPiece.shape[y].length; x++) {
+          if (currentPiece.shape[y][x]) {
+            ctx.fillRect(
+              (currentPiece.x + x) * BLOCK_SIZE,
+              (currentPiece.y + y) * BLOCK_SIZE,
+              BLOCK_SIZE - 1, BLOCK_SIZE - 1
+            );
+          }
+        }
+      }
+    }
+    
+    // Update score display
+    const scoreEl = document.getElementById('tetrisScore');
+    if (scoreEl) scoreEl.textContent = String(score);
+  }
+  
+  elements.gameContainer.innerHTML = `
+    <div class="tetris-game">
+      <div class="tetris-main">
+        <canvas id="tetrisCanvas" width="${COLS * BLOCK_SIZE}" height="${ROWS * BLOCK_SIZE}"></canvas>
+        <div class="tetris-sidebar">
+          <div class="tetris-next">
+            <div class="tetris-next-label">NEXT</div>
+            <canvas id="tetrisNextCanvas" width="80" height="80"></canvas>
+          </div>
+          <div class="tetris-score-box">
+            <div class="tetris-score-label">SCORE</div>
+            <div class="tetris-score-value" id="tetrisScore">0</div>
+          </div>
+        </div>
+      </div>
+      <div class="tetris-controls">
+        <button class="tetris-btn" id="tetrisLeft">←</button>
+        <button class="tetris-btn" id="tetrisRotate">↻</button>
+        <button class="tetris-btn" id="tetrisRight">→</button>
+        <button class="tetris-btn" id="tetrisDown">↓</button>
+      </div>
+      <div class="tetris-hint">Use arrow keys or buttons</div>
+    </div>
+  `;
+  
+  // Controls
+  document.getElementById('tetrisLeft')?.addEventListener('click', () => {
+    if (!collision(-1, 0)) { currentPiece!.x--; render(); }
+  });
+  document.getElementById('tetrisRight')?.addEventListener('click', () => {
+    if (!collision(1, 0)) { currentPiece!.x++; render(); }
+  });
+  document.getElementById('tetrisRotate')?.addEventListener('click', () => { rotate(); render(); });
+  document.getElementById('tetrisDown')?.addEventListener('click', drop);
+  
+  document.addEventListener('keydown', (e) => {
+    if (gameOver) return;
+    if (e.key === 'ArrowLeft' && !collision(-1, 0)) { currentPiece!.x--; render(); }
+    if (e.key === 'ArrowRight' && !collision(1, 0)) { currentPiece!.x++; render(); }
+    if (e.key === 'ArrowUp') { rotate(); render(); }
+    if (e.key === 'ArrowDown') drop();
+  });
+  
+  newPiece();
+  render();
+  gameInterval = window.setInterval(drop, 500);
+}
+
+// Game 2: 2048
+function load2048() {
+  const SIZE = 4;
+  let grid: number[][] = Array(SIZE).fill(null).map(() => Array(SIZE).fill(0));
+  let score = 0;
+  
+  function addRandomTile() {
+    const empty: [number, number][] = [];
+    for (let r = 0; r < SIZE; r++) {
+      for (let c = 0; c < SIZE; c++) {
+        if (grid[r][c] === 0) empty.push([r, c]);
+      }
+    }
+    if (empty.length > 0) {
+      const [r, c] = empty[Math.floor(Math.random() * empty.length)];
+      grid[r][c] = Math.random() < 0.9 ? 2 : 4;
+    }
+  }
+  
+  function slide(row: number[]): { newRow: number[], scored: number } {
+    let arr = row.filter(x => x !== 0);
+    let scored = 0;
+    for (let i = 0; i < arr.length - 1; i++) {
+      if (arr[i] === arr[i + 1]) {
+        arr[i] *= 2;
+        scored += arr[i];
+        arr.splice(i + 1, 1);
+      }
+    }
+    while (arr.length < SIZE) arr.push(0);
+    return { newRow: arr, scored };
+  }
+  
+  function move(direction: 'up' | 'down' | 'left' | 'right'): boolean {
+    let moved = false;
+    const oldGrid = grid.map(r => [...r]);
+    
+    if (direction === 'left') {
+      for (let r = 0; r < SIZE; r++) {
+        const { newRow, scored } = slide(grid[r]);
+        grid[r] = newRow;
+        score += scored;
+      }
+    } else if (direction === 'right') {
+      for (let r = 0; r < SIZE; r++) {
+        const { newRow, scored } = slide([...grid[r]].reverse());
+        grid[r] = newRow.reverse();
+        score += scored;
+      }
+    } else if (direction === 'up') {
+      for (let c = 0; c < SIZE; c++) {
+        const col = grid.map(r => r[c]);
+        const { newRow, scored } = slide(col);
+        for (let r = 0; r < SIZE; r++) grid[r][c] = newRow[r];
+        score += scored;
+      }
+    } else if (direction === 'down') {
+      for (let c = 0; c < SIZE; c++) {
+        const col = grid.map(r => r[c]).reverse();
+        const { newRow, scored } = slide(col);
+        const reversed = newRow.reverse();
+        for (let r = 0; r < SIZE; r++) grid[r][c] = reversed[r];
+        score += scored;
+      }
+    }
+    
+    moved = JSON.stringify(oldGrid) !== JSON.stringify(grid);
+    return moved;
+  }
+  
+  function checkWin(): boolean {
+    return grid.some(r => r.some(c => c >= 2048));
+  }
+  
+  function checkLose(): boolean {
+    for (let r = 0; r < SIZE; r++) {
+      for (let c = 0; c < SIZE; c++) {
+        if (grid[r][c] === 0) return false;
+        if (c < SIZE - 1 && grid[r][c] === grid[r][c + 1]) return false;
+        if (r < SIZE - 1 && grid[r][c] === grid[r + 1][c]) return false;
+      }
+    }
+    return true;
+  }
+  
+  function getTileColor(val: number): string {
+    const colors: Record<number, string> = {
+      2: '#eee4da', 4: '#ede0c8', 8: '#f2b179', 16: '#f59563',
+      32: '#f67c5f', 64: '#f65e3b', 128: '#edcf72', 256: '#edcc61',
+      512: '#edc850', 1024: '#edc53f', 2048: '#edc22e'
+    };
+    return colors[val] || '#3c3a32';
+  }
+  
+  function render() {
+    const container = document.getElementById('grid2048');
+    if (!container) return;
+    
+    container.innerHTML = grid.map(row => 
+      row.map(val => `
+        <div class="tile-2048" style="background: ${val ? getTileColor(val) : 'rgba(255,255,255,0.1)'}; color: ${val > 4 ? '#fff' : '#776e65'}">
+          ${val || ''}
+        </div>
+      `).join('')
+    ).join('');
+    
+    const scoreEl = document.getElementById('score2048');
+    if (scoreEl) scoreEl.textContent = String(score);
+  }
+  
+  function handleMove(dir: 'up' | 'down' | 'left' | 'right') {
+    if (move(dir)) {
+      addRandomTile();
+      render();
+      
+      if (checkWin()) {
+        soundManager.play('win');
+        setTimeout(() => endGame(true, score), 500);
+      } else if (checkLose()) {
+        soundManager.play('lose');
+        setTimeout(() => endGame(false, score), 500);
+      }
+    }
+  }
+  
+  elements.gameContainer.innerHTML = `
+    <div class="game-2048">
+      <div class="header-2048">
+        <div class="score-2048">Score: <span id="score2048">0</span></div>
+      </div>
+      <div class="grid-2048" id="grid2048"></div>
+      <div class="controls-2048">
+        <button class="btn-2048" data-dir="up">↑</button>
+        <div class="controls-row">
+          <button class="btn-2048" data-dir="left">←</button>
+          <button class="btn-2048" data-dir="down">↓</button>
+          <button class="btn-2048" data-dir="right">→</button>
+        </div>
+      </div>
+      <div class="hint-2048">Swipe or use arrow keys</div>
+    </div>
+  `;
+  
+  // Add tiles
+  addRandomTile();
+  addRandomTile();
+  render();
+  
+  // Controls
+  document.querySelectorAll('.btn-2048').forEach(btn => {
+    btn.addEventListener('click', () => {
+      handleMove(btn.getAttribute('data-dir') as 'up' | 'down' | 'left' | 'right');
+    });
+  });
+  
+  document.addEventListener('keydown', (e) => {
+    const keyMap: Record<string, 'up' | 'down' | 'left' | 'right'> = {
+      'ArrowUp': 'up', 'ArrowDown': 'down', 'ArrowLeft': 'left', 'ArrowRight': 'right'
+    };
+    if (keyMap[e.key]) handleMove(keyMap[e.key]);
+  });
+}
+
+// Game 3: SUDOKU
+function loadSudoku() {
+  // Pre-made Sudoku puzzles (0 = empty)
+  const puzzles = [
+    [
+      [5,3,0,0,7,0,0,0,0],
+      [6,0,0,1,9,5,0,0,0],
+      [0,9,8,0,0,0,0,6,0],
+      [8,0,0,0,6,0,0,0,3],
+      [4,0,0,8,0,3,0,0,1],
+      [7,0,0,0,2,0,0,0,6],
+      [0,6,0,0,0,0,2,8,0],
+      [0,0,0,4,1,9,0,0,5],
+      [0,0,0,0,8,0,0,7,9]
+    ]
+  ];
+  
+  const solutions = [
+    [
+      [5,3,4,6,7,8,9,1,2],
+      [6,7,2,1,9,5,3,4,8],
+      [1,9,8,3,4,2,5,6,7],
+      [8,5,9,7,6,1,4,2,3],
+      [4,2,6,8,5,3,7,9,1],
+      [7,1,3,9,2,4,8,5,6],
+      [9,6,1,5,3,7,2,8,4],
+      [2,8,7,4,1,9,6,3,5],
+      [3,4,5,2,8,6,1,7,9]
+    ]
+  ];
+  
+  const puzzleIdx = 0;
+  const puzzle = puzzles[puzzleIdx].map(r => [...r]);
+  const solution = solutions[puzzleIdx];
+  const original = puzzles[puzzleIdx].map(r => [...r]);
+  let selectedCell: [number, number] | null = null;
+  
+  function render() {
+    const grid = document.getElementById('sudokuGrid');
+    if (!grid) return;
+    
+    grid.innerHTML = puzzle.map((row, r) => 
+      row.map((val, c) => {
+        const isOriginal = original[r][c] !== 0;
+        const isSelected = selectedCell && selectedCell[0] === r && selectedCell[1] === c;
+        const isWrong = val !== 0 && val !== solution[r][c];
+        return `
+          <div class="sudoku-cell ${isOriginal ? 'original' : ''} ${isSelected ? 'selected' : ''} ${isWrong ? 'wrong' : ''}" 
+               data-row="${r}" data-col="${c}">
+            ${val || ''}
+          </div>
+        `;
+      }).join('')
+    ).join('');
+    
+    // Add click handlers
+    grid.querySelectorAll('.sudoku-cell:not(.original)').forEach(cell => {
+      cell.addEventListener('click', () => {
+        const r = parseInt(cell.getAttribute('data-row')!);
+        const c = parseInt(cell.getAttribute('data-col')!);
+        selectedCell = [r, c];
+        render();
+      });
+    });
+  }
+  
+  function checkWin(): boolean {
+    for (let r = 0; r < 9; r++) {
+      for (let c = 0; c < 9; c++) {
+        if (puzzle[r][c] !== solution[r][c]) return false;
+      }
+    }
+    return true;
+  }
+  
+  elements.gameContainer.innerHTML = `
+    <div class="sudoku-game">
+      <div class="sudoku-header">Sudoku</div>
+      <div class="sudoku-grid" id="sudokuGrid"></div>
+      <div class="sudoku-numbers">
+        ${[1,2,3,4,5,6,7,8,9].map(n => `<button class="sudoku-num" data-num="${n}">${n}</button>`).join('')}
+        <button class="sudoku-num sudoku-clear" data-num="0">✕</button>
+      </div>
+    </div>
+  `;
+  
+  render();
+  
+  // Number input
+  document.querySelectorAll('.sudoku-num').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (!selectedCell) return;
+      const [r, c] = selectedCell;
+      if (original[r][c] !== 0) return;
+      
+      const num = parseInt(btn.getAttribute('data-num')!);
+      puzzle[r][c] = num;
+      render();
+      
+      if (checkWin()) {
+        soundManager.play('win');
+        setTimeout(() => endGame(true, 100), 500);
+      }
+    });
+  });
+}
+
+// Game 4: HANGMAN
+function loadHangman() {
+  const words = [
+    'JAVASCRIPT', 'PYTHON', 'ALGORITHM', 'DATABASE', 'FUNCTION',
+    'VARIABLE', 'COMPUTER', 'KEYBOARD', 'INTERNET', 'SOFTWARE',
+    'BROWSER', 'NETWORK', 'MEMORY', 'PROCESSOR', 'ENCRYPTION'
+  ];
+  
+  const word = words[Math.floor(Math.random() * words.length)];
+  let guessed: string[] = [];
+  let mistakes = 0;
+  const maxMistakes = 6;
+  
+  function render() {
+    const display = word.split('').map(l => guessed.includes(l) ? l : '_').join(' ');
+    const won = !display.includes('_');
+    const lost = mistakes >= maxMistakes;
+    
+    elements.gameContainer.innerHTML = `
+      <div class="hangman-game">
+        <div class="hangman-figure">
+          <svg viewBox="0 0 200 200" width="150" height="150">
+            <line x1="20" y1="180" x2="100" y2="180" stroke="#00F5FF" stroke-width="3"/>
+            <line x1="60" y1="180" x2="60" y2="20" stroke="#00F5FF" stroke-width="3"/>
+            <line x1="60" y1="20" x2="140" y2="20" stroke="#00F5FF" stroke-width="3"/>
+            <line x1="140" y1="20" x2="140" y2="40" stroke="#00F5FF" stroke-width="3"/>
+            ${mistakes > 0 ? '<circle cx="140" cy="55" r="15" stroke="#FF3366" fill="none" stroke-width="3"/>' : ''}
+            ${mistakes > 1 ? '<line x1="140" y1="70" x2="140" y2="110" stroke="#FF3366" stroke-width="3"/>' : ''}
+            ${mistakes > 2 ? '<line x1="140" y1="80" x2="120" y2="100" stroke="#FF3366" stroke-width="3"/>' : ''}
+            ${mistakes > 3 ? '<line x1="140" y1="80" x2="160" y2="100" stroke="#FF3366" stroke-width="3"/>' : ''}
+            ${mistakes > 4 ? '<line x1="140" y1="110" x2="120" y2="140" stroke="#FF3366" stroke-width="3"/>' : ''}
+            ${mistakes > 5 ? '<line x1="140" y1="110" x2="160" y2="140" stroke="#FF3366" stroke-width="3"/>' : ''}
+          </svg>
+        </div>
+        <div class="hangman-word">${display}</div>
+        <div class="hangman-status">Mistakes: ${mistakes}/${maxMistakes}</div>
+        ${won || lost ? `
+          <div class="hangman-result ${won ? 'won' : 'lost'}">
+            ${won ? '🎉 You Won!' : `💀 Game Over! Word: ${word}`}
+          </div>
+        ` : `
+          <div class="hangman-keyboard">
+            ${'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(l => `
+              <button class="hangman-key ${guessed.includes(l) ? (word.includes(l) ? 'correct' : 'wrong') : ''}" 
+                      data-letter="${l}" ${guessed.includes(l) ? 'disabled' : ''}>
+                ${l}
+              </button>
+            `).join('')}
+          </div>
+        `}
+      </div>
+    `;
+    
+    if (won) {
+      soundManager.play('win');
+      setTimeout(() => endGame(true, (maxMistakes - mistakes) * 15), 1000);
+    } else if (lost) {
+      soundManager.play('lose');
+      setTimeout(() => endGame(false, 0), 1000);
+    } else {
+      // Add click handlers
+      document.querySelectorAll('.hangman-key:not([disabled])').forEach(key => {
+        key.addEventListener('click', () => {
+          const letter = key.getAttribute('data-letter')!;
+          guessed.push(letter);
+          if (!word.includes(letter)) {
+            mistakes++;
+            soundManager.play('wrong');
+          } else {
+            soundManager.play('correct');
+          }
+          render();
+        });
+      });
+    }
+  }
+  
+  render();
+}
+
+// Game 5: CONNECTIONS (NYT style)
+function loadConnections() {
+  const puzzles = [
+    {
+      groups: [
+        { category: '🟨 Fruits', words: ['APPLE', 'BANANA', 'ORANGE', 'GRAPE'] },
+        { category: '🟩 Countries', words: ['FRANCE', 'JAPAN', 'BRAZIL', 'EGYPT'] },
+        { category: '🟦 Colors', words: ['RED', 'BLUE', 'GREEN', 'YELLOW'] },
+        { category: '🟪 Planets', words: ['MARS', 'VENUS', 'JUPITER', 'SATURN'] }
+      ]
+    },
+    {
+      groups: [
+        { category: '🟨 Animals', words: ['DOG', 'CAT', 'BIRD', 'FISH'] },
+        { category: '🟩 Sports', words: ['SOCCER', 'TENNIS', 'GOLF', 'HOCKEY'] },
+        { category: '🟦 Music', words: ['PIANO', 'GUITAR', 'DRUMS', 'VIOLIN'] },
+        { category: '🟪 Food', words: ['PIZZA', 'BURGER', 'PASTA', 'SALAD'] }
+      ]
+    }
+  ];
+  
+  const puzzle = puzzles[Math.floor(Math.random() * puzzles.length)];
+  const allWords = puzzle.groups.flatMap(g => g.words).sort(() => Math.random() - 0.5);
+  let selected: string[] = [];
+  let found: string[][] = [];
+  let mistakes = 0;
+  const maxMistakes = 4;
+  
+  function render() {
+    const remaining = allWords.filter(w => !found.flat().includes(w));
+    
+    elements.gameContainer.innerHTML = `
+      <div class="connections-game">
+        <div class="connections-header">
+          <span>Group 16 words into 4 categories</span>
+          <span class="connections-mistakes">Mistakes: ${mistakes}/${maxMistakes}</span>
+        </div>
+        <div class="connections-found">
+          ${found.map((group, i) => {
+            const groupData = puzzle.groups.find(g => g.words.every(w => group.includes(w)));
+            return `<div class="connections-group found-${i}">${groupData?.category}</div>`;
+          }).join('')}
+        </div>
+        <div class="connections-grid">
+          ${remaining.map(word => `
+            <button class="connections-word ${selected.includes(word) ? 'selected' : ''}" data-word="${word}">
+              ${word}
+            </button>
+          `).join('')}
+        </div>
+        <div class="connections-actions">
+          <button class="connections-btn" id="connectionsClear">Clear</button>
+          <button class="connections-btn primary" id="connectionsSubmit" ${selected.length !== 4 ? 'disabled' : ''}>
+            Submit (${selected.length}/4)
+          </button>
+        </div>
+      </div>
+    `;
+    
+    // Word selection
+    document.querySelectorAll('.connections-word').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const word = btn.getAttribute('data-word')!;
+        if (selected.includes(word)) {
+          selected = selected.filter(w => w !== word);
+        } else if (selected.length < 4) {
+          selected.push(word);
+        }
+        render();
+      });
+    });
+    
+    document.getElementById('connectionsClear')?.addEventListener('click', () => {
+      selected = [];
+      render();
+    });
+    
+    document.getElementById('connectionsSubmit')?.addEventListener('click', () => {
+      const isCorrect = puzzle.groups.some(g => 
+        g.words.every(w => selected.includes(w)) && selected.every(w => g.words.includes(w))
+      );
+      
+      if (isCorrect) {
+        found.push([...selected]);
+        selected = [];
+        soundManager.play('correct');
+        
+        if (found.length === 4) {
+          setTimeout(() => endGame(true, (maxMistakes - mistakes) * 25), 500);
+        } else {
+          render();
+        }
+      } else {
+        mistakes++;
+        soundManager.play('wrong');
+        if (mistakes >= maxMistakes) {
+          setTimeout(() => endGame(false, found.length * 20), 500);
+        } else {
+          render();
+        }
+      }
+    });
+  }
+  
+  render();
+}
+
+// Game 6: SNAKE
+function loadSnake() {
+  const GRID_SIZE = 15;
+  const CELL_SIZE = 20;
+  
+  let snake = [{ x: 7, y: 7 }];
+  let direction = { x: 1, y: 0 };
+  let food = { x: 10, y: 7 };
+  let score = 0;
+  let gameOver = false;
+  let gameInterval: number | null = null;
+  
+  function placeFood() {
+    do {
+      food = {
+        x: Math.floor(Math.random() * GRID_SIZE),
+        y: Math.floor(Math.random() * GRID_SIZE)
+      };
+    } while (snake.some(s => s.x === food.x && s.y === food.y));
+  }
+  
+  function update() {
+    if (gameOver) return;
+    
+    const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
+    
+    // Check collision with walls
+    if (head.x < 0 || head.x >= GRID_SIZE || head.y < 0 || head.y >= GRID_SIZE) {
+      gameOver = true;
+      if (gameInterval) clearInterval(gameInterval);
+      endGame(score > 20, score);
+      return;
+    }
+    
+    // Check collision with self
+    if (snake.some(s => s.x === head.x && s.y === head.y)) {
+      gameOver = true;
+      if (gameInterval) clearInterval(gameInterval);
+      endGame(score > 20, score);
+      return;
+    }
+    
+    snake.unshift(head);
+    
+    // Check food
+    if (head.x === food.x && head.y === food.y) {
+      score += 10;
+      soundManager.play('correct');
+      placeFood();
+    } else {
+      snake.pop();
+    }
+    
+    render();
+  }
+  
+  function render() {
+    const canvas = document.getElementById('snakeCanvas') as HTMLCanvasElement;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d')!;
+    
+    ctx.fillStyle = '#0a0a14';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    for (let i = 0; i <= GRID_SIZE; i++) {
+      ctx.beginPath();
+      ctx.moveTo(i * CELL_SIZE, 0);
+      ctx.lineTo(i * CELL_SIZE, GRID_SIZE * CELL_SIZE);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, i * CELL_SIZE);
+      ctx.lineTo(GRID_SIZE * CELL_SIZE, i * CELL_SIZE);
+      ctx.stroke();
+    }
+    
+    // Draw snake
+    snake.forEach((s, i) => {
+      ctx.fillStyle = i === 0 ? '#00FF88' : '#00D4FF';
+      ctx.fillRect(s.x * CELL_SIZE + 1, s.y * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+    });
+    
+    // Draw food
+    ctx.fillStyle = '#FF3366';
+    ctx.beginPath();
+    ctx.arc(food.x * CELL_SIZE + CELL_SIZE/2, food.y * CELL_SIZE + CELL_SIZE/2, CELL_SIZE/2 - 2, 0, Math.PI * 2);
+    ctx.fill();
+    
+    const scoreEl = document.getElementById('snakeScore');
+    if (scoreEl) scoreEl.textContent = String(score);
+  }
+  
+  elements.gameContainer.innerHTML = `
+    <div class="snake-game">
+      <div class="snake-header">Score: <span id="snakeScore">0</span></div>
+      <canvas id="snakeCanvas" width="${GRID_SIZE * CELL_SIZE}" height="${GRID_SIZE * CELL_SIZE}"></canvas>
+      <div class="snake-controls">
+        <button class="snake-btn" data-dir="up">↑</button>
+        <div class="snake-row">
+          <button class="snake-btn" data-dir="left">←</button>
+          <button class="snake-btn" data-dir="down">↓</button>
+          <button class="snake-btn" data-dir="right">→</button>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  render();
+  
+  const setDirection = (dir: string) => {
+    const dirs: Record<string, {x: number, y: number}> = {
+      'up': {x: 0, y: -1}, 'down': {x: 0, y: 1},
+      'left': {x: -1, y: 0}, 'right': {x: 1, y: 0}
+    };
+    const newDir = dirs[dir];
+    if (newDir && !(direction.x === -newDir.x && direction.y === -newDir.y)) {
+      direction = newDir;
+    }
+  };
+  
+  document.querySelectorAll('.snake-btn').forEach(btn => {
+    btn.addEventListener('click', () => setDirection(btn.getAttribute('data-dir')!));
+  });
+  
+  document.addEventListener('keydown', (e) => {
+    const keyMap: Record<string, string> = {
+      'ArrowUp': 'up', 'ArrowDown': 'down', 'ArrowLeft': 'left', 'ArrowRight': 'right'
+    };
+    if (keyMap[e.key]) setDirection(keyMap[e.key]);
+  });
+  
+  gameInterval = window.setInterval(update, 150);
+}
+
+// Game 7: MATCH-3
+function loadMatchThree() {
+  const GRID = 6;
+  const TYPES = ['🍎', '🍊', '🍋', '🍇', '🍓', '🫐'];
+  
+  let grid: string[][] = [];
+  let selected: [number, number] | null = null;
+  let score = 0;
+  let moves = 20;
+  
+  function init() {
+    grid = Array(GRID).fill(null).map(() => 
+      Array(GRID).fill(null).map(() => TYPES[Math.floor(Math.random() * TYPES.length)])
+    );
+    // Remove initial matches
+    while (findMatches().length > 0) {
+      clearMatches();
+      fillGrid();
+    }
+  }
+  
+  function findMatches(): [number, number][] {
+    const matches: Set<string> = new Set();
+    
+    // Horizontal
+    for (let r = 0; r < GRID; r++) {
+      for (let c = 0; c < GRID - 2; c++) {
+        if (grid[r][c] && grid[r][c] === grid[r][c+1] && grid[r][c] === grid[r][c+2]) {
+          matches.add(`${r},${c}`);
+          matches.add(`${r},${c+1}`);
+          matches.add(`${r},${c+2}`);
+        }
+      }
+    }
+    
+    // Vertical
+    for (let c = 0; c < GRID; c++) {
+      for (let r = 0; r < GRID - 2; r++) {
+        if (grid[r][c] && grid[r][c] === grid[r+1][c] && grid[r][c] === grid[r+2][c]) {
+          matches.add(`${r},${c}`);
+          matches.add(`${r+1},${c}`);
+          matches.add(`${r+2},${c}`);
+        }
+      }
+    }
+    
+    return Array.from(matches).map(s => s.split(',').map(Number) as [number, number]);
+  }
+  
+  function clearMatches() {
+    const matches = findMatches();
+    matches.forEach(([r, c]) => { grid[r][c] = ''; });
+    score += matches.length * 10;
+    return matches.length > 0;
+  }
+  
+  function fillGrid() {
+    for (let c = 0; c < GRID; c++) {
+      for (let r = GRID - 1; r >= 0; r--) {
+        if (!grid[r][c]) {
+          // Drop from above
+          for (let above = r - 1; above >= 0; above--) {
+            if (grid[above][c]) {
+              grid[r][c] = grid[above][c];
+              grid[above][c] = '';
+              break;
+            }
+          }
+          // If still empty, add new
+          if (!grid[r][c]) {
+            grid[r][c] = TYPES[Math.floor(Math.random() * TYPES.length)];
+          }
+        }
+      }
+    }
+  }
+  
+  function swap(r1: number, c1: number, r2: number, c2: number) {
+    [grid[r1][c1], grid[r2][c2]] = [grid[r2][c2], grid[r1][c1]];
+  }
+  
+  function render() {
+    elements.gameContainer.innerHTML = `
+      <div class="match3-game">
+        <div class="match3-header">
+          <span>Score: ${score}</span>
+          <span>Moves: ${moves}</span>
+        </div>
+        <div class="match3-grid">
+          ${grid.map((row, r) => row.map((cell, c) => `
+            <button class="match3-cell ${selected && selected[0] === r && selected[1] === c ? 'selected' : ''}" 
+                    data-row="${r}" data-col="${c}">
+              ${cell}
+            </button>
+          `).join('')).join('')}
+        </div>
+      </div>
+    `;
+    
+    document.querySelectorAll('.match3-cell').forEach(cell => {
+      cell.addEventListener('click', () => {
+        const r = parseInt(cell.getAttribute('data-row')!);
+        const c = parseInt(cell.getAttribute('data-col')!);
+        
+        if (!selected) {
+          selected = [r, c];
+          render();
+        } else {
+          const [sr, sc] = selected;
+          const isAdjacent = (Math.abs(r - sr) === 1 && c === sc) || (Math.abs(c - sc) === 1 && r === sr);
+          
+          if (isAdjacent) {
+            swap(sr, sc, r, c);
+            
+            if (findMatches().length > 0) {
+              moves--;
+              while (clearMatches()) {
+                fillGrid();
+              }
+              soundManager.play('correct');
+            } else {
+              swap(sr, sc, r, c); // Swap back
+              soundManager.play('wrong');
+            }
+          }
+          
+          selected = null;
+          
+          if (moves <= 0) {
+            setTimeout(() => endGame(score >= 100, score), 500);
+          } else {
+            render();
+          }
+        }
+      });
+    });
+  }
+  
+  init();
+  render();
+}
+
+// Game 8: GOOGLE FEUD (Search Feud)
+async function loadGoogleFeud() {
+  // Pre-made queries with common completions
+  const queries = [
+    { start: 'Why do cats', answers: ['purr', 'knead', 'meow', 'sleep so much', 'like boxes'] },
+    { start: 'How to make', answers: ['money', 'friends', 'pancakes', 'slime', 'coffee'] },
+    { start: 'Is it bad to', answers: ['sleep too much', 'eat late', 'crack knuckles', 'skip breakfast'] },
+    { start: 'Why is the sky', answers: ['blue', 'red at sunset', 'orange', 'gray'] },
+    { start: 'Can dogs eat', answers: ['bananas', 'chocolate', 'grapes', 'cheese', 'apples'] },
+    { start: 'What happens if', answers: ['you swallow gum', 'you eat too much', 'the sun explodes'] },
+  ];
+  
+  let currentQuery = queries[Math.floor(Math.random() * queries.length)];
+  let found: string[] = [];
+  let guesses = 0;
+  const maxGuesses = 5;
+  let score = 0;
+  
+  function render() {
+    elements.gameContainer.innerHTML = `
+      <div class="feud-game">
+        <div class="feud-header">
+          <span>Guesses: ${guesses}/${maxGuesses}</span>
+          <span>Score: ${score}</span>
+        </div>
+        <div class="feud-query">
+          <span class="feud-google">G</span><span class="feud-google o1">o</span><span class="feud-google o2">o</span><span class="feud-google g">g</span><span class="feud-google l">l</span><span class="feud-google e">e</span>
+          <div class="feud-search">${currentQuery.start}...</div>
+        </div>
+        <div class="feud-answers">
+          ${currentQuery.answers.map((a, i) => `
+            <div class="feud-answer ${found.includes(a) ? 'found' : ''}">
+              ${found.includes(a) ? a : `#${i + 1}`}
+            </div>
+          `).join('')}
+        </div>
+        <div class="feud-input-wrap">
+          <input type="text" id="feudInput" class="feud-input" placeholder="Type your guess..." autocomplete="off">
+          <button class="feud-submit" id="feudSubmit">Guess</button>
+        </div>
+      </div>
+    `;
+    
+    const input = document.getElementById('feudInput') as HTMLInputElement;
+    const submit = document.getElementById('feudSubmit')!;
+    input.focus();
+    
+    const checkGuess = () => {
+      const guess = input.value.toLowerCase().trim();
+      if (!guess) return;
+      
+      const match = currentQuery.answers.find(a => 
+        a.toLowerCase().includes(guess) || guess.includes(a.toLowerCase())
+      );
+      
+      if (match && !found.includes(match)) {
+        found.push(match);
+        score += 20;
+        soundManager.play('correct');
+      } else {
+        guesses++;
+        soundManager.play('wrong');
+      }
+      
+      input.value = '';
+      
+      if (found.length === currentQuery.answers.length) {
+        setTimeout(() => endGame(true, score), 500);
+      } else if (guesses >= maxGuesses) {
+        setTimeout(() => endGame(score > 0, score), 500);
+      } else {
+        render();
+      }
+    };
+    
+    submit.addEventListener('click', checkGuess);
+    input.addEventListener('keypress', (e) => { if (e.key === 'Enter') checkGuess(); });
+  }
+  
+  render();
+}
+
+// Game 9: BOGGLE (Word Blitz)
+function loadBoggle() {
+  const LETTERS = 'AAABCDEEEFGHIIIJKLMNOOOPQRSTUUUVWXYZ';
+  const SIZE = 4;
+  
+  const grid: string[] = Array(SIZE * SIZE).fill('').map(() => 
+    LETTERS[Math.floor(Math.random() * LETTERS.length)]
+  );
+  
+  // Simple word list
+  const validWords = new Set([
+    'THE', 'AND', 'FOR', 'ARE', 'BUT', 'NOT', 'YOU', 'ALL', 'CAN', 'HAD',
+    'HER', 'WAS', 'ONE', 'OUR', 'OUT', 'DAY', 'GET', 'HAS', 'HIM', 'HIS',
+    'HOW', 'ITS', 'MAY', 'NEW', 'NOW', 'OLD', 'SEE', 'WAY', 'WHO', 'BOY',
+    'DID', 'OWN', 'SAY', 'SHE', 'TOO', 'USE', 'CAT', 'DOG', 'PIG', 'COW',
+    'RUN', 'SUN', 'FUN', 'GUN', 'BUN', 'PEN', 'TEN', 'MEN', 'HEN', 'DEN',
+    'BAT', 'HAT', 'RAT', 'SAT', 'MAT', 'PAT', 'FAT', 'EAT', 'BIG', 'DIG',
+    'FIG', 'JIG', 'PIG', 'RIG', 'WIG', 'BIT', 'FIT', 'HIT', 'KIT', 'LIT',
+    'PIT', 'SIT', 'WIT', 'CUP', 'CUT', 'GUT', 'HUT', 'JUT', 'NUT', 'PUT',
+    'RUT', 'TUB', 'BUS', 'GUS', 'PUS', 'AIR', 'ASK', 'ACE', 'ACT', 'ADD'
+  ]);
+  
+  let foundWords: string[] = [];
+  let currentWord = '';
+  let selectedCells: number[] = [];
+  let score = 0;
+  let timeLeft = 60;
+  let timer: number | null = null;
+  
+  function render() {
+    elements.gameContainer.innerHTML = `
+      <div class="boggle-game">
+        <div class="boggle-header">
+          <span>Score: ${score}</span>
+          <span>Time: ${timeLeft}s</span>
+        </div>
+        <div class="boggle-current">${currentWord || 'Select letters...'}</div>
+        <div class="boggle-grid">
+          ${grid.map((l, i) => `
+            <button class="boggle-cell ${selectedCells.includes(i) ? 'selected' : ''}" data-idx="${i}">
+              ${l}
+            </button>
+          `).join('')}
+        </div>
+        <div class="boggle-actions">
+          <button class="boggle-btn" id="boggleClear">Clear</button>
+          <button class="boggle-btn primary" id="boggleSubmit">Submit</button>
+        </div>
+        <div class="boggle-found">Found: ${foundWords.join(', ') || 'none yet'}</div>
+      </div>
+    `;
+    
+    document.querySelectorAll('.boggle-cell').forEach(cell => {
+      cell.addEventListener('click', () => {
+        const idx = parseInt(cell.getAttribute('data-idx')!);
+        if (!selectedCells.includes(idx)) {
+          selectedCells.push(idx);
+          currentWord += grid[idx];
+          render();
+        }
+      });
+    });
+    
+    document.getElementById('boggleClear')?.addEventListener('click', () => {
+      currentWord = '';
+      selectedCells = [];
+      render();
+    });
+    
+    document.getElementById('boggleSubmit')?.addEventListener('click', () => {
+      if (currentWord.length >= 3 && validWords.has(currentWord) && !foundWords.includes(currentWord)) {
+        foundWords.push(currentWord);
+        score += currentWord.length * 10;
+        soundManager.play('correct');
+      } else {
+        soundManager.play('wrong');
+      }
+      currentWord = '';
+      selectedCells = [];
+      render();
+    });
+  }
+  
+  render();
+  
+  timer = window.setInterval(() => {
+    timeLeft--;
+    const timeEl = document.querySelector('.boggle-header span:last-child');
+    if (timeEl) timeEl.textContent = `Time: ${timeLeft}s`;
+    
+    if (timeLeft <= 0) {
+      if (timer) clearInterval(timer);
+      endGame(score >= 30, score);
+    }
+  }, 1000);
+}
+
+// Game 10: AIM TRAINER
+function loadAimTrainer() {
+  let score = 0;
+  let misses = 0;
+  let targetsHit = 0;
+  const totalTargets = 20;
+  let targetTimeout: number | null = null;
+  
+  function spawnTarget() {
+    if (targetsHit >= totalTargets) {
+      const finalScore = Math.max(0, score - misses * 5);
+      endGame(finalScore > 100, finalScore);
+      return;
+    }
+    
+    const container = document.getElementById('aimContainer');
+    if (!container) return;
+    
+    const size = 30 + Math.random() * 30;
+    const maxX = container.clientWidth - size;
+    const maxY = container.clientHeight - size;
+    const x = Math.random() * maxX;
+    const y = Math.random() * maxY;
+    
+    container.innerHTML = `
+      <div class="aim-target" style="left: ${x}px; top: ${y}px; width: ${size}px; height: ${size}px;">
+        🎯
+      </div>
+    `;
+    
+    const target = container.querySelector('.aim-target')!;
+    target.addEventListener('click', (e) => {
+      e.stopPropagation();
+      targetsHit++;
+      score += Math.round(60 - size + 20);
+      soundManager.play('correct');
+      if (targetTimeout) clearTimeout(targetTimeout);
+      updateUI();
+      spawnTarget();
+    });
+    
+    targetTimeout = window.setTimeout(() => {
+      misses++;
+      soundManager.play('wrong');
+      updateUI();
+      spawnTarget();
+    }, 1500);
+  }
+  
+  function updateUI() {
+    const scoreEl = document.getElementById('aimScore');
+    const progressEl = document.getElementById('aimProgress');
+    if (scoreEl) scoreEl.textContent = String(score);
+    if (progressEl) progressEl.textContent = `${targetsHit}/${totalTargets}`;
+  }
+  
+  elements.gameContainer.innerHTML = `
+    <div class="aim-game">
+      <div class="aim-header">
+        <span>Score: <span id="aimScore">0</span></span>
+        <span>Targets: <span id="aimProgress">0/${totalTargets}</span></span>
+      </div>
+      <div class="aim-container" id="aimContainer"></div>
+      <div class="aim-hint">Click the targets as fast as you can!</div>
+    </div>
+  `;
+  
+  const container = document.getElementById('aimContainer')!;
+  container.addEventListener('click', () => {
+    misses++;
+    updateUI();
+  });
+  
+  spawnTarget();
+}
+
+// ==================== ADDITIONAL POPULAR GAMES ====================
+
+// Game 11: JIGSAW PUZZLE
+function loadJigsaw() {
+  const GRID = 3; // 3x3 = 9 pieces
+  const PIECE_SIZE = 80;
+  
+  // Create pieces with positions
+  const pieces: { id: number; currentPos: number; correctPos: number }[] = [];
+  for (let i = 0; i < GRID * GRID; i++) {
+    pieces.push({ id: i, currentPos: i, correctPos: i });
+  }
+  
+  // Shuffle pieces (but keep one in place for solvability)
+  for (let i = pieces.length - 2; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pieces[i].currentPos, pieces[j].currentPos] = [pieces[j].currentPos, pieces[i].currentPos];
+  }
+  
+  let selected: number | null = null;
+  let moves = 0;
+  
+  const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F', '#BB8FCE'];
+  
+  function checkWin(): boolean {
+    return pieces.every(p => p.currentPos === p.correctPos);
+  }
+  
+  function render() {
+    const sortedByPos = [...pieces].sort((a, b) => a.currentPos - b.currentPos);
+    
+    elements.gameContainer.innerHTML = `
+      <div class="jigsaw-game">
+        <div class="jigsaw-header">
+          <span>Moves: ${moves}</span>
+        </div>
+        <div class="jigsaw-grid" style="grid-template-columns: repeat(${GRID}, ${PIECE_SIZE}px)">
+          ${sortedByPos.map(piece => `
+            <div class="jigsaw-piece ${selected === piece.id ? 'selected' : ''} ${piece.currentPos === piece.correctPos ? 'correct' : ''}" 
+                 data-id="${piece.id}"
+                 style="background: ${colors[piece.id]}">
+              ${piece.id + 1}
+            </div>
+          `).join('')}
+        </div>
+        <div class="jigsaw-hint">Click two pieces to swap them</div>
+      </div>
+    `;
+    
+    document.querySelectorAll('.jigsaw-piece').forEach(el => {
+      el.addEventListener('click', () => {
+        const id = parseInt(el.getAttribute('data-id')!);
+        
+        if (selected === null) {
+          selected = id;
+        } else if (selected === id) {
+          selected = null;
+        } else {
+          // Swap pieces
+          const piece1 = pieces.find(p => p.id === selected)!;
+          const piece2 = pieces.find(p => p.id === id)!;
+          [piece1.currentPos, piece2.currentPos] = [piece2.currentPos, piece1.currentPos];
+          moves++;
+          selected = null;
+          soundManager.play('click');
+          
+          if (checkWin()) {
+            soundManager.play('win');
+            setTimeout(() => endGame(true, Math.max(10, 100 - moves * 2)), 500);
+            return;
+          }
+        }
+        render();
+      });
+    });
+  }
+  
+  render();
+}
+
+// Game 12: N-BACK
+function loadNBack() {
+  const POSITIONS = 9; // 3x3 grid
+  const N = 2; // 2-back
+  let sequence: number[] = [];
+  let currentIndex = 0;
+  let score = 0;
+  let mistakes = 0;
+  const MAX_MISTAKES = 3;
+  const TOTAL_ROUNDS = 20;
+  let showingPosition = false;
+  
+  function generateSequence() {
+    sequence = [];
+    for (let i = 0; i < TOTAL_ROUNDS; i++) {
+      // 30% chance to repeat N-back position
+      if (i >= N && Math.random() < 0.3) {
+        sequence.push(sequence[i - N]);
+      } else {
+        sequence.push(Math.floor(Math.random() * POSITIONS));
+      }
+    }
+  }
+  
+  function showPosition() {
+    if (currentIndex >= TOTAL_ROUNDS || mistakes >= MAX_MISTAKES) {
+      endGame(score >= 10, score * 5);
+      return;
+    }
+    
+    showingPosition = true;
+    render();
+    
+    setTimeout(() => {
+      showingPosition = false;
+      render();
+    }, 1000);
+  }
+  
+  function render() {
+    const isMatch = currentIndex >= N && sequence[currentIndex] === sequence[currentIndex - N];
+    
+    elements.gameContainer.innerHTML = `
+      <div class="nback-game">
+        <div class="nback-header">
+          <div class="lives-display">
+            ${Array(MAX_MISTAKES).fill(0).map((_, i) => `
+              <span class="life-heart ${i < MAX_MISTAKES - mistakes ? 'active' : 'lost'}">❤️</span>
+            `).join('')}
+          </div>
+          <span>Score: ${score}</span>
+          <span>Round: ${currentIndex + 1}/${TOTAL_ROUNDS}</span>
+        </div>
+        <div class="nback-info">${N}-Back: Was this position shown ${N} steps ago?</div>
+        <div class="nback-grid">
+          ${Array(POSITIONS).fill(0).map((_, i) => `
+            <div class="nback-cell ${showingPosition && sequence[currentIndex] === i ? 'active' : ''}"></div>
+          `).join('')}
+        </div>
+        ${!showingPosition ? `
+          <div class="nback-buttons">
+            <button class="nback-btn no" id="nbackNo">✗ Different</button>
+            <button class="nback-btn yes" id="nbackYes">✓ Same</button>
+          </div>
+        ` : '<div class="nback-waiting">Remember this position...</div>'}
+      </div>
+    `;
+    
+    if (!showingPosition) {
+      document.getElementById('nbackYes')?.addEventListener('click', () => {
+        if (isMatch) {
+          score++;
+          soundManager.play('correct');
+        } else {
+          mistakes++;
+          soundManager.play('wrong');
+        }
+        currentIndex++;
+        showPosition();
+      });
+      
+      document.getElementById('nbackNo')?.addEventListener('click', () => {
+        if (!isMatch) {
+          score++;
+          soundManager.play('correct');
+        } else {
+          mistakes++;
+          soundManager.play('wrong');
+        }
+        currentIndex++;
+        showPosition();
+      });
+    }
+  }
+  
+  generateSequence();
+  showPosition();
+}
+
+// Game 13: MINI CROSSWORD
+function loadCrossword() {
+  const puzzle = {
+    grid: [
+      ['C', 'A', 'T', ' ', ' '],
+      ['A', ' ', 'O', ' ', ' '],
+      ['R', 'U', 'N', ' ', ' '],
+      [' ', ' ', ' ', ' ', ' '],
+      [' ', ' ', ' ', ' ', ' '],
+    ],
+    clues: {
+      across: [
+        { num: 1, row: 0, col: 0, answer: 'CAT', clue: 'Feline pet' },
+        { num: 3, row: 2, col: 0, answer: 'RUN', clue: 'Move fast' },
+      ],
+      down: [
+        { num: 1, row: 0, col: 0, answer: 'CAR', clue: 'Vehicle' },
+        { num: 2, row: 0, col: 2, answer: 'TON', clue: '2000 pounds' },
+      ]
+    }
+  };
+  
+  const userGrid: string[][] = puzzle.grid.map(row => row.map(c => c === ' ' ? ' ' : ''));
+  let selectedCell: [number, number] | null = null;
+  
+  function checkWin(): boolean {
+    for (let r = 0; r < 5; r++) {
+      for (let c = 0; c < 5; c++) {
+        if (puzzle.grid[r][c] !== ' ' && userGrid[r][c] !== puzzle.grid[r][c]) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+  
+  function render() {
+    elements.gameContainer.innerHTML = `
+      <div class="crossword-game">
+        <div class="crossword-grid">
+          ${puzzle.grid.map((row, r) => row.map((cell, c) => {
+            if (cell === ' ') {
+              return '<div class="crossword-cell blocked"></div>';
+            }
+            const isSelected = selectedCell && selectedCell[0] === r && selectedCell[1] === c;
+            const isCorrect = userGrid[r][c] === puzzle.grid[r][c];
+            const clueNum = 
+              (r === 0 && c === 0) ? '1' : 
+              (r === 0 && c === 2) ? '2' : 
+              (r === 2 && c === 0) ? '3' : '';
+            return `
+              <div class="crossword-cell ${isSelected ? 'selected' : ''} ${isCorrect && userGrid[r][c] ? 'correct' : ''}" 
+                   data-row="${r}" data-col="${c}">
+                ${clueNum ? `<span class="crossword-num">${clueNum}</span>` : ''}
+                ${userGrid[r][c]}
+              </div>
+            `;
+          }).join('')).join('')}
+        </div>
+        <div class="crossword-clues">
+          <div class="clue-section">
+            <h4>Across</h4>
+            ${puzzle.clues.across.map(c => `<div class="clue">${c.num}. ${c.clue}</div>`).join('')}
+          </div>
+          <div class="clue-section">
+            <h4>Down</h4>
+            ${puzzle.clues.down.map(c => `<div class="clue">${c.num}. ${c.clue}</div>`).join('')}
+          </div>
+        </div>
+        <div class="crossword-keyboard">
+          ${'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(l => 
+            `<button class="crossword-key" data-letter="${l}">${l}</button>`
+          ).join('')}
+        </div>
+      </div>
+    `;
+    
+    // Cell selection
+    document.querySelectorAll('.crossword-cell:not(.blocked)').forEach(cell => {
+      cell.addEventListener('click', () => {
+        const r = parseInt(cell.getAttribute('data-row')!);
+        const c = parseInt(cell.getAttribute('data-col')!);
+        selectedCell = [r, c];
+        render();
+      });
+    });
+    
+    // Keyboard input
+    document.querySelectorAll('.crossword-key').forEach(key => {
+      key.addEventListener('click', () => {
+        if (!selectedCell) return;
+        const [r, c] = selectedCell;
+        userGrid[r][c] = key.getAttribute('data-letter')!;
+        soundManager.play('click');
+        
+        if (checkWin()) {
+          soundManager.play('win');
+          setTimeout(() => endGame(true, 100), 500);
+        } else {
+          render();
+        }
+      });
+    });
+  }
+  
+  render();
+}
+
+// Game 14: SOLITAIRE (Simplified Klondike)
+function loadSolitaire() {
+  const SUITS = ['♠', '♥', '♦', '♣'];
+  const VALUES = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+  
+  interface Card {
+    suit: string;
+    value: string;
+    faceUp: boolean;
+    color: 'red' | 'black';
+  }
+  
+  let deck: Card[] = [];
+  let tableau: Card[][] = [[], [], [], [], [], [], []];
+  let foundation: Card[][] = [[], [], [], []];
+  let waste: Card[] = [];
+  let stock: Card[] = [];
+  let selectedCard: { pile: string; index: number; cardIndex: number } | null = null;
+  let moves = 0;
+  
+  function createDeck(): Card[] {
+    const cards: Card[] = [];
+    SUITS.forEach(suit => {
+      VALUES.forEach(value => {
+        cards.push({
+          suit,
+          value,
+          faceUp: false,
+          color: suit === '♥' || suit === '♦' ? 'red' : 'black'
+        });
+      });
+    });
+    // Shuffle
+    for (let i = cards.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [cards[i], cards[j]] = [cards[j], cards[i]];
+    }
+    return cards;
+  }
+  
+  function setup() {
+    deck = createDeck();
+    let cardIndex = 0;
+    
+    // Deal to tableau
+    for (let col = 0; col < 7; col++) {
+      for (let row = 0; row <= col; row++) {
+        tableau[col].push(deck[cardIndex]);
+        if (row === col) tableau[col][row].faceUp = true;
+        cardIndex++;
+      }
+    }
+    
+    // Rest goes to stock
+    stock = deck.slice(cardIndex);
+  }
+  
+  function drawFromStock() {
+    if (stock.length > 0) {
+      const card = stock.pop()!;
+      card.faceUp = true;
+      waste.push(card);
+    } else {
+      // Reset stock from waste
+      stock = waste.reverse().map(c => ({ ...c, faceUp: false }));
+      waste = [];
+    }
+    moves++;
+    render();
+  }
+  
+  function checkWin(): boolean {
+    return foundation.every(pile => pile.length === 13);
+  }
+  
+  function render() {
+    elements.gameContainer.innerHTML = `
+      <div class="solitaire-game">
+        <div class="solitaire-header">
+          <span>Moves: ${moves}</span>
+          <span>Foundation: ${foundation.reduce((a, p) => a + p.length, 0)}/52</span>
+        </div>
+        <div class="solitaire-top">
+          <div class="solitaire-stock" id="stock">
+            ${stock.length > 0 ? '🂠' : '⭕'}
+          </div>
+          <div class="solitaire-waste">
+            ${waste.length > 0 ? `
+              <div class="solitaire-card ${waste[waste.length-1].color}" data-pile="waste">
+                ${waste[waste.length-1].value}${waste[waste.length-1].suit}
+              </div>
+            ` : ''}
+          </div>
+          <div class="solitaire-foundations">
+            ${foundation.map((pile, i) => `
+              <div class="solitaire-foundation" data-foundation="${i}">
+                ${pile.length > 0 ? `
+                  <div class="solitaire-card ${pile[pile.length-1].color}">
+                    ${pile[pile.length-1].value}${pile[pile.length-1].suit}
+                  </div>
+                ` : SUITS[i]}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        <div class="solitaire-tableau">
+          ${tableau.map((pile, col) => `
+            <div class="solitaire-pile" data-col="${col}">
+              ${pile.map((card, idx) => `
+                <div class="solitaire-card ${card.faceUp ? card.color : 'face-down'} ${selectedCard?.pile === 'tableau' && selectedCard?.index === col && selectedCard?.cardIndex === idx ? 'selected' : ''}" 
+                     style="top: ${idx * 20}px"
+                     data-pile="tableau" data-col="${col}" data-idx="${idx}">
+                  ${card.faceUp ? `${card.value}${card.suit}` : '🂠'}
+                </div>
+              `).join('')}
+            </div>
+          `).join('')}
+        </div>
+        <div class="solitaire-hint">Click stock to draw, click cards to move to foundation</div>
+      </div>
+    `;
+    
+    // Stock click
+    document.getElementById('stock')?.addEventListener('click', drawFromStock);
+    
+    // Card clicks - simplified: just try to move to foundation
+    document.querySelectorAll('.solitaire-card:not(.face-down)').forEach(card => {
+      card.addEventListener('click', () => {
+        const pile = card.getAttribute('data-pile');
+        
+        if (pile === 'waste' && waste.length > 0) {
+          const topCard = waste[waste.length - 1];
+          const foundIdx = foundation.findIndex((f, i) => {
+            if (f.length === 0) return topCard.value === 'A' && SUITS[i] === topCard.suit;
+            const topF = f[f.length - 1];
+            return topF.suit === topCard.suit && VALUES.indexOf(topCard.value) === VALUES.indexOf(topF.value) + 1;
+          });
+          
+          if (foundIdx >= 0) {
+            foundation[foundIdx].push(waste.pop()!);
+            moves++;
+            soundManager.play('correct');
+            if (checkWin()) {
+              setTimeout(() => endGame(true, Math.max(10, 200 - moves)), 500);
+            }
+          }
+        } else if (pile === 'tableau') {
+          const col = parseInt(card.getAttribute('data-col')!);
+          const idx = parseInt(card.getAttribute('data-idx')!);
+          const tableauCard = tableau[col][idx];
+          
+          if (idx === tableau[col].length - 1 && tableauCard.faceUp) {
+            const foundIdx = foundation.findIndex((f, i) => {
+              if (f.length === 0) return tableauCard.value === 'A' && SUITS[i] === tableauCard.suit;
+              const topF = f[f.length - 1];
+              return topF.suit === tableauCard.suit && VALUES.indexOf(tableauCard.value) === VALUES.indexOf(topF.value) + 1;
+            });
+            
+            if (foundIdx >= 0) {
+              foundation[foundIdx].push(tableau[col].pop()!);
+              if (tableau[col].length > 0 && !tableau[col][tableau[col].length - 1].faceUp) {
+                tableau[col][tableau[col].length - 1].faceUp = true;
+              }
+              moves++;
+              soundManager.play('correct');
+              if (checkWin()) {
+                setTimeout(() => endGame(true, Math.max(10, 200 - moves)), 500);
+              }
+            }
+          }
+        }
+        render();
+      });
+    });
+  }
+  
+  setup();
+  render();
+}
+
+// Game 15: QUICK DRAW (AI guesses your drawing)
+function loadQuickDraw() {
+  const WORDS = ['cat', 'dog', 'house', 'tree', 'car', 'sun', 'flower', 'fish', 'bird', 'star'];
+  const targetWord = WORDS[Math.floor(Math.random() * WORDS.length)];
+  let isDrawing = false;
+  let timeLeft = 20;
+  let timer: number | null = null;
+  let guessed = false;
+  
+  elements.gameContainer.innerHTML = `
+    <div class="quickdraw-game">
+      <div class="quickdraw-header">
+        <span>Draw: <strong>${targetWord.toUpperCase()}</strong></span>
+        <span>Time: <span id="qdTime">${timeLeft}</span>s</span>
+      </div>
+      <canvas id="qdCanvas" width="300" height="300"></canvas>
+      <div class="quickdraw-controls">
+        <button class="quickdraw-btn" id="qdClear">Clear</button>
+        <button class="quickdraw-btn primary" id="qdSubmit">Submit Drawing</button>
+      </div>
+      <div class="quickdraw-hint">Draw the word above! AI will try to guess.</div>
+    </div>
+  `;
+  
+  const canvas = document.getElementById('qdCanvas') as HTMLCanvasElement;
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = '#1a1a2e';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = '#00F5FF';
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+  
+  let lastX = 0, lastY = 0;
+  
+  const startDraw = (e: MouseEvent | TouchEvent) => {
+    isDrawing = true;
+    const rect = canvas.getBoundingClientRect();
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    lastX = clientX - rect.left;
+    lastY = clientY - rect.top;
+  };
+  
+  const draw = (e: MouseEvent | TouchEvent) => {
+    if (!isDrawing) return;
+    const rect = canvas.getBoundingClientRect();
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    
+    lastX = x;
+    lastY = y;
+  };
+  
+  const stopDraw = () => { isDrawing = false; };
+  
+  canvas.addEventListener('mousedown', startDraw);
+  canvas.addEventListener('mousemove', draw);
+  canvas.addEventListener('mouseup', stopDraw);
+  canvas.addEventListener('mouseleave', stopDraw);
+  canvas.addEventListener('touchstart', startDraw);
+  canvas.addEventListener('touchmove', draw);
+  canvas.addEventListener('touchend', stopDraw);
+  
+  document.getElementById('qdClear')?.addEventListener('click', () => {
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  });
+  
+  document.getElementById('qdSubmit')?.addEventListener('click', () => {
+    if (guessed) return;
+    guessed = true;
+    if (timer) clearInterval(timer);
+    
+    // Simulate AI "guessing" - in real implementation, would use AI
+    const guesses = [targetWord, ...WORDS.filter(w => w !== targetWord).slice(0, 2)];
+    const aiGuess = guesses[Math.floor(Math.random() * 3)];
+    const correct = aiGuess === targetWord;
+    
+    const container = document.querySelector('.quickdraw-game')!;
+    container.innerHTML += `
+      <div class="quickdraw-result ${correct ? 'correct' : 'wrong'}">
+        AI guessed: "${aiGuess.toUpperCase()}"
+        ${correct ? '✅ Correct!' : `❌ Wrong! It was "${targetWord.toUpperCase()}"`}
+      </div>
+    `;
+    
+    if (correct) {
+      soundManager.play('win');
+      setTimeout(() => endGame(true, timeLeft * 5), 1500);
+    } else {
+      soundManager.play('lose');
+      setTimeout(() => endGame(false, 0), 1500);
+    }
+  });
+  
+  timer = window.setInterval(() => {
+    timeLeft--;
+    const timeEl = document.getElementById('qdTime');
+    if (timeEl) timeEl.textContent = String(timeLeft);
+    
+    if (timeLeft <= 0) {
+      if (timer) clearInterval(timer);
+      document.getElementById('qdSubmit')?.click();
+    }
+  }, 1000);
+}
+
 // Auto-continue timer
 let autoNextTimer: number | null = null;
 let autoNextCountdown = 3;
@@ -3316,6 +5156,66 @@ function setupEventListeners() {
   
   elements.achievementsModal.querySelector('.modal-overlay')?.addEventListener('click', () => {
     elements.achievementsModal.classList.add('hidden');
+  });
+  
+  // Export progress
+  document.getElementById('exportProgress')?.addEventListener('click', () => {
+    const data = JSON.stringify(currentProgress, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `autothink-iq-arena-backup-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    const status = document.getElementById('backupStatus');
+    if (status) {
+      status.textContent = '✅ Backup exported successfully!';
+      status.className = 'backup-status show success';
+      setTimeout(() => { status.className = 'backup-status'; }, 3000);
+    }
+  });
+  
+  // Import progress
+  document.getElementById('importProgress')?.addEventListener('change', async (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    
+    const status = document.getElementById('backupStatus');
+    
+    try {
+      const text = await file.text();
+      const imported = JSON.parse(text);
+      
+      // Validate the imported data has required fields
+      if (!imported.level || !imported.totalGamesPlayed === undefined) {
+        throw new Error('Invalid backup file');
+      }
+      
+      // Save the imported progress
+      await saveProgress(imported);
+      currentProgress = imported;
+      updateUI();
+      
+      if (status) {
+        status.textContent = '✅ Progress restored successfully! Welcome back!';
+        status.className = 'backup-status show success';
+      }
+      
+      soundManager.play('levelUp');
+    } catch (err) {
+      console.error('Import error:', err);
+      if (status) {
+        status.textContent = '❌ Failed to import backup. Invalid file format.';
+        status.className = 'backup-status show error';
+      }
+    }
+    
+    // Reset file input
+    (e.target as HTMLInputElement).value = '';
   });
   
   // Result screen buttons

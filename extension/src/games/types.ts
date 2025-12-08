@@ -12,7 +12,6 @@ export type GameType =
   | 'ai-trivia'
   | 'word-association'
   | 'fact-or-fiction'
-  // New games
   | 'speed-typing'
   | 'color-match'
   | 'reaction-time'
@@ -22,9 +21,35 @@ export type GameType =
   | 'ai-riddles'
   | 'mental-math'
   | 'spot-difference'
-  | 'word-search';
+  | 'word-search'
+  // Classic Popular Games
+  | 'tetris'
+  | 'game-2048'
+  | 'sudoku'
+  | 'hangman'
+  | 'connections'
+  | 'snake'
+  | 'match-three'
+  | 'google-feud'
+  | 'boggle'
+  | 'aim-trainer'
+  // Additional Popular Games
+  | 'jigsaw'
+  | 'n-back'
+  | 'crossword'
+  | 'solitaire'
+  | 'quick-draw';
 
-export type GameCategory = 'all' | 'memory' | 'speed' | 'logic' | 'words' | 'ai';
+export type GameCategory = 
+  | 'all' 
+  | 'memory'      // Memory & pattern recognition
+  | 'speed'       // Reaction & quick thinking
+  | 'logic'       // Puzzles & strategy
+  | 'words'       // Word games & language
+  | 'math'        // Numbers & calculations
+  | 'trivia'      // Knowledge & facts
+  | 'visual'      // Visual perception
+  | 'ai';         // AI-powered games
 
 export type GameDifficulty = 'easy' | 'medium' | 'hard' | 'expert' | 'legendary';
 

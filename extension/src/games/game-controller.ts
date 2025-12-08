@@ -20,12 +20,15 @@ export const CATEGORY_LABELS: Record<string, { icon: string; name: string }> = {
   'all': { icon: '🎮', name: 'All Games' },
   'memory': { icon: '🧠', name: 'Memory' },
   'speed': { icon: '⚡', name: 'Speed' },
-  'logic': { icon: '🔢', name: 'Logic' },
+  'logic': { icon: '🧩', name: 'Puzzles' },
   'words': { icon: '📝', name: 'Words' },
+  'math': { icon: '🔢', name: 'Math' },
+  'trivia': { icon: '❓', name: 'Trivia' },
+  'visual': { icon: '👁️', name: 'Visual' },
   'ai': { icon: '🤖', name: 'AI-Powered' },
 };
 
-// Game configurations
+// Game configurations with detailed categories
 export const GAME_CONFIGS: Record<GameType, GameConfig> = {
   // Memory Games
   'memory-match': {
@@ -43,7 +46,7 @@ export const GAME_CONFIGS: Record<GameType, GameConfig> = {
     icon: '🎨',
     description: 'Repeat the color sequence',
     requiresAI: false,
-    minLevel: 2,
+    minLevel: 5,
     category: 'memory',
   },
   'pattern-match': {
@@ -52,7 +55,7 @@ export const GAME_CONFIGS: Record<GameType, GameConfig> = {
     icon: '🔷',
     description: 'Memorize the visual pattern',
     requiresAI: false,
-    minLevel: 4,
+    minLevel: 40,
     category: 'memory',
   },
   'visual-memory': {
@@ -61,20 +64,11 @@ export const GAME_CONFIGS: Record<GameType, GameConfig> = {
     icon: '👁️',
     description: 'Remember and recreate the grid',
     requiresAI: false,
-    minLevel: 3,
-    category: 'memory',
+    minLevel: 20,
+    category: 'visual',
   },
   
   // Speed Games
-  'math-challenge': {
-    type: 'math-challenge',
-    name: 'Math Challenge',
-    icon: '🔢',
-    description: 'Solve quick arithmetic problems',
-    requiresAI: false,
-    minLevel: 1,
-    category: 'speed',
-  },
   'reaction-time': {
     type: 'reaction-time',
     name: 'Reaction Time',
@@ -90,7 +84,7 @@ export const GAME_CONFIGS: Record<GameType, GameConfig> = {
     icon: '⌨️',
     description: 'Type as fast as you can',
     requiresAI: false,
-    minLevel: 2,
+    minLevel: 5,
     category: 'speed',
   },
   'color-match': {
@@ -99,8 +93,19 @@ export const GAME_CONFIGS: Record<GameType, GameConfig> = {
     icon: '🌈',
     description: 'Stroop test - match colors quickly',
     requiresAI: false,
-    minLevel: 3,
+    minLevel: 15,
     category: 'speed',
+  },
+
+  // Math Games
+  'math-challenge': {
+    type: 'math-challenge',
+    name: 'Math Challenge',
+    icon: '🔢',
+    description: 'Solve quick arithmetic problems',
+    requiresAI: false,
+    minLevel: 1,
+    category: 'math',
   },
   'mental-math': {
     type: 'mental-math',
@@ -108,18 +113,27 @@ export const GAME_CONFIGS: Record<GameType, GameConfig> = {
     icon: '🧮',
     description: 'Chain calculations in your head',
     requiresAI: false,
-    minLevel: 5,
-    category: 'speed',
+    minLevel: 50,
+    category: 'math',
+  },
+  'number-sequence': {
+    type: 'number-sequence',
+    name: 'Number Sequence',
+    icon: '🔮',
+    description: 'Find the pattern in numbers',
+    requiresAI: false,
+    minLevel: 50,
+    category: 'math',
   },
 
-  // Logic Games
+  // Logic/Puzzle Games
   'minesweeper': {
     type: 'minesweeper',
     name: 'Minesweeper',
     icon: '💣',
     description: 'Clear the minefield using logic',
     requiresAI: false,
-    minLevel: 3,
+    minLevel: 30,
     category: 'logic',
   },
   'sliding-puzzle': {
@@ -128,16 +142,7 @@ export const GAME_CONFIGS: Record<GameType, GameConfig> = {
     icon: '🧩',
     description: 'Arrange tiles in correct order',
     requiresAI: false,
-    minLevel: 4,
-    category: 'logic',
-  },
-  'number-sequence': {
-    type: 'number-sequence',
-    name: 'Number Sequence',
-    icon: '🔮',
-    description: 'Find the pattern in numbers',
-    requiresAI: false,
-    minLevel: 5,
+    minLevel: 30,
     category: 'logic',
   },
   'spot-difference': {
@@ -146,8 +151,8 @@ export const GAME_CONFIGS: Record<GameType, GameConfig> = {
     icon: '🔍',
     description: 'Find the odd one out',
     requiresAI: false,
-    minLevel: 2,
-    category: 'logic',
+    minLevel: 10,
+    category: 'visual',
   },
 
   // Word Games
@@ -157,7 +162,7 @@ export const GAME_CONFIGS: Record<GameType, GameConfig> = {
     icon: '📝',
     description: 'Guess the 5-letter word',
     requiresAI: false,
-    minLevel: 4,
+    minLevel: 40,
     category: 'words',
   },
   'anagram': {
@@ -166,7 +171,7 @@ export const GAME_CONFIGS: Record<GameType, GameConfig> = {
     icon: '🔤',
     description: 'Unscramble the letters',
     requiresAI: false,
-    minLevel: 3,
+    minLevel: 15,
     category: 'words',
   },
   'emoji-decoder': {
@@ -175,7 +180,7 @@ export const GAME_CONFIGS: Record<GameType, GameConfig> = {
     icon: '😀',
     description: 'Guess the phrase from emojis',
     requiresAI: false,
-    minLevel: 2,
+    minLevel: 10,
     category: 'words',
   },
   'word-search': {
@@ -184,19 +189,19 @@ export const GAME_CONFIGS: Record<GameType, GameConfig> = {
     icon: '🔎',
     description: 'Find hidden words in the grid',
     requiresAI: false,
-    minLevel: 3,
+    minLevel: 20,
     category: 'words',
   },
 
-  // AI-Powered Games
+  // Trivia & AI-Powered Games
   'ai-trivia': {
     type: 'ai-trivia',
     name: 'AI Trivia',
     icon: '🧪',
     description: 'Answer AI-generated questions',
     requiresAI: true,
-    minLevel: 5,
-    category: 'ai',
+    minLevel: 60,
+    category: 'trivia',
   },
   'word-association': {
     type: 'word-association',
@@ -204,7 +209,7 @@ export const GAME_CONFIGS: Record<GameType, GameConfig> = {
     icon: '💭',
     description: 'Connect related words with AI',
     requiresAI: true,
-    minLevel: 6,
+    minLevel: 70,
     category: 'ai',
   },
   'fact-or-fiction': {
@@ -213,8 +218,8 @@ export const GAME_CONFIGS: Record<GameType, GameConfig> = {
     icon: '❓',
     description: 'Identify true statements',
     requiresAI: true,
-    minLevel: 7,
-    category: 'ai',
+    minLevel: 80,
+    category: 'trivia',
   },
   'ai-riddles': {
     type: 'ai-riddles',
@@ -222,7 +227,148 @@ export const GAME_CONFIGS: Record<GameType, GameConfig> = {
     icon: '🎭',
     description: 'Solve AI-generated riddles',
     requiresAI: true,
-    minLevel: 8,
+    minLevel: 90,
+    category: 'ai',
+  },
+
+  // ============ NEW CLASSIC POPULAR GAMES ============
+  
+  'tetris': {
+    type: 'tetris',
+    name: 'Tetris',
+    icon: '🧱',
+    description: 'Stack falling blocks to clear lines',
+    requiresAI: false,
+    minLevel: 5,
+    category: 'logic',
+  },
+  'game-2048': {
+    type: 'game-2048',
+    name: '2048',
+    icon: '🔢',
+    description: 'Merge tiles to reach 2048',
+    requiresAI: false,
+    minLevel: 10,
+    category: 'logic',
+  },
+  'sudoku': {
+    type: 'sudoku',
+    name: 'Sudoku',
+    icon: '📊',
+    description: 'Fill the 9x9 grid with numbers',
+    requiresAI: false,
+    minLevel: 25,
+    category: 'logic',
+  },
+  'hangman': {
+    type: 'hangman',
+    name: 'Hangman',
+    icon: '🎯',
+    description: 'Guess the word letter by letter',
+    requiresAI: false,
+    minLevel: 5,
+    category: 'words',
+  },
+  'connections': {
+    type: 'connections',
+    name: 'Connections',
+    icon: '🔗',
+    description: 'Group words into 4 categories',
+    requiresAI: false,
+    minLevel: 35,
+    category: 'words',
+  },
+  'snake': {
+    type: 'snake',
+    name: 'Snake',
+    icon: '🐍',
+    description: 'Eat food and grow longer',
+    requiresAI: false,
+    minLevel: 1,
+    category: 'speed',
+  },
+  'match-three': {
+    type: 'match-three',
+    name: 'Match 3',
+    icon: '🍬',
+    description: 'Match 3 or more items in a row',
+    requiresAI: false,
+    minLevel: 15,
+    category: 'logic',
+  },
+  'google-feud': {
+    type: 'google-feud',
+    name: 'Search Feud',
+    icon: '🔍',
+    description: 'Guess the autocomplete suggestions',
+    requiresAI: true,
+    minLevel: 45,
+    category: 'trivia',
+  },
+  'boggle': {
+    type: 'boggle',
+    name: 'Word Blitz',
+    icon: '🔤',
+    description: 'Find words in the letter grid',
+    requiresAI: false,
+    minLevel: 20,
+    category: 'words',
+  },
+  'aim-trainer': {
+    type: 'aim-trainer',
+    name: 'Aim Trainer',
+    icon: '🎯',
+    description: 'Click targets as fast as possible',
+    requiresAI: false,
+    minLevel: 10,
+    category: 'speed',
+  },
+
+  // ============ ADDITIONAL POPULAR GAMES ============
+  
+  'jigsaw': {
+    type: 'jigsaw',
+    name: 'Jigsaw Puzzle',
+    icon: '🧩',
+    description: 'Arrange pieces to complete the image',
+    requiresAI: false,
+    minLevel: 15,
+    category: 'logic',
+  },
+  'n-back': {
+    type: 'n-back',
+    name: 'N-Back',
+    icon: '🧠',
+    description: 'Scientific memory training exercise',
+    requiresAI: false,
+    minLevel: 30,
+    category: 'memory',
+  },
+  'crossword': {
+    type: 'crossword',
+    name: 'Mini Crossword',
+    icon: '✏️',
+    description: 'Fill in the crossword puzzle',
+    requiresAI: false,
+    minLevel: 25,
+    category: 'words',
+  },
+  'solitaire': {
+    type: 'solitaire',
+    name: 'Solitaire',
+    icon: '🃏',
+    description: 'Classic card game',
+    requiresAI: false,
+    minLevel: 20,
+    category: 'logic',
+  },
+  'quick-draw': {
+    type: 'quick-draw',
+    name: 'Quick Draw',
+    icon: '🎨',
+    description: 'Draw and let AI guess',
+    requiresAI: true,
+    minLevel: 55,
     category: 'ai',
   },
 };
