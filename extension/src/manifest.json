@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "AI Smart Autofill",
-  "version": "1.1.0",
-  "description": "AI-powered smart autofill assistant with Web Memory - remembers every site you visit",
+  "name": "AutoThink",
+  "version": "2.0.0",
+  "description": "Your AI-powered Chrome companion - Form Autofill, Chat Assistant, Web Memory, Smart Bookmarks & Brain Games",
   "permissions": [
     "storage",
     "scripting",

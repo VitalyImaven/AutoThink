@@ -1856,11 +1856,21 @@ async function loadWordAssociation(params: ReturnType<typeof getDifficultyParams
             <strong>Better examples:</strong> ${result.better_examples.join(', ')}
           </div>
         ` : ''}
+        <div class="countdown-timer" id="wordCountdown">Next in 7s...</div>
       </div>
     `;
     
+    // Countdown timer display
+    let countdown = 7;
+    const countdownEl = document.getElementById('wordCountdown');
+    const countdownInterval = setInterval(() => {
+      countdown--;
+      if (countdownEl) countdownEl.textContent = `Next in ${countdown}s...`;
+      if (countdown <= 0) clearInterval(countdownInterval);
+    }, 1000);
+    
     currentRound++;
-    setTimeout(startRound, 2500);
+    setTimeout(startRound, 7000); // Increased from 2500ms to 7000ms
   }
   
   function showError() {
@@ -2059,11 +2069,11 @@ let lastGameInfo = {
 
 // Chrome Web Store URL (replace with your actual extension URL when published)
 const EXTENSION_URL = 'https://chrome.google.com/webstore/detail/ai-smart-autofill/YOUR_EXTENSION_ID';
-const SHARE_HASHTAGS = '#IQArena #BrainGames #AI';
+const SHARE_HASHTAGS = '#AutoThink #IQArena #BrainGames #AI';
 
 // Generate share text
 function generateShareText(): string {
-  return `🧠 I scored ${lastGameInfo.score} points in ${lastGameInfo.gameName} on IQ Arena!\n\nCan you beat my score? Train your brain with AI-powered games!\n\n🎮 Get the extension: ${EXTENSION_URL}\n\n${SHARE_HASHTAGS}`;
+  return `🧠 I scored ${lastGameInfo.score} points in ${lastGameInfo.gameName} on AutoThink IQ Arena!\n\nCan you beat my score? Train your brain with AI-powered games!\n\n🎮 Get AutoThink: ${EXTENSION_URL}\n\n${SHARE_HASHTAGS}`;
 }
 
 // Share functions

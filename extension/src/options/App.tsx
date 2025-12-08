@@ -813,7 +813,7 @@ const App: React.FC = () => {
           </defs>
           <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
         </svg>
-        AI Smart Autofill - Knowledge Base
+        AutoThink - Knowledge Base
       </h1>
       <p className="subtitle">
         Build your AI-powered knowledge base through documents or interactive interviews

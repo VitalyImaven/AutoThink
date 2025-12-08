@@ -4,9 +4,9 @@ from app.config import settings
 from app import routes_dynamic, routes_chat, routes_interview, routes_web_memory, routes_bookmarks, routes_games
 
 app = FastAPI(
-    title="AI Smart Autofill Backend - Dynamic Categorization",
-    description="Backend API for AI-powered form autofill with dynamic AI-discovered categorization, Web Memory, and Smart Bookmarks",
-    version="1.2.0"
+    title="AutoThink Backend",
+    description="Backend API for AutoThink Chrome Extension - AI-powered Form Autofill, Web Memory, Smart Bookmarks & IQ Arena Games",
+    version="2.0.0"
 )
 
 # CORS middleware for Chrome extension
@@ -42,9 +42,9 @@ async def health_check():
     """Health check endpoint"""
     return {
         "status": "ok",
-        "version": "1.2.0",
-        "system": "Dynamic AI Categorization + Web Memory + Smart Bookmarks",
-        "description": "AI discovers semantic topics from your documents. Web Memory remembers sites. Smart Bookmarks help you organize favorites.",
+        "version": "2.0.0",
+        "system": "AutoThink - AI Chrome Companion",
+        "description": "Your AI-powered Chrome companion for productivity and brain training.",
         "features": [
             "Form Autofill",
             "Chat Assistant",

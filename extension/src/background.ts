@@ -1014,5 +1014,5 @@ chrome.windows.onRemoved.addListener((windowId) => {
   }
 });
 
-console.log('AI Smart Autofill background service worker loaded');
+console.log('AutoThink background service worker loaded');
 

@@ -1979,6 +1979,17 @@ body {
   color: var(--text-muted);
 }
 
+.countdown-timer {
+  margin-top: 20px;
+  padding: 8px 16px;
+  background: var(--bg-glass);
+  border-radius: 20px;
+  font-family: var(--font-display);
+  font-size: 12px;
+  color: var(--text-muted);
+  display: inline-block;
+}
+
 /* ==================== */
 /* FACT OR FICTION      */
 /* ==================== */

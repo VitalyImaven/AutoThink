@@ -1,7 +1,7 @@
 {
-  "name": "ai-smart-autofill",
-  "version": "1.1.0",
-  "description": "AI-powered smart autofill assistant for web forms",
+  "name": "autothink",
+  "version": "2.0.0",
+  "description": "AutoThink - Your AI-powered Chrome companion for productivity and brain training",
   "type": "module",
   "scripts": {
     "dev": "vite build --watch --mode development",

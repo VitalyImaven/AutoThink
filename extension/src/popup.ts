@@ -122,5 +122,5 @@ testSuggestionBtn.addEventListener('click', async () => {
   }
 });
 
-console.log('AI Smart Autofill popup loaded');
+console.log('AutoThink popup loaded');
 

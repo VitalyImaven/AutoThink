@@ -860,7 +860,7 @@ function showAboutModal() {
         <div style="width: 60px; height: 60px; margin: 0 auto 16px; background: linear-gradient(135deg, #00D4FF, #8B5CF6); border-radius: 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 30px rgba(0, 212, 255, 0.4);">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
         </div>
-        <h2 style="margin: 0 0 4px 0; font-size: 20px; background: linear-gradient(135deg, #fff, #00D4FF); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">AI Smart Autofill</h2>
+        <h2 style="margin: 0 0 4px 0; font-size: 20px; background: linear-gradient(135deg, #fff, #00D4FF); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">AutoThink</h2>
         <div style="font-size: 12px; color: rgba(255,255,255,0.5);">Version 1.1.0 • Web Memory Edition</div>
       </div>
       <div style="padding: 20px;">

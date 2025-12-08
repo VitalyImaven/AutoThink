@@ -14,7 +14,7 @@ import {
 // Detect if we're in an iframe or top frame
 const isInIframe = window !== window.top;
 const frameType = isInIframe ? '🖼️ IFRAME' : '📄 TOP FRAME';
-console.log(`AI Smart Autofill loaded in ${frameType}: ${window.location.href.substring(0, 80)}`);
+console.log(`AutoThink loaded in ${frameType}: ${window.location.href.substring(0, 80)}`);
 
 // Listen for messages from iframes (only in top frame)
 if (!isInIframe) {
@@ -1483,7 +1483,7 @@ function openSidePanel() {
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
           </div>
           <div>
-            <h1 style="font-size: 16px; margin: 0; font-weight: 600; background: linear-gradient(135deg, #fff, #00D4FF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">AI Smart Assistant</h1>
+            <h1 style="font-size: 16px; margin: 0; font-weight: 600; background: linear-gradient(135deg, #fff, #00D4FF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">AutoThink</h1>
             <div style="font-size: 11px; color: rgba(255, 255, 255, 0.4); margin-top: 2px;">Docked to this page</div>
           </div>
         </div>
@@ -1601,7 +1601,7 @@ function openSidePanel() {
         </div>
         <div style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; background: transparent;" id="ai-chat-messages">
           <div style="max-width: 95%; padding: 16px; border-radius: 16px; background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(139, 92, 246, 0.1)); border: 1px solid rgba(0, 212, 255, 0.2); color: #fff; font-size: 12px; align-self: center; line-height: 1.6;">
-            <div style="font-weight: 700; font-size: 14px; margin-bottom: 12px; background: linear-gradient(135deg, #00D4FF, #8B5CF6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">👋 Welcome to AI Smart Autofill!</div>
+            <div style="font-weight: 700; font-size: 14px; margin-bottom: 12px; background: linear-gradient(135deg, #00D4FF, #8B5CF6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">👋 Welcome to AutoThink!</div>
             
             <div style="margin-bottom: 10px; color: #00D4FF;"><strong>I can help you with:</strong></div>
             <ul style="margin: 8px 0 8px 12px; color: rgba(255, 255, 255, 0.7);">
@@ -2085,7 +2085,7 @@ function initializeSidePanelHandlers(panel: HTMLElement) {
       } else if (action === 'clear') {
         chatMessages.innerHTML = `
           <div style="max-width: 95%; padding: 12px 16px; border-radius: 12px; background: linear-gradient(135deg, #fff3cd 0%, #ffe8a1 100%); color: #856404; font-size: 12px; align-self: center; line-height: 1.6; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
-            <div style="font-weight: 600; margin-bottom: 8px; font-size: 13px;">👋 Welcome to AI Smart Autofill!</div>
+            <div style="font-weight: 600; margin-bottom: 8px; font-size: 13px;">👋 Welcome to AutoThink!</div>
             
             <div style="margin-bottom: 8px;"><strong>I can help you with:</strong></div>
             <div style="margin-left: 8px; margin-bottom: 6px;">
@@ -2549,7 +2549,7 @@ function showAboutModal() {
         </div>
         
         <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 800; background: linear-gradient(135deg, #fff, #00D4FF); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-          AI Smart Autofill
+          AutoThink
         </h1>
         
         <p style="margin: 0 0 4px 0; font-size: 14px; color: rgba(255, 255, 255, 0.6);">
@@ -3972,5 +3972,5 @@ if (!isInIframe) {
   }
 }
 
-console.log('AI Smart Autofill content script loaded');
+console.log('AutoThink content script loaded');
 
