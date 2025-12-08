@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app import routes_dynamic, routes_chat, routes_interview, routes_web_memory, routes_bookmarks
+from app import routes_dynamic, routes_chat, routes_interview, routes_web_memory, routes_bookmarks, routes_games
 
 app = FastAPI(
     title="AI Smart Autofill Backend - Dynamic Categorization",
@@ -33,6 +33,9 @@ app.include_router(routes_web_memory.router, tags=["Web Memory"])
 # Include smart bookmarks routes (rate, categorize, and search bookmarks)
 app.include_router(routes_bookmarks.router, tags=["Smart Bookmarks"])
 
+# Include IQ Arena game routes (AI-powered games)
+app.include_router(routes_games.router, tags=["IQ Arena Games"])
+
 
 @app.get("/health")
 async def health_check():
@@ -48,7 +51,8 @@ async def health_check():
             "Page Summarization",
             "Element Highlighting",
             "Web Memory - Search your browsing history with AI",
-            "Smart Bookmarks - Rate, categorize, and search your bookmarks with AI"
+            "Smart Bookmarks - Rate, categorize, and search your bookmarks with AI",
+            "IQ Arena - AI-powered brain games"
         ]
     }
 

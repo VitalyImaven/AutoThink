@@ -235,19 +235,17 @@ async function loadGame(gameType: GameType) {
     case 'number-sequence':
       loadNumberSequence(params);
       break;
-    // AI-powered games (require backend)
-    case 'ai-trivia':
-    case 'word-association':
-    case 'fact-or-fiction':
     case 'pattern-match':
-      const aiGameConfig = GAME_CONFIGS[gameType];
-      elements.gameContainer.innerHTML = `
-        <div style="text-align: center; color: var(--text-muted);">
-          <p style="font-size: 48px; margin-bottom: 20px;">🤖</p>
-          <p>AI-Powered Game</p>
-          <p style="font-size: 14px; margin-top: 10px;">${aiGameConfig.name} requires AI backend - Coming Soon!</p>
-        </div>
-      `;
+      loadPatternMatch(params);
+      break;
+    case 'ai-trivia':
+      loadAiTrivia(params);
+      break;
+    case 'word-association':
+      loadWordAssociation(params);
+      break;
+    case 'fact-or-fiction':
+      loadFactOrFiction(params);
       break;
   }
 }
@@ -1170,6 +1168,485 @@ function loadNumberSequence(params: ReturnType<typeof getDifficultyParams>) {
   }
   
   showProblem();
+}
+
+// Backend API URL
+const BACKEND_URL = 'http://localhost:8000';
+
+// Pattern Match Game (Visual patterns - no AI)
+function loadPatternMatch(params: ReturnType<typeof getDifficultyParams>) {
+  const gridSize = params.patternGridSize;
+  const patternLength = params.patternLength;
+  
+  let pattern: number[] = [];
+  let playerPattern: number[] = [];
+  let phase: 'show' | 'input' | 'result' = 'show';
+  let currentRound = 1;
+  let score = 0;
+  const totalRounds = 5;
+  
+  function generatePattern() {
+    pattern = [];
+    const totalCells = gridSize * gridSize;
+    while (pattern.length < patternLength + currentRound - 1) {
+      const cell = Math.floor(Math.random() * totalCells);
+      if (!pattern.includes(cell)) {
+        pattern.push(cell);
+      }
+    }
+  }
+  
+  function renderGrid(showPattern: boolean = false, showResults: boolean = false) {
+    elements.gameContainer.innerHTML = `
+      <div class="pattern-game">
+        <div class="pattern-info">
+          <span>Round ${currentRound}/${totalRounds}</span>
+          <span>Score: ${score}</span>
+        </div>
+        <div class="pattern-status" id="patternStatus">
+          ${phase === 'show' ? '👀 Memorize the pattern!' : '🎯 Tap the highlighted cells!'}
+        </div>
+        <div class="pattern-grid" style="grid-template-columns: repeat(${gridSize}, 1fr);">
+          ${Array(gridSize * gridSize).fill(0).map((_, i) => {
+            let className = 'pattern-cell';
+            if (showPattern && pattern.includes(i)) {
+              className += ' highlighted';
+            }
+            if (showResults) {
+              if (playerPattern.includes(i) && pattern.includes(i)) {
+                className += ' correct';
+              } else if (playerPattern.includes(i) && !pattern.includes(i)) {
+                className += ' wrong';
+              } else if (pattern.includes(i)) {
+                className += ' missed';
+              }
+            }
+            return `<div class="${className}" data-index="${i}"></div>`;
+          }).join('')}
+        </div>
+      </div>
+    `;
+    
+    if (phase === 'input' && !showResults) {
+      elements.gameContainer.querySelectorAll('.pattern-cell').forEach(cell => {
+        cell.addEventListener('click', () => {
+          const index = parseInt(cell.getAttribute('data-index')!);
+          handleCellClick(index, cell as HTMLElement);
+        });
+      });
+    }
+  }
+  
+  function handleCellClick(index: number, cell: HTMLElement) {
+    if (playerPattern.includes(index)) return;
+    
+    playerPattern.push(index);
+    cell.classList.add('selected');
+    soundManager.play('click');
+    
+    if (playerPattern.length === pattern.length) {
+      checkPattern();
+    }
+  }
+  
+  function checkPattern() {
+    phase = 'result';
+    const correct = playerPattern.filter(p => pattern.includes(p)).length;
+    const accuracy = correct / pattern.length;
+    
+    renderGrid(false, true);
+    
+    if (accuracy >= 0.8) {
+      score += Math.floor(accuracy * 20);
+      soundManager.play('correct');
+    } else {
+      soundManager.play('wrong');
+    }
+    
+    setTimeout(() => {
+      currentRound++;
+      if (currentRound > totalRounds) {
+        endGame(score >= totalRounds * 10, score);
+      } else {
+        startRound();
+      }
+    }, 1500);
+  }
+  
+  function startRound() {
+    playerPattern = [];
+    generatePattern();
+    phase = 'show';
+    renderGrid(true);
+    
+    setTimeout(() => {
+      phase = 'input';
+      renderGrid(false);
+    }, 1500 + currentRound * 300);
+  }
+  
+  startRound();
+}
+
+// AI Trivia Game
+async function loadAiTrivia(params: ReturnType<typeof getDifficultyParams>) {
+  const difficulty = params.triviaQuestionCount <= 5 ? 'easy' : params.triviaQuestionCount <= 8 ? 'medium' : 'hard';
+  
+  elements.gameContainer.innerHTML = `
+    <div class="loading-game">
+      <div class="loading-spinner">🧠</div>
+      <p>AI is generating trivia questions...</p>
+    </div>
+  `;
+  
+  try {
+    const response = await fetch(`${BACKEND_URL}/games/trivia`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ difficulty, count: 5 })
+    });
+    
+    if (!response.ok) throw new Error('Failed to fetch trivia');
+    
+    const data = await response.json();
+    const questions = data.questions;
+    
+    let currentQuestion = 0;
+    let score = 0;
+    
+    function showQuestion() {
+      if (currentQuestion >= questions.length) {
+        endGame(score >= questions.length / 2, score * 20);
+        return;
+      }
+      
+      const q = questions[currentQuestion];
+      
+      elements.gameContainer.innerHTML = `
+        <div class="trivia-game">
+          <div class="trivia-info">
+            <span>Question ${currentQuestion + 1}/${questions.length}</span>
+            <span class="trivia-category">${q.category}</span>
+            <span>Score: ${score}</span>
+          </div>
+          <div class="trivia-question">${q.question}</div>
+          <div class="trivia-options">
+            ${q.options.map((opt: string, i: number) => `
+              <button class="trivia-option" data-value="${opt}">${String.fromCharCode(65 + i)}. ${opt}</button>
+            `).join('')}
+          </div>
+        </div>
+      `;
+      
+      elements.gameContainer.querySelectorAll('.trivia-option').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const value = btn.getAttribute('data-value')!;
+          const isCorrect = value === q.correct_answer;
+          
+          // Disable all buttons
+          elements.gameContainer.querySelectorAll('.trivia-option').forEach(b => {
+            (b as HTMLButtonElement).disabled = true;
+            if (b.getAttribute('data-value') === q.correct_answer) {
+              b.classList.add('correct');
+            }
+          });
+          
+          if (isCorrect) {
+            btn.classList.add('correct');
+            score++;
+            soundManager.play('correct');
+          } else {
+            btn.classList.add('wrong');
+            soundManager.play('wrong');
+          }
+          
+          // Show explanation
+          const explanationEl = document.createElement('div');
+          explanationEl.className = 'trivia-explanation';
+          explanationEl.innerHTML = `<strong>💡</strong> ${q.explanation}`;
+          elements.gameContainer.querySelector('.trivia-game')?.appendChild(explanationEl);
+          
+          currentQuestion++;
+          setTimeout(showQuestion, 2500);
+        });
+      });
+    }
+    
+    showQuestion();
+    
+  } catch (error) {
+    console.error('AI Trivia error:', error);
+    elements.gameContainer.innerHTML = `
+      <div class="error-message">
+        <p style="font-size: 48px;">⚠️</p>
+        <p>Could not connect to AI service</p>
+        <p style="font-size: 14px; color: var(--text-muted);">Make sure the backend is running</p>
+        <button class="retry-btn" onclick="location.reload()">Retry</button>
+      </div>
+    `;
+  }
+}
+
+// Word Association Game
+async function loadWordAssociation(params: ReturnType<typeof getDifficultyParams>) {
+  const difficulty = params.sequenceComplexity <= 2 ? 'easy' : params.sequenceComplexity <= 3 ? 'medium' : 'hard';
+  
+  let currentRound = 0;
+  let score = 0;
+  const totalRounds = 5;
+  let currentWord = '';
+  let currentCategory = '';
+  
+  async function startRound() {
+    if (currentRound >= totalRounds) {
+      endGame(score >= totalRounds / 2, score * 20);
+      return;
+    }
+    
+    elements.gameContainer.innerHTML = `
+      <div class="loading-game">
+        <div class="loading-spinner">🔤</div>
+        <p>Getting next word...</p>
+      </div>
+    `;
+    
+    try {
+      const response = await fetch(`${BACKEND_URL}/games/word-association/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ difficulty })
+      });
+      
+      if (!response.ok) throw new Error('Failed to start word association');
+      
+      const data = await response.json();
+      currentWord = data.starting_word;
+      currentCategory = data.target_category;
+      
+      renderWordInput(data.hint);
+      
+    } catch (error) {
+      showError();
+    }
+  }
+  
+  function renderWordInput(hint: string) {
+    const categoryLabels: Record<string, string> = {
+      'synonym': '🔄 Synonym',
+      'antonym': '↔️ Antonym',
+      'related': '🔗 Related'
+    };
+    
+    elements.gameContainer.innerHTML = `
+      <div class="word-game">
+        <div class="word-info">
+          <span>Round ${currentRound + 1}/${totalRounds}</span>
+          <span class="word-category">${categoryLabels[currentCategory] || currentCategory}</span>
+          <span>Score: ${score}</span>
+        </div>
+        <div class="word-target">
+          <span class="target-label">Find a ${currentCategory} for:</span>
+          <span class="target-word">${currentWord.toUpperCase()}</span>
+        </div>
+        <div class="word-hint">${hint}</div>
+        <div class="word-input-area">
+          <input type="text" class="word-input" id="wordInput" placeholder="Type your answer..." maxlength="30" autocomplete="off">
+          <button class="word-submit" id="wordSubmit">Submit</button>
+        </div>
+      </div>
+    `;
+    
+    const input = document.getElementById('wordInput') as HTMLInputElement;
+    const submitBtn = document.getElementById('wordSubmit')!;
+    
+    input.focus();
+    
+    const submitAnswer = async () => {
+      const userWord = input.value.trim().toLowerCase();
+      if (!userWord) return;
+      
+      submitBtn.textContent = 'Checking...';
+      (submitBtn as HTMLButtonElement).disabled = true;
+      input.disabled = true;
+      
+      try {
+        const response = await fetch(`${BACKEND_URL}/games/word-association/judge`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            target_word: currentWord,
+            user_word: userWord,
+            category: currentCategory
+          })
+        });
+        
+        if (!response.ok) throw new Error('Failed to judge');
+        
+        const result = await response.json();
+        showResult(userWord, result);
+        
+      } catch (error) {
+        showError();
+      }
+    };
+    
+    submitBtn.addEventListener('click', submitAnswer);
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') submitAnswer();
+    });
+  }
+  
+  function showResult(userWord: string, result: { is_valid: boolean; score: number; explanation: string; better_examples: string[] }) {
+    const isGood = result.is_valid && result.score >= 50;
+    
+    if (isGood) {
+      score++;
+      soundManager.play('correct');
+    } else {
+      soundManager.play('wrong');
+    }
+    
+    elements.gameContainer.innerHTML = `
+      <div class="word-result ${isGood ? 'correct' : 'wrong'}">
+        <div class="result-icon">${isGood ? '✅' : '❌'}</div>
+        <div class="result-words">
+          <span class="original-word">${currentWord}</span>
+          <span class="arrow">→</span>
+          <span class="user-word">${userWord}</span>
+        </div>
+        <div class="result-score">Score: ${result.score}/100</div>
+        <div class="result-explanation">${result.explanation}</div>
+        ${result.better_examples.length > 0 ? `
+          <div class="better-examples">
+            <strong>Better examples:</strong> ${result.better_examples.join(', ')}
+          </div>
+        ` : ''}
+      </div>
+    `;
+    
+    currentRound++;
+    setTimeout(startRound, 2500);
+  }
+  
+  function showError() {
+    elements.gameContainer.innerHTML = `
+      <div class="error-message">
+        <p style="font-size: 48px;">⚠️</p>
+        <p>Could not connect to AI service</p>
+        <button class="retry-btn" onclick="location.reload()">Retry</button>
+      </div>
+    `;
+  }
+  
+  startRound();
+}
+
+// Fact or Fiction Game
+async function loadFactOrFiction(params: ReturnType<typeof getDifficultyParams>) {
+  const difficulty = params.triviaQuestionCount <= 5 ? 'easy' : 'medium';
+  
+  elements.gameContainer.innerHTML = `
+    <div class="loading-game">
+      <div class="loading-spinner">🤔</div>
+      <p>AI is generating statements...</p>
+    </div>
+  `;
+  
+  try {
+    const response = await fetch(`${BACKEND_URL}/games/fact-or-fiction`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ difficulty, count: 5 })
+    });
+    
+    if (!response.ok) throw new Error('Failed to fetch statements');
+    
+    const data = await response.json();
+    const statements = data.statements;
+    
+    let currentStatement = 0;
+    let score = 0;
+    
+    function showStatement() {
+      if (currentStatement >= statements.length) {
+        endGame(score >= statements.length / 2, score * 20);
+        return;
+      }
+      
+      const s = statements[currentStatement];
+      
+      elements.gameContainer.innerHTML = `
+        <div class="fof-game">
+          <div class="fof-info">
+            <span>Statement ${currentStatement + 1}/${statements.length}</span>
+            <span class="fof-category">${s.category}</span>
+            <span>Score: ${score}</span>
+          </div>
+          <div class="fof-statement">"${s.statement}"</div>
+          <div class="fof-buttons">
+            <button class="fof-btn fact" data-answer="true">
+              <span class="fof-icon">✅</span>
+              <span>FACT</span>
+            </button>
+            <button class="fof-btn fiction" data-answer="false">
+              <span class="fof-icon">❌</span>
+              <span>FICTION</span>
+            </button>
+          </div>
+        </div>
+      `;
+      
+      elements.gameContainer.querySelectorAll('.fof-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const answer = btn.getAttribute('data-answer') === 'true';
+          const isCorrect = answer === s.is_fact;
+          
+          // Disable buttons
+          elements.gameContainer.querySelectorAll('.fof-btn').forEach(b => {
+            (b as HTMLButtonElement).disabled = true;
+          });
+          
+          // Show result
+          if (isCorrect) {
+            btn.classList.add('correct');
+            score++;
+            soundManager.play('correct');
+          } else {
+            btn.classList.add('wrong');
+            // Highlight correct answer
+            const correctBtn = elements.gameContainer.querySelector(`[data-answer="${s.is_fact}"]`);
+            correctBtn?.classList.add('correct');
+            soundManager.play('wrong');
+          }
+          
+          // Show explanation
+          const explanationEl = document.createElement('div');
+          explanationEl.className = 'fof-explanation';
+          explanationEl.innerHTML = `
+            <div class="fof-verdict">${s.is_fact ? '✅ This is a FACT!' : '❌ This is FICTION!'}</div>
+            <p>${s.explanation}</p>
+          `;
+          elements.gameContainer.querySelector('.fof-game')?.appendChild(explanationEl);
+          
+          currentStatement++;
+          setTimeout(showStatement, 3000);
+        });
+      });
+    }
+    
+    showStatement();
+    
+  } catch (error) {
+    console.error('Fact or Fiction error:', error);
+    elements.gameContainer.innerHTML = `
+      <div class="error-message">
+        <p style="font-size: 48px;">⚠️</p>
+        <p>Could not connect to AI service</p>
+        <p style="font-size: 14px; color: var(--text-muted);">Make sure the backend is running</p>
+        <button class="retry-btn" onclick="location.reload()">Retry</button>
+      </div>
+    `;
+  }
 }
 
 // Auto-continue timer

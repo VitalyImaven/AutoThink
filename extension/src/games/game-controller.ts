@@ -176,6 +176,10 @@ export interface DifficultyParams {
   
   // AI Trivia
   triviaQuestionCount: number;
+  
+  // Pattern Match
+  patternGridSize: number;
+  patternLength: number;
 }
 
 export function getDifficultyParams(level: number): DifficultyParams {
@@ -197,6 +201,8 @@ export function getDifficultyParams(level: number): DifficultyParams {
       wordleMaxAttempts: 6,
       sequenceComplexity: 1,
       triviaQuestionCount: 5,
+      patternGridSize: 4,
+      patternLength: 4,
     },
     medium: {
       memoryGridSize: { rows: 4, cols: 4 },
@@ -213,6 +219,8 @@ export function getDifficultyParams(level: number): DifficultyParams {
       wordleMaxAttempts: 5,
       sequenceComplexity: 2,
       triviaQuestionCount: 7,
+      patternGridSize: 4,
+      patternLength: 5,
     },
     hard: {
       memoryGridSize: { rows: 4, cols: 5 },
@@ -229,6 +237,8 @@ export function getDifficultyParams(level: number): DifficultyParams {
       wordleMaxAttempts: 5,
       sequenceComplexity: 3,
       triviaQuestionCount: 10,
+      patternGridSize: 5,
+      patternLength: 6,
     },
     expert: {
       memoryGridSize: { rows: 5, cols: 4 },
@@ -245,6 +255,8 @@ export function getDifficultyParams(level: number): DifficultyParams {
       wordleMaxAttempts: 4,
       sequenceComplexity: 4,
       triviaQuestionCount: 12,
+      patternGridSize: 5,
+      patternLength: 7,
     },
     legendary: {
       memoryGridSize: { rows: 5, cols: 6 },
@@ -261,6 +273,8 @@ export function getDifficultyParams(level: number): DifficultyParams {
       wordleMaxAttempts: 4,
       sequenceComplexity: 5,
       triviaQuestionCount: 15,
+      patternGridSize: 6,
+      patternLength: 8,
     },
   };
   
