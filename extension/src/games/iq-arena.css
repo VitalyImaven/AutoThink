@@ -2447,12 +2447,12 @@ body {
   border-color: var(--error);
 }
 
-/* Spot the Difference */
+/* Spot the Difference - Color Edition */
 .spot-game {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
+  gap: 16px;
   padding: 20px;
 }
 
@@ -2462,14 +2462,69 @@ body {
   align-items: center;
   width: 100%;
   max-width: 400px;
+  gap: 16px;
+}
+
+.spot-round {
+  font-family: var(--font-display);
+  font-size: 12px;
+  color: var(--primary);
 }
 
 .spot-instruction {
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: 16px;
   color: var(--text-secondary);
 }
 
+.spot-color-grid {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 2px solid var(--border-color);
+}
+
+.spot-color-cell {
+  width: 60px;
+  height: 60px;
+  border: 3px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.spot-color-cell:hover {
+  transform: scale(1.08);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.spot-color-cell.correct {
+  border-color: var(--success) !important;
+  box-shadow: 0 0 20px var(--success);
+  animation: correctPulse 0.5s;
+}
+
+.spot-color-cell.wrong {
+  border-color: var(--error) !important;
+  animation: shake 0.5s;
+}
+
+@keyframes correctPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+.spot-difficulty {
+  font-family: var(--font-display);
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+/* Legacy emoji grid (keep for backwards compat) */
 .spot-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -3785,6 +3840,131 @@ body {
 .quickdraw-result.wrong {
   background: rgba(255, 51, 102, 0.2);
   color: var(--error);
+}
+
+/* ==================== */
+/* TUTORIAL SCREEN      */
+/* ==================== */
+
+.tutorial-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 32px 24px;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.tutorial-header {
+  text-align: center;
+}
+
+.tutorial-header h2 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+
+.tutorial-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: linear-gradient(135deg, rgba(0, 245, 255, 0.2), rgba(139, 92, 246, 0.1));
+  border-radius: 20px;
+  font-family: var(--font-display);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--primary);
+}
+
+.tutorial-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.tutorial-rule {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.rule-number {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  border-radius: 50%;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  color: #000;
+  flex-shrink: 0;
+}
+
+.rule-text {
+  font-size: 14px;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.tutorial-tip {
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.1), rgba(0, 245, 255, 0.05));
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  color: var(--success);
+  text-align: center;
+  width: 100%;
+}
+
+.tutorial-start-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 48px;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  border: none;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  color: #000;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-top: 8px;
+}
+
+.tutorial-start-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px var(--primary-glow);
+}
+
+.tutorial-skip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.tutorial-skip input {
+  accent-color: var(--primary);
 }
 
 /* ==================== */

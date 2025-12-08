@@ -46,6 +46,419 @@ let freePlayGameSettings: Record<string, any> = {};
 let selectedFreePlayGame: GameType | null = null;
 let selectedCategory: GameCategory = 'all';
 
+// Game Tutorials - Rules and how to play for each game
+const GAME_TUTORIALS: Record<GameType, { title: string; rules: string[]; tips: string }> = {
+  'memory-match': {
+    title: '🃏 Memory Match',
+    rules: [
+      'Flip cards to reveal symbols',
+      'Find matching pairs of cards',
+      'Remember card positions',
+      'Clear all pairs to win'
+    ],
+    tips: '💡 Start from corners and edges - easier to remember!'
+  },
+  'math-challenge': {
+    title: '🔢 Math Challenge',
+    rules: [
+      'Solve arithmetic problems quickly',
+      'Select the correct answer from options',
+      '3 mistakes = game over',
+      'Faster answers = higher score'
+    ],
+    tips: '💡 Practice mental math daily to improve speed!'
+  },
+  'reaction-time': {
+    title: '🎯 Reaction Time',
+    rules: [
+      'Wait for the box to turn GREEN',
+      'Click as fast as possible when green',
+      'Don\'t click too early (red = wait)',
+      'Average of 5 attempts determines score'
+    ],
+    tips: '💡 Stay focused but relaxed - tension slows reactions!'
+  },
+  'simon-says': {
+    title: '🎨 Simon Says',
+    rules: [
+      'Watch the color sequence carefully',
+      'Repeat the sequence by clicking colors',
+      'Sequence gets longer each round',
+      'One mistake = game over'
+    ],
+    tips: '💡 Say colors aloud in your head to remember!'
+  },
+  'speed-typing': {
+    title: '⌨️ Speed Typing',
+    rules: [
+      'Type the displayed word exactly',
+      'Case doesn\'t matter',
+      '3 mistakes = game over',
+      'Complete 10 words to win'
+    ],
+    tips: '💡 Focus on accuracy first, speed comes naturally!'
+  },
+  'minesweeper': {
+    title: '💣 Minesweeper',
+    rules: [
+      'Click to reveal cells',
+      'Numbers show adjacent mines',
+      'Right-click to flag suspected mines',
+      'Reveal all safe cells to win'
+    ],
+    tips: '💡 Start with corners - they have fewer neighbors!'
+  },
+  'sliding-puzzle': {
+    title: '🧩 Sliding Puzzle',
+    rules: [
+      'Click tiles to slide them',
+      'Arrange numbers in order (1-8)',
+      'Empty space allows movement',
+      'Fewer moves = higher score'
+    ],
+    tips: '💡 Solve top row first, then work down!'
+  },
+  'wordle': {
+    title: '📝 Wordle',
+    rules: [
+      'Guess the 5-letter word in 6 tries',
+      '🟩 Green = correct letter & position',
+      '🟨 Yellow = correct letter, wrong position',
+      '⬛ Gray = letter not in word'
+    ],
+    tips: '💡 Start with words that have common vowels like ARISE!'
+  },
+  'number-sequence': {
+    title: '🔮 Number Sequence',
+    rules: [
+      'Find the pattern in the number series',
+      'Select the next number in sequence',
+      'Patterns can be +, -, ×, or complex',
+      '3 mistakes = game over'
+    ],
+    tips: '💡 Check differences between consecutive numbers first!'
+  },
+  'pattern-match': {
+    title: '🔷 Pattern Match',
+    rules: [
+      'Memorize the highlighted pattern',
+      'Pattern disappears after a moment',
+      'Click cells to recreate the pattern',
+      'Accuracy determines your score'
+    ],
+    tips: '💡 Break complex patterns into smaller chunks!'
+  },
+  'ai-trivia': {
+    title: '🧪 AI Trivia',
+    rules: [
+      'Answer AI-generated questions',
+      'Select from 4 possible answers',
+      '3 wrong answers = game over',
+      'Questions get harder as you progress'
+    ],
+    tips: '💡 Read all options before choosing - one is always tricky!'
+  },
+  'word-association': {
+    title: '💭 Word Association',
+    rules: [
+      'See a word and category (synonym/antonym)',
+      'Type a word that matches the category',
+      'AI judges if your answer is valid',
+      '3 wrong answers = game over'
+    ],
+    tips: '💡 Think of common, well-known words!'
+  },
+  'fact-or-fiction': {
+    title: '❓ Fact or Fiction',
+    rules: [
+      'Read each statement carefully',
+      'Decide if it\'s TRUE or FALSE',
+      'AI generates tricky statements',
+      '3 wrong answers = game over'
+    ],
+    tips: '💡 If it sounds too amazing, it might be fiction!'
+  },
+  'color-match': {
+    title: '🌈 Color Match (Stroop Test)',
+    rules: [
+      'See a color word (e.g., "RED")',
+      'Click the COLOR of the text, not the word',
+      'This tests your brain\'s processing',
+      '3 mistakes = game over'
+    ],
+    tips: '💡 Ignore reading the word - focus only on the color!'
+  },
+  'visual-memory': {
+    title: '👁️ Visual Memory',
+    rules: [
+      'Memorize highlighted cells in the grid',
+      'Click the cells that were highlighted',
+      'Grid gets larger as you level up',
+      '3 wrong clicks = lose a life'
+    ],
+    tips: '💡 Look for shapes or patterns in the highlighted cells!'
+  },
+  'anagram': {
+    title: '🔤 Anagram',
+    rules: [
+      'See scrambled letters',
+      'Unscramble to form a real word',
+      'Type your answer and press Enter',
+      '3 wrong answers = game over'
+    ],
+    tips: '💡 Look for common letter combinations like TH, ING, ED!'
+  },
+  'emoji-decoder': {
+    title: '😀 Emoji Decoder',
+    rules: [
+      'See emojis representing a word/phrase',
+      'Guess what they represent',
+      'Type your answer and press Enter',
+      '3 wrong answers = game over'
+    ],
+    tips: '💡 Think of common phrases, movies, or objects!'
+  },
+  'mental-math': {
+    title: '🧮 Mental Math Chain',
+    rules: [
+      'Solve a chain of calculations',
+      'Example: 5 + 3 × 2 - 4 = ?',
+      'Calculate left to right',
+      'Select the correct answer'
+    ],
+    tips: '💡 Write intermediate results in your head!'
+  },
+  'spot-difference': {
+    title: '🔍 Spot the Difference',
+    rules: [
+      'Find the color that\'s slightly different',
+      'One square has a different shade',
+      'Click the odd one out',
+      '3 mistakes = game over'
+    ],
+    tips: '💡 Relax your eyes and scan the whole grid!'
+  },
+  'word-search': {
+    title: '🔎 Word Search',
+    rules: [
+      'Find hidden words in the letter grid',
+      'Words can be horizontal or vertical',
+      'Click letters to select them',
+      'Find all words to win'
+    ],
+    tips: '💡 Scan for the first letter of each word!'
+  },
+  'ai-riddles': {
+    title: '🎭 AI Riddles',
+    rules: [
+      'Read the AI-generated riddle',
+      'Think about what it describes',
+      'Type your answer',
+      '3 wrong answers = game over'
+    ],
+    tips: '💡 Riddles often have literal answers hidden in wordplay!'
+  },
+  'tetris': {
+    title: '🧱 Tetris',
+    rules: [
+      'Falling blocks must be stacked',
+      'Complete horizontal lines to clear them',
+      'Game ends when blocks reach top',
+      'Use arrows to move, up to rotate'
+    ],
+    tips: '💡 Keep the stack flat - avoid creating holes!'
+  },
+  'game-2048': {
+    title: '🔢 2048',
+    rules: [
+      'Swipe to move all tiles',
+      'Same numbers merge when they touch',
+      'Reach 2048 to win',
+      'Game ends when no moves left'
+    ],
+    tips: '💡 Keep your highest tile in a corner!'
+  },
+  'sudoku': {
+    title: '📊 Sudoku',
+    rules: [
+      'Fill the 9x9 grid with numbers 1-9',
+      'Each row must have 1-9 (no repeats)',
+      'Each column must have 1-9',
+      'Each 3x3 box must have 1-9'
+    ],
+    tips: '💡 Start with rows/columns that have most numbers!'
+  },
+  'hangman': {
+    title: '🎯 Hangman',
+    rules: [
+      'Guess the hidden word letter by letter',
+      'Correct letters are revealed',
+      'Wrong guesses add body parts',
+      '6 wrong guesses = game over'
+    ],
+    tips: '💡 Try common letters first: E, A, R, I, O, T!'
+  },
+  'connections': {
+    title: '🔗 Connections',
+    rules: [
+      'Group 16 words into 4 categories',
+      'Select 4 words that share a theme',
+      'Submit to check if correct',
+      '4 wrong guesses = game over'
+    ],
+    tips: '💡 Look for the most obvious group first!'
+  },
+  'snake': {
+    title: '🐍 Snake',
+    rules: [
+      'Control the snake with arrows',
+      'Eat food to grow longer',
+      'Don\'t hit walls or yourself',
+      'Survive as long as possible'
+    ],
+    tips: '💡 Plan your path - think 2-3 moves ahead!'
+  },
+  'match-three': {
+    title: '🍬 Match 3',
+    rules: [
+      'Swap adjacent items to match 3+',
+      'Matches clear and score points',
+      'Limited moves available',
+      'Reach target score to win'
+    ],
+    tips: '💡 Look for moves that create chain reactions!'
+  },
+  'google-feud': {
+    title: '🔍 Search Feud',
+    rules: [
+      'Guess popular search autocompletes',
+      'Type what people commonly search',
+      'Find all answers on the board',
+      '5 wrong guesses = game over'
+    ],
+    tips: '💡 Think about what most people would search!'
+  },
+  'boggle': {
+    title: '🔤 Word Blitz',
+    rules: [
+      'Find words in the letter grid',
+      'Click letters to form words',
+      'Words must be 3+ letters',
+      '60 seconds to find as many as possible'
+    ],
+    tips: '💡 Focus on 3-4 letter words - they\'re easier!'
+  },
+  'aim-trainer': {
+    title: '🎯 Aim Trainer',
+    rules: [
+      'Click targets as they appear',
+      'Smaller targets = more points',
+      'Miss = target disappears',
+      'Hit 20 targets to complete'
+    ],
+    tips: '💡 Move your cursor to center after each click!'
+  },
+  'jigsaw': {
+    title: '🧩 Jigsaw Puzzle',
+    rules: [
+      'Click two pieces to swap them',
+      'Arrange pieces in correct positions',
+      'Numbers help identify order',
+      'Fewer moves = higher score'
+    ],
+    tips: '💡 Work on one row at a time!'
+  },
+  'n-back': {
+    title: '🧠 N-Back Training',
+    rules: [
+      'Watch positions flash on grid',
+      'Remember position from N steps ago',
+      'Press YES if position matches N-back',
+      'Press NO if different'
+    ],
+    tips: '💡 Say positions aloud: "top-left, center, bottom"!'
+  },
+  'crossword': {
+    title: '✏️ Mini Crossword',
+    rules: [
+      'Fill in words based on clues',
+      'Across and Down clues provided',
+      'Click cell then type letter',
+      'Complete all words to win'
+    ],
+    tips: '💡 Start with the clues you\'re sure about!'
+  },
+  'solitaire': {
+    title: '🃏 Solitaire',
+    rules: [
+      'Move cards to foundation (A to K)',
+      'Build down in alternating colors',
+      'Click stock to draw cards',
+      'Clear all cards to win'
+    ],
+    tips: '💡 Reveal face-down cards early!'
+  },
+  'quick-draw': {
+    title: '🎨 Quick Draw',
+    rules: [
+      'Draw the word shown on screen',
+      'You have 20 seconds',
+      'AI tries to guess your drawing',
+      'Clear, simple drawings work best'
+    ],
+    tips: '💡 Draw the most recognizable feature first!'
+  },
+};
+
+// Show tutorial before starting game
+function showTutorial(gameType: GameType, onStart: () => void) {
+  const tutorial = GAME_TUTORIALS[gameType];
+  if (!tutorial) {
+    onStart();
+    return;
+  }
+  
+  elements.gameContainer.innerHTML = `
+    <div class="tutorial-screen">
+      <div class="tutorial-header">
+        <h2>${tutorial.title}</h2>
+        <span class="tutorial-badge">How to Play</span>
+      </div>
+      <div class="tutorial-rules">
+        ${tutorial.rules.map((rule, i) => `
+          <div class="tutorial-rule">
+            <span class="rule-number">${i + 1}</span>
+            <span class="rule-text">${rule}</span>
+          </div>
+        `).join('')}
+      </div>
+      <div class="tutorial-tip">${tutorial.tips}</div>
+      <button class="tutorial-start-btn" id="startGameBtn">
+        <span>Start Game</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+      </button>
+      <label class="tutorial-skip">
+        <input type="checkbox" id="skipTutorials"> Don't show tutorials again
+      </label>
+    </div>
+  `;
+  
+  document.getElementById('startGameBtn')?.addEventListener('click', () => {
+    const skipCheckbox = document.getElementById('skipTutorials') as HTMLInputElement;
+    if (skipCheckbox?.checked) {
+      localStorage.setItem('iq-arena-skip-tutorials', 'true');
+    }
+    onStart();
+  });
+}
+
+// Check if tutorials should be skipped
+function shouldSkipTutorial(): boolean {
+  return localStorage.getItem('iq-arena-skip-tutorials') === 'true';
+}
+
 // DOM Elements
 const elements = {
   // Screens
@@ -550,12 +963,8 @@ function stopTimer() {
   }
 }
 
-// Load game based on type
-async function loadGame(gameType: GameType, mode: GameMode) {
-  const params = mode === 'career' 
-    ? getDifficultyParams(currentProgress.level)
-    : getFreePlayDifficultyParams();
-  
+// Actually load the game after tutorial
+function actuallyLoadGame(gameType: GameType, params: ReturnType<typeof getDifficultyParams>) {
   switch (gameType) {
     case 'memory-match':
       loadMemoryMatch(params);
@@ -668,6 +1077,19 @@ async function loadGame(gameType: GameType, mode: GameMode) {
     case 'quick-draw':
       loadQuickDraw();
       break;
+  }
+}
+
+// Load game - shows tutorial first unless skipped
+async function loadGame(gameType: GameType, mode: GameMode) {
+  const params = mode === 'career' 
+    ? getDifficultyParams(currentProgress.level)
+    : getFreePlayDifficultyParams();
+  
+  if (shouldSkipTutorial()) {
+    actuallyLoadGame(gameType, params);
+  } else {
+    showTutorial(gameType, () => actuallyLoadGame(gameType, params));
   }
 }
 
@@ -2743,28 +3165,76 @@ function loadMentalMath(_params: ReturnType<typeof getDifficultyParams>) {
   showProblem();
 }
 
-// Spot the Difference Game
+// Spot the Difference Game - Color Edition
 function loadSpotDifference(_params: ReturnType<typeof getDifficultyParams>) {
-  const patterns = [
-    { items: ['🍎', '🍎', '🍎', '🍎', '🍊', '🍎', '🍎', '🍎', '🍎'], different: 4 },
-    { items: ['⭐', '⭐', '⭐', '✨', '⭐', '⭐', '⭐', '⭐', '⭐'], different: 3 },
-    { items: ['🔵', '🔵', '🔵', '🔵', '🔵', '🔵', '🟣', '🔵', '🔵'], different: 6 },
-    { items: ['🐱', '🐱', '🐱', '🐱', '🐱', '😺', '🐱', '🐱', '🐱'], different: 5 },
-    { items: ['❤️', '❤️', '💗', '❤️', '❤️', '❤️', '❤️', '❤️', '❤️'], different: 2 },
+  // Base colors with their HSL values for easy manipulation
+  const baseColors = [
+    { name: 'red', h: 0, s: 70, l: 50 },
+    { name: 'blue', h: 210, s: 70, l: 50 },
+    { name: 'green', h: 120, s: 60, l: 45 },
+    { name: 'purple', h: 270, s: 60, l: 55 },
+    { name: 'orange', h: 30, s: 80, l: 50 },
+    { name: 'cyan', h: 180, s: 70, l: 45 },
+    { name: 'pink', h: 330, s: 70, l: 60 },
+    { name: 'teal', h: 160, s: 50, l: 45 },
   ];
   
   let score = 0;
   let mistakes = 0;
   const MAX_MISTAKES = 3;
   let round = 0;
+  const MAX_ROUNDS = 15;
+  let gridSize = 9; // 3x3
+  
+  function generateRound() {
+    // Increase difficulty over time
+    if (round >= 5) gridSize = 16; // 4x4
+    if (round >= 10) gridSize = 25; // 5x5
+    
+    const cols = Math.sqrt(gridSize);
+    
+    // Pick a random base color
+    const baseColor = baseColors[Math.floor(Math.random() * baseColors.length)];
+    
+    // Calculate difference based on round (harder = smaller difference)
+    const difficultyMultiplier = Math.max(5, 20 - round); // Starts at 20, goes down to 5
+    const hueDiff = difficultyMultiplier;
+    const satDiff = difficultyMultiplier * 0.8;
+    const lightDiff = difficultyMultiplier * 0.6;
+    
+    // Randomly choose which property to change
+    const changeType = Math.floor(Math.random() * 3);
+    let differentH = baseColor.h;
+    let differentS = baseColor.s;
+    let differentL = baseColor.l;
+    
+    switch (changeType) {
+      case 0: differentH = baseColor.h + hueDiff; break;
+      case 1: differentS = Math.min(100, baseColor.s + satDiff); break;
+      case 2: differentL = Math.min(80, baseColor.l + lightDiff); break;
+    }
+    
+    const baseHSL = `hsl(${baseColor.h}, ${baseColor.s}%, ${baseColor.l}%)`;
+    const differentHSL = `hsl(${differentH}, ${differentS}%, ${differentL}%)`;
+    
+    // Pick random position for different color
+    const differentIndex = Math.floor(Math.random() * gridSize);
+    
+    return { baseHSL, differentHSL, differentIndex, cols };
+  }
   
   function showRound() {
-    if (mistakes >= MAX_MISTAKES || round >= 10) {
+    if (mistakes >= MAX_MISTAKES) {
       endGame(score > 0, score * 10);
       return;
     }
     
-    const pattern = patterns[Math.floor(Math.random() * patterns.length)];
+    if (round >= MAX_ROUNDS) {
+      endGame(true, score * 10 + 50); // Bonus for completing all rounds
+      return;
+    }
+    
+    const { baseHSL, differentHSL, differentIndex, cols } = generateRound();
     
     elements.gameContainer.innerHTML = `
       <div class="spot-game">
@@ -2775,32 +3245,38 @@ function loadSpotDifference(_params: ReturnType<typeof getDifficultyParams>) {
             `).join('')}
           </div>
           <div class="spot-score">Score: ${score}</div>
+          <div class="spot-round">Round ${round + 1}/${MAX_ROUNDS}</div>
         </div>
-        <div class="spot-instruction">Find the different one!</div>
-        <div class="spot-grid">
-          ${pattern.items.map((item, i) => `
-            <button class="spot-item" data-index="${i}">${item}</button>
+        <div class="spot-instruction">Find the slightly different color!</div>
+        <div class="spot-color-grid" style="grid-template-columns: repeat(${cols}, 1fr)">
+          ${Array(cols * cols).fill(0).map((_, i) => `
+            <button class="spot-color-cell" data-index="${i}" 
+                    style="background-color: ${i === differentIndex ? differentHSL : baseHSL}">
+            </button>
           `).join('')}
         </div>
+        <div class="spot-difficulty">Difficulty: ${round < 5 ? 'Easy' : round < 10 ? 'Medium' : 'Hard'}</div>
       </div>
     `;
     
-    elements.gameContainer.querySelectorAll('.spot-item').forEach(btn => {
+    elements.gameContainer.querySelectorAll('.spot-color-cell').forEach(btn => {
       btn.addEventListener('click', () => {
         const index = parseInt(btn.getAttribute('data-index')!);
-        if (index === pattern.different) {
+        
+        if (index === differentIndex) {
           score++;
+          round++;
           soundManager.play('correct');
           btn.classList.add('correct');
+          setTimeout(showRound, 600);
         } else {
           mistakes++;
           soundManager.play('wrong');
           btn.classList.add('wrong');
-          elements.gameContainer.querySelector(`[data-index="${pattern.different}"]`)?.classList.add('correct');
+          // Highlight the correct one
+          elements.gameContainer.querySelector(`[data-index="${differentIndex}"]`)?.classList.add('correct');
+          setTimeout(showRound, 1200);
         }
-        
-        round++;
-        setTimeout(showRound, 800);
       });
     });
   }
