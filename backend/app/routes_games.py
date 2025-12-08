@@ -78,6 +78,22 @@ class WordChainResponse(BaseModel):
     hint: str
 
 
+class RiddleRequest(BaseModel):
+    difficulty: str = "medium"
+    count: int = 5
+
+
+class Riddle(BaseModel):
+    riddle: str
+    answer: str
+    hint: Optional[str] = None
+    category: str
+
+
+class RiddleResponse(BaseModel):
+    riddles: List[Riddle]
+
+
 def parse_json_response(content: str) -> any:
     """Clean and parse JSON from AI response."""
     # Remove markdown code blocks
@@ -388,3 +404,85 @@ async def start_word_chain(request: WordChainRequest):
         target_category=category,
         hint=hints.get(category, "Find an associated word")
     )
+
+
+# AI Riddles endpoint
+@router.post("/riddles", response_model=RiddleResponse)
+async def generate_riddles(request: RiddleRequest):
+    """Generate AI-powered riddles."""
+    
+    print(f"\n{'='*60}")
+    print(f"🎭 RIDDLES REQUEST")
+    print(f"{'='*60}")
+    print(f"Difficulty: {request.difficulty}")
+    print(f"Count: {request.count}")
+    print(f"Model: {GAMES_MODEL}")
+    
+    difficulty_hints = {
+        "easy": "simple and straightforward riddles for beginners",
+        "medium": "classic riddles that require some thinking",
+        "hard": "complex riddles with tricky wordplay or lateral thinking"
+    }
+    
+    prompt = f"""Generate exactly {request.count} unique riddles.
+Difficulty level: {request.difficulty} ({difficulty_hints.get(request.difficulty, "medium difficulty")})
+
+Requirements:
+- Each riddle should be clever and engaging
+- Answers should be single words or short phrases
+- Include a variety of riddle types (wordplay, logic, lateral thinking)
+- Riddles should be original or classic but not too well-known
+- Cover various categories: nature, objects, concepts, wordplay
+
+IMPORTANT: Return ONLY a valid JSON array, no markdown, no explanation, just the JSON.
+
+Format:
+[
+  {{
+    "riddle": "The riddle text...",
+    "answer": "ANSWER",
+    "hint": "Optional hint",
+    "category": "wordplay"
+  }}
+]"""
+
+    try:
+        print(f"📤 Sending request to OpenAI...")
+        
+        messages = [
+            {
+                "role": "system", 
+                "content": "You are a riddle master. You MUST respond with ONLY a valid JSON array containing riddles. No other text, no markdown code blocks, just pure JSON array."
+            },
+            {"role": "user", "content": prompt}
+        ]
+        
+        content = await call_openai_with_retry(messages, max_tokens=4000)
+        
+        print(f"Response content: {content[:500]}...")
+        
+        riddles_data = parse_json_response(content)
+        
+        riddles = [
+            Riddle(
+                riddle=r["riddle"],
+                answer=r["answer"].upper(),
+                hint=r.get("hint"),
+                category=r.get("category", "general")
+            )
+            for r in riddles_data
+        ]
+        
+        print(f"✅ Generated {len(riddles)} riddles")
+        return RiddleResponse(riddles=riddles)
+        
+    except json.JSONDecodeError as e:
+        print(f"❌ JSON Parse Error: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to parse AI response: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ UNEXPECTED Error: {type(e).__name__}: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error generating riddles: {str(e)}")

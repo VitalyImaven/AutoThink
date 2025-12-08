@@ -1,6 +1,6 @@
 // IQ Arena - Main Controller
 
-import { GameType, PlayerProgress, GameDifficulty } from './types';
+import { GameType, PlayerProgress, GameDifficulty, GameCategory } from './types';
 import { 
   loadProgress, 
   getLevelInfo, 
@@ -43,6 +43,7 @@ let currentMode: GameMode = 'career';
 let freePlayDifficulty: GameDifficulty = 'medium';
 let freePlayGameSettings: Record<string, any> = {};
 let selectedFreePlayGame: GameType | null = null;
+let selectedCategory: GameCategory = 'all';
 
 // DOM Elements
 const elements = {
@@ -181,11 +182,29 @@ function renderCareerGamesGrid() {
   });
 }
 
-// Render Free Play games grid (all unlocked)
+// Render Free Play games grid (all unlocked, filtered by category)
 function renderFreePlayGamesGrid() {
   const allGames = Object.values(GAME_CONFIGS);
+  const filteredGames = selectedCategory === 'all' 
+    ? allGames 
+    : allGames.filter(g => g.category === selectedCategory);
   
-  elements.freePlayGamesGrid.innerHTML = allGames.map(game => `
+  // Update title and count
+  const categoryTitles: Record<GameCategory, string> = {
+    'all': 'All Games',
+    'memory': 'Memory Games',
+    'speed': 'Speed Games',
+    'logic': 'Logic Games',
+    'words': 'Word Games',
+    'ai': 'AI-Powered Games'
+  };
+  
+  const titleEl = document.getElementById('categoryTitle');
+  const countEl = document.getElementById('gameCount');
+  if (titleEl) titleEl.textContent = categoryTitles[selectedCategory];
+  if (countEl) countEl.textContent = `(${filteredGames.length})`;
+  
+  elements.freePlayGamesGrid.innerHTML = filteredGames.map(game => `
     <div class="game-card" data-game="${game.type}">
       <span class="game-card-icon">${game.icon}</span>
       <span class="game-card-name">${game.name}</span>
@@ -566,6 +585,37 @@ async function loadGame(gameType: GameType, mode: GameMode) {
       break;
     case 'fact-or-fiction':
       loadFactOrFiction(params);
+      break;
+    // New games
+    case 'speed-typing':
+      loadSpeedTyping(params);
+      break;
+    case 'color-match':
+      loadColorMatch(params);
+      break;
+    case 'reaction-time':
+      loadReactionTime();
+      break;
+    case 'visual-memory':
+      loadVisualMemory(params);
+      break;
+    case 'anagram':
+      loadAnagram(params);
+      break;
+    case 'emoji-decoder':
+      loadEmojiDecoder(params);
+      break;
+    case 'ai-riddles':
+      loadAiRiddles(params);
+      break;
+    case 'mental-math':
+      loadMentalMath(params);
+      break;
+    case 'spot-difference':
+      loadSpotDifference(params);
+      break;
+    case 'word-search':
+      loadWordSearch(params);
       break;
   }
 }
@@ -2056,6 +2106,843 @@ async function loadFactOrFiction(params: ReturnType<typeof getDifficultyParams>)
   showStatement();
 }
 
+// ==================== NEW GAMES ====================
+
+// Speed Typing Game
+function loadSpeedTyping(_params: ReturnType<typeof getDifficultyParams>) {
+  const words = [
+    'brain', 'think', 'smart', 'quick', 'logic', 'solve', 'learn', 'focus',
+    'power', 'skill', 'sharp', 'speed', 'fast', 'type', 'word', 'game',
+    'challenge', 'keyboard', 'fingers', 'practice', 'memory', 'reaction',
+    'intelligence', 'cognitive', 'mental', 'exercise', 'training', 'brain',
+    'puzzle', 'trivia', 'knowledge', 'wisdom', 'genius', 'expert', 'master'
+  ];
+  
+  let currentWordIndex = 0;
+  let score = 0;
+  let mistakes = 0;
+  const MAX_MISTAKES = 3;
+  const totalWords = 10;
+  let startTime = 0;
+  
+  function showWord() {
+    if (mistakes >= MAX_MISTAKES) {
+      endGame(score > 0, score * 10);
+      return;
+    }
+    
+    if (currentWordIndex >= totalWords) {
+      const timeBonus = Math.max(0, 100 - Math.floor((Date.now() - startTime) / 1000));
+      endGame(true, score * 10 + timeBonus);
+      return;
+    }
+    
+    const word = words[Math.floor(Math.random() * words.length)];
+    
+    elements.gameContainer.innerHTML = `
+      <div class="typing-game">
+        <div class="typing-header">
+          <div class="lives-display">
+            ${Array(MAX_MISTAKES).fill(0).map((_, i) => `
+              <span class="life-heart ${i < MAX_MISTAKES - mistakes ? 'active' : 'lost'}">❤️</span>
+            `).join('')}
+          </div>
+          <div class="typing-score">
+            <span class="score-label">Score</span>
+            <span class="score-value">${score}</span>
+          </div>
+        </div>
+        <div class="typing-word-display">${word.toUpperCase()}</div>
+        <input type="text" class="typing-input" id="typingInput" placeholder="Type the word..." autocomplete="off" autocapitalize="off">
+        <div class="typing-progress">Word ${currentWordIndex + 1} of ${totalWords}</div>
+      </div>
+    `;
+    
+    const input = document.getElementById('typingInput') as HTMLInputElement;
+    input.focus();
+    
+    if (currentWordIndex === 0) startTime = Date.now();
+    
+    input.addEventListener('input', () => {
+      const typed = input.value.toLowerCase();
+      if (typed === word) {
+        score++;
+        soundManager.play('correct');
+        currentWordIndex++;
+        setTimeout(showWord, 300);
+      } else if (typed.length >= word.length) {
+        mistakes++;
+        soundManager.play('wrong');
+        input.value = '';
+        input.classList.add('shake');
+        setTimeout(() => input.classList.remove('shake'), 500);
+        if (mistakes >= MAX_MISTAKES) {
+          setTimeout(showWord, 500);
+        }
+      }
+    });
+  }
+  
+  showWord();
+}
+
+// Color Match (Stroop Test)
+function loadColorMatch(_params: ReturnType<typeof getDifficultyParams>) {
+  const colors = [
+    { name: 'RED', color: '#FF3366' },
+    { name: 'BLUE', color: '#00D4FF' },
+    { name: 'GREEN', color: '#00FF88' },
+    { name: 'YELLOW', color: '#FFE500' },
+    { name: 'PURPLE', color: '#8B5CF6' },
+  ];
+  
+  let score = 0;
+  let mistakes = 0;
+  const MAX_MISTAKES = 3;
+  let round = 0;
+  const totalRounds = 15;
+  
+  function showRound() {
+    if (mistakes >= MAX_MISTAKES || round >= totalRounds) {
+      endGame(score > 0, score * 10);
+      return;
+    }
+    
+    // Random word and color (often mismatched for Stroop effect)
+    const wordColor = colors[Math.floor(Math.random() * colors.length)];
+    const textColor = Math.random() > 0.3 
+      ? colors[Math.floor(Math.random() * colors.length)]
+      : wordColor;
+    
+    elements.gameContainer.innerHTML = `
+      <div class="color-match-game">
+        <div class="color-header">
+          <div class="lives-display">
+            ${Array(MAX_MISTAKES).fill(0).map((_, i) => `
+              <span class="life-heart ${i < MAX_MISTAKES - mistakes ? 'active' : 'lost'}">❤️</span>
+            `).join('')}
+          </div>
+          <div class="color-score">Score: ${score}</div>
+        </div>
+        <div class="color-instruction">What COLOR is the text?</div>
+        <div class="color-word" style="color: ${textColor.color}">${wordColor.name}</div>
+        <div class="color-options">
+          ${colors.map(c => `
+            <button class="color-option" data-color="${c.name}" style="background: ${c.color}"></button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+    
+    elements.gameContainer.querySelectorAll('.color-option').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const selected = btn.getAttribute('data-color');
+        const isCorrect = selected === textColor.name;
+        
+        if (isCorrect) {
+          score++;
+          soundManager.play('correct');
+        } else {
+          mistakes++;
+          soundManager.play('wrong');
+        }
+        
+        round++;
+        setTimeout(showRound, 300);
+      });
+    });
+  }
+  
+  showRound();
+}
+
+// Reaction Time Game
+function loadReactionTime() {
+  let attempts = 0;
+  let totalTime = 0;
+  const maxAttempts = 5;
+  let waitTimeout: number | null = null;
+  let startTime = 0;
+  
+  function showWaiting() {
+    if (attempts >= maxAttempts) {
+      const avgTime = Math.round(totalTime / maxAttempts);
+      const score = Math.max(0, 500 - avgTime);
+      endGame(avgTime < 400, score);
+      return;
+    }
+    
+    elements.gameContainer.innerHTML = `
+      <div class="reaction-game waiting">
+        <div class="reaction-info">Attempt ${attempts + 1}/${maxAttempts}</div>
+        <div class="reaction-box">
+          <div class="reaction-text">Wait for GREEN...</div>
+        </div>
+        <div class="reaction-hint">Click when the box turns green!</div>
+      </div>
+    `;
+    
+    const box = elements.gameContainer.querySelector('.reaction-box')!;
+    
+    // Random delay 1-4 seconds
+    const delay = 1000 + Math.random() * 3000;
+    
+    waitTimeout = window.setTimeout(() => {
+      startTime = Date.now();
+      box.classList.add('ready');
+      (box.querySelector('.reaction-text') as HTMLElement).textContent = 'CLICK NOW!';
+      
+      box.addEventListener('click', handleClick);
+    }, delay);
+    
+    // Handle early click
+    box.addEventListener('click', handleEarlyClick);
+  }
+  
+  function handleEarlyClick() {
+    if (startTime === 0) {
+      if (waitTimeout) clearTimeout(waitTimeout);
+      soundManager.play('wrong');
+      
+      elements.gameContainer.innerHTML = `
+        <div class="reaction-game too-early">
+          <div class="reaction-box">
+            <div class="reaction-text">Too Early! 😅</div>
+          </div>
+        </div>
+      `;
+      
+      setTimeout(showWaiting, 1500);
+    }
+  }
+  
+  function handleClick() {
+    if (startTime > 0) {
+      const reactionTime = Date.now() - startTime;
+      totalTime += reactionTime;
+      attempts++;
+      startTime = 0;
+      
+      soundManager.play('correct');
+      
+      elements.gameContainer.innerHTML = `
+        <div class="reaction-game result">
+          <div class="reaction-time">${reactionTime}ms</div>
+          <div class="reaction-rating">${reactionTime < 200 ? '🔥 Incredible!' : reactionTime < 300 ? '⚡ Fast!' : reactionTime < 400 ? '👍 Good' : '🐢 Keep trying'}</div>
+        </div>
+      `;
+      
+      setTimeout(showWaiting, 1500);
+    }
+  }
+  
+  showWaiting();
+}
+
+// Visual Memory Game
+function loadVisualMemory(_params: ReturnType<typeof getDifficultyParams>) {
+  let gridSize = 3;
+  let level = 1;
+  let lives = 3;
+  
+  function startLevel() {
+    if (lives <= 0) {
+      endGame(level > 1, (level - 1) * 20);
+      return;
+    }
+    
+    const totalCells = gridSize * gridSize;
+    const highlightCount = Math.min(gridSize + level - 1, Math.floor(totalCells * 0.6));
+    
+    // Generate random highlighted cells
+    const highlighted: number[] = [];
+    while (highlighted.length < highlightCount) {
+      const cell = Math.floor(Math.random() * totalCells);
+      if (!highlighted.includes(cell)) highlighted.push(cell);
+    }
+    
+    // Show pattern
+    elements.gameContainer.innerHTML = `
+      <div class="visual-memory-game">
+        <div class="vm-header">
+          <div class="lives-display">
+            ${Array(3).fill(0).map((_, i) => `
+              <span class="life-heart ${i < lives ? 'active' : 'lost'}">❤️</span>
+            `).join('')}
+          </div>
+          <div class="vm-level">Level ${level}</div>
+        </div>
+        <div class="vm-instruction">Memorize the pattern!</div>
+        <div class="vm-grid" style="grid-template-columns: repeat(${gridSize}, 1fr)">
+          ${Array(totalCells).fill(0).map((_, i) => `
+            <div class="vm-cell ${highlighted.includes(i) ? 'highlighted' : ''}" data-index="${i}"></div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+    
+    // Hide after delay
+    setTimeout(() => {
+      let playerClicks: number[] = [];
+      let wrongClicks = 0;
+      
+      elements.gameContainer.innerHTML = `
+        <div class="visual-memory-game">
+          <div class="vm-header">
+            <div class="lives-display">
+              ${Array(3).fill(0).map((_, i) => `
+                <span class="life-heart ${i < lives ? 'active' : 'lost'}">❤️</span>
+              `).join('')}
+            </div>
+            <div class="vm-level">Level ${level}</div>
+          </div>
+          <div class="vm-instruction">Click the highlighted cells! (${highlightCount - playerClicks.length} left)</div>
+          <div class="vm-grid" style="grid-template-columns: repeat(${gridSize}, 1fr)">
+            ${Array(totalCells).fill(0).map((_, i) => `
+              <div class="vm-cell" data-index="${i}"></div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+      
+      elements.gameContainer.querySelectorAll('.vm-cell').forEach(cell => {
+        cell.addEventListener('click', () => {
+          const index = parseInt(cell.getAttribute('data-index')!);
+          if (playerClicks.includes(index)) return;
+          
+          playerClicks.push(index);
+          
+          if (highlighted.includes(index)) {
+            cell.classList.add('correct');
+            soundManager.play('correct');
+            
+            // Update instruction
+            const instruction = elements.gameContainer.querySelector('.vm-instruction');
+            if (instruction) {
+              instruction.textContent = `Click the highlighted cells! (${highlightCount - playerClicks.filter(c => highlighted.includes(c)).length} left)`;
+            }
+            
+            // Check if all found
+            if (playerClicks.filter(c => highlighted.includes(c)).length === highlightCount) {
+              level++;
+              if (level > 3 && gridSize < 5) gridSize++;
+              setTimeout(startLevel, 1000);
+            }
+          } else {
+            cell.classList.add('wrong');
+            wrongClicks++;
+            soundManager.play('wrong');
+            
+            if (wrongClicks >= 3) {
+              lives--;
+              if (lives > 0) {
+                setTimeout(startLevel, 1000);
+              } else {
+                setTimeout(() => endGame(level > 1, (level - 1) * 20), 1000);
+              }
+            }
+          }
+        });
+      });
+    }, 1500 + level * 200);
+  }
+  
+  startLevel();
+}
+
+// Anagram Game
+function loadAnagram(_params: ReturnType<typeof getDifficultyParams>) {
+  const wordList = [
+    'BRAIN', 'SMART', 'THINK', 'LOGIC', 'SOLVE', 'LEARN', 'FOCUS', 'POWER',
+    'QUICK', 'SHARP', 'PUZZLE', 'TRIVIA', 'WISDOM', 'GENIUS', 'MEMORY',
+    'SKILL', 'SPEED', 'MENTAL', 'MASTER'
+  ];
+  
+  let score = 0;
+  let mistakes = 0;
+  const MAX_MISTAKES = 3;
+  let round = 0;
+  
+  function scramble(word: string): string {
+    const arr = word.split('');
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr.join('');
+  }
+  
+  function showRound() {
+    if (mistakes >= MAX_MISTAKES) {
+      endGame(score > 0, score * 15);
+      return;
+    }
+    
+    const word = wordList[Math.floor(Math.random() * wordList.length)];
+    let scrambled = scramble(word);
+    while (scrambled === word) scrambled = scramble(word);
+    
+    elements.gameContainer.innerHTML = `
+      <div class="anagram-game">
+        <div class="anagram-header">
+          <div class="lives-display">
+            ${Array(MAX_MISTAKES).fill(0).map((_, i) => `
+              <span class="life-heart ${i < MAX_MISTAKES - mistakes ? 'active' : 'lost'}">❤️</span>
+            `).join('')}
+          </div>
+          <div class="anagram-score">Score: ${score}</div>
+        </div>
+        <div class="anagram-scrambled">${scrambled}</div>
+        <input type="text" class="anagram-input" id="anagramInput" placeholder="Unscramble the word..." maxlength="${word.length}" autocomplete="off" autocapitalize="characters">
+        <div class="anagram-hint">Hint: ${word.length} letters</div>
+      </div>
+    `;
+    
+    const input = document.getElementById('anagramInput') as HTMLInputElement;
+    input.focus();
+    
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        const answer = input.value.toUpperCase();
+        if (answer === word) {
+          score++;
+          soundManager.play('correct');
+          round++;
+          setTimeout(showRound, 500);
+        } else {
+          mistakes++;
+          soundManager.play('wrong');
+          input.value = '';
+          input.placeholder = `It was: ${word}`;
+          setTimeout(showRound, 1500);
+        }
+      }
+    });
+  }
+  
+  showRound();
+}
+
+// Emoji Decoder Game
+function loadEmojiDecoder(_params: ReturnType<typeof getDifficultyParams>) {
+  const puzzles = [
+    { emojis: '🌙⭐', answer: 'NIGHT SKY', hints: ['Two words', 'Look up'] },
+    { emojis: '🔥🥊', answer: 'BOXING', hints: ['Sport', 'Fighting'] },
+    { emojis: '🍕🇮🇹', answer: 'ITALY', hints: ['Country', 'Europe'] },
+    { emojis: '📖🐛', answer: 'BOOKWORM', hints: ['Reader', 'One word'] },
+    { emojis: '🎂🎈', answer: 'BIRTHDAY', hints: ['Celebration', 'Annual'] },
+    { emojis: '☀️🌻', answer: 'SUNFLOWER', hints: ['Plant', 'Yellow'] },
+    { emojis: '🌊🏄', answer: 'SURFING', hints: ['Sport', 'Beach'] },
+    { emojis: '❄️👸', answer: 'FROZEN', hints: ['Movie', 'Disney'] },
+    { emojis: '🎭🎪', answer: 'CIRCUS', hints: ['Entertainment', 'Tent'] },
+    { emojis: '🌈🦄', answer: 'UNICORN', hints: ['Mythical', 'Horse'] },
+    { emojis: '🧠💡', answer: 'IDEA', hints: ['Thought', 'Lightbulb moment'] },
+    { emojis: '⏰🐊', answer: 'TICK TOCK', hints: ['Sound', 'Peter Pan'] },
+  ];
+  
+  let score = 0;
+  let mistakes = 0;
+  const MAX_MISTAKES = 3;
+  let usedPuzzles: number[] = [];
+  
+  function showPuzzle() {
+    if (mistakes >= MAX_MISTAKES || usedPuzzles.length >= puzzles.length) {
+      endGame(score > 0, score * 20);
+      return;
+    }
+    
+    let puzzleIndex;
+    do {
+      puzzleIndex = Math.floor(Math.random() * puzzles.length);
+    } while (usedPuzzles.includes(puzzleIndex));
+    usedPuzzles.push(puzzleIndex);
+    
+    const puzzle = puzzles[puzzleIndex];
+    
+    elements.gameContainer.innerHTML = `
+      <div class="emoji-game">
+        <div class="emoji-header">
+          <div class="lives-display">
+            ${Array(MAX_MISTAKES).fill(0).map((_, i) => `
+              <span class="life-heart ${i < MAX_MISTAKES - mistakes ? 'active' : 'lost'}">❤️</span>
+            `).join('')}
+          </div>
+          <div class="emoji-score">Score: ${score}</div>
+        </div>
+        <div class="emoji-display">${puzzle.emojis}</div>
+        <div class="emoji-question">What does this represent?</div>
+        <input type="text" class="emoji-input" id="emojiInput" placeholder="Type your answer..." autocomplete="off" autocapitalize="characters">
+        <div class="emoji-hints">Hints: ${puzzle.hints.join(' • ')}</div>
+      </div>
+    `;
+    
+    const input = document.getElementById('emojiInput') as HTMLInputElement;
+    input.focus();
+    
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        const answer = input.value.toUpperCase().trim();
+        if (answer === puzzle.answer || answer === puzzle.answer.replace(' ', '')) {
+          score++;
+          soundManager.play('correct');
+          setTimeout(showPuzzle, 500);
+        } else {
+          mistakes++;
+          soundManager.play('wrong');
+          input.value = '';
+          input.placeholder = `Answer: ${puzzle.answer}`;
+          setTimeout(showPuzzle, 2000);
+        }
+      }
+    });
+  }
+  
+  showPuzzle();
+}
+
+// Mental Math Chain Game
+function loadMentalMath(_params: ReturnType<typeof getDifficultyParams>) {
+  let score = 0;
+  let mistakes = 0;
+  const MAX_MISTAKES = 3;
+  
+  function generateChain(): { expression: string; answer: number } {
+    let result = Math.floor(Math.random() * 20) + 5;
+    let expression = String(result);
+    
+    const operations = 3;
+    for (let i = 0; i < operations; i++) {
+      const op = ['+', '-', '×'][Math.floor(Math.random() * 3)];
+      let num: number;
+      
+      switch (op) {
+        case '+':
+          num = Math.floor(Math.random() * 20) + 1;
+          result += num;
+          expression += ` + ${num}`;
+          break;
+        case '-':
+          num = Math.floor(Math.random() * Math.min(result, 15)) + 1;
+          result -= num;
+          expression += ` - ${num}`;
+          break;
+        case '×':
+          num = Math.floor(Math.random() * 5) + 2;
+          result *= num;
+          expression += ` × ${num}`;
+          break;
+      }
+    }
+    
+    return { expression, answer: result };
+  }
+  
+  function showProblem() {
+    if (mistakes >= MAX_MISTAKES) {
+      endGame(score > 0, score * 15);
+      return;
+    }
+    
+    const { expression, answer } = generateChain();
+    const options = [answer];
+    while (options.length < 4) {
+      const wrong = answer + (Math.floor(Math.random() * 40) - 20);
+      if (!options.includes(wrong) && wrong > 0) options.push(wrong);
+    }
+    options.sort(() => Math.random() - 0.5);
+    
+    elements.gameContainer.innerHTML = `
+      <div class="mental-math-game">
+        <div class="mm-header">
+          <div class="lives-display">
+            ${Array(MAX_MISTAKES).fill(0).map((_, i) => `
+              <span class="life-heart ${i < MAX_MISTAKES - mistakes ? 'active' : 'lost'}">❤️</span>
+            `).join('')}
+          </div>
+          <div class="mm-score">Score: ${score}</div>
+        </div>
+        <div class="mm-expression">${expression} = ?</div>
+        <div class="mm-options">
+          ${options.map(opt => `
+            <button class="mm-option" data-value="${opt}">${opt}</button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+    
+    elements.gameContainer.querySelectorAll('.mm-option').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const value = parseInt(btn.getAttribute('data-value')!);
+        if (value === answer) {
+          score++;
+          soundManager.play('correct');
+          btn.classList.add('correct');
+        } else {
+          mistakes++;
+          soundManager.play('wrong');
+          btn.classList.add('wrong');
+          elements.gameContainer.querySelector(`[data-value="${answer}"]`)?.classList.add('correct');
+        }
+        
+        setTimeout(showProblem, 800);
+      });
+    });
+  }
+  
+  showProblem();
+}
+
+// Spot the Difference Game
+function loadSpotDifference(_params: ReturnType<typeof getDifficultyParams>) {
+  const patterns = [
+    { items: ['🍎', '🍎', '🍎', '🍎', '🍊', '🍎', '🍎', '🍎', '🍎'], different: 4 },
+    { items: ['⭐', '⭐', '⭐', '✨', '⭐', '⭐', '⭐', '⭐', '⭐'], different: 3 },
+    { items: ['🔵', '🔵', '🔵', '🔵', '🔵', '🔵', '🟣', '🔵', '🔵'], different: 6 },
+    { items: ['🐱', '🐱', '🐱', '🐱', '🐱', '😺', '🐱', '🐱', '🐱'], different: 5 },
+    { items: ['❤️', '❤️', '💗', '❤️', '❤️', '❤️', '❤️', '❤️', '❤️'], different: 2 },
+  ];
+  
+  let score = 0;
+  let mistakes = 0;
+  const MAX_MISTAKES = 3;
+  let round = 0;
+  
+  function showRound() {
+    if (mistakes >= MAX_MISTAKES || round >= 10) {
+      endGame(score > 0, score * 10);
+      return;
+    }
+    
+    const pattern = patterns[Math.floor(Math.random() * patterns.length)];
+    
+    elements.gameContainer.innerHTML = `
+      <div class="spot-game">
+        <div class="spot-header">
+          <div class="lives-display">
+            ${Array(MAX_MISTAKES).fill(0).map((_, i) => `
+              <span class="life-heart ${i < MAX_MISTAKES - mistakes ? 'active' : 'lost'}">❤️</span>
+            `).join('')}
+          </div>
+          <div class="spot-score">Score: ${score}</div>
+        </div>
+        <div class="spot-instruction">Find the different one!</div>
+        <div class="spot-grid">
+          ${pattern.items.map((item, i) => `
+            <button class="spot-item" data-index="${i}">${item}</button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+    
+    elements.gameContainer.querySelectorAll('.spot-item').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const index = parseInt(btn.getAttribute('data-index')!);
+        if (index === pattern.different) {
+          score++;
+          soundManager.play('correct');
+          btn.classList.add('correct');
+        } else {
+          mistakes++;
+          soundManager.play('wrong');
+          btn.classList.add('wrong');
+          elements.gameContainer.querySelector(`[data-index="${pattern.different}"]`)?.classList.add('correct');
+        }
+        
+        round++;
+        setTimeout(showRound, 800);
+      });
+    });
+  }
+  
+  showRound();
+}
+
+// Word Search Game
+function loadWordSearch(_params: ReturnType<typeof getDifficultyParams>) {
+  const words = ['BRAIN', 'THINK', 'SMART', 'LOGIC'];
+  const gridSize = 8;
+  const grid: string[][] = [];
+  
+  // Initialize grid with random letters
+  for (let r = 0; r < gridSize; r++) {
+    grid[r] = [];
+    for (let c = 0; c < gridSize; c++) {
+      grid[r][c] = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+    }
+  }
+  
+  // Place words horizontally
+  const placedWords: { word: string; positions: number[] }[] = [];
+  words.forEach((word, i) => {
+    const row = i * 2;
+    const startCol = Math.floor(Math.random() * (gridSize - word.length));
+    const positions: number[] = [];
+    for (let c = 0; c < word.length; c++) {
+      grid[row][startCol + c] = word[c];
+      positions.push(row * gridSize + startCol + c);
+    }
+    placedWords.push({ word, positions });
+  });
+  
+  let foundWords: string[] = [];
+  let selectedCells: number[] = [];
+  
+  function render() {
+    elements.gameContainer.innerHTML = `
+      <div class="wordsearch-game">
+        <div class="ws-header">
+          <div class="ws-found">Found: ${foundWords.length}/${words.length}</div>
+        </div>
+        <div class="ws-words">
+          ${words.map(w => `
+            <span class="ws-word ${foundWords.includes(w) ? 'found' : ''}">${w}</span>
+          `).join('')}
+        </div>
+        <div class="ws-grid" style="grid-template-columns: repeat(${gridSize}, 1fr)">
+          ${grid.flat().map((letter, i) => `
+            <button class="ws-cell ${selectedCells.includes(i) ? 'selected' : ''}" data-index="${i}">${letter}</button>
+          `).join('')}
+        </div>
+        <div class="ws-hint">Click cells to select letters</div>
+      </div>
+    `;
+    
+    elements.gameContainer.querySelectorAll('.ws-cell').forEach(cell => {
+      cell.addEventListener('click', () => {
+        const index = parseInt(cell.getAttribute('data-index')!);
+        
+        if (selectedCells.includes(index)) {
+          selectedCells = selectedCells.filter(i => i !== index);
+        } else {
+          selectedCells.push(index);
+        }
+        
+        // Check if selected cells form a word
+        const selectedWord = selectedCells.map(i => grid[Math.floor(i / gridSize)][i % gridSize]).join('');
+        
+        const matchedWord = placedWords.find(pw => 
+          pw.word === selectedWord && 
+          JSON.stringify(pw.positions.sort()) === JSON.stringify([...selectedCells].sort())
+        );
+        
+        if (matchedWord && !foundWords.includes(matchedWord.word)) {
+          foundWords.push(matchedWord.word);
+          soundManager.play('correct');
+          selectedCells = [];
+          
+          if (foundWords.length === words.length) {
+            setTimeout(() => endGame(true, 100), 500);
+            return;
+          }
+        }
+        
+        render();
+      });
+    });
+  }
+  
+  render();
+}
+
+// AI Riddles Game
+async function loadAiRiddles(_params: ReturnType<typeof getDifficultyParams>) {
+  const difficulty = freePlayDifficulty || 'medium';
+  
+  elements.gameContainer.innerHTML = `
+    <div class="loading-game">
+      <div class="loading-spinner">🎭</div>
+      <p>AI is creating riddles...</p>
+    </div>
+  `;
+  
+  // Fallback riddles if AI fails
+  const fallbackRiddles = [
+    { riddle: "I have cities, but no houses. I have mountains, but no trees. I have water, but no fish. What am I?", answer: "MAP" },
+    { riddle: "The more you take, the more you leave behind. What am I?", answer: "FOOTSTEPS" },
+    { riddle: "I speak without a mouth and hear without ears. I have no body, but I come alive with the wind. What am I?", answer: "ECHO" },
+    { riddle: "What has keys but no locks, space but no room, and you can enter but can't go inside?", answer: "KEYBOARD" },
+    { riddle: "I am not alive, but I grow. I don't have lungs, but I need air. What am I?", answer: "FIRE" },
+  ];
+  
+  let riddles = fallbackRiddles;
+  let score = 0;
+  let mistakes = 0;
+  const MAX_MISTAKES = 3;
+  let currentRiddle = 0;
+  
+  // Try to get AI riddles
+  try {
+    const response = await fetch(`${BACKEND_URL}/games/riddles`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ difficulty, count: 5 })
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      if (data.riddles && data.riddles.length > 0) {
+        riddles = data.riddles;
+      }
+    }
+  } catch (e) {
+    console.log('Using fallback riddles');
+  }
+  
+  function showRiddle() {
+    if (mistakes >= MAX_MISTAKES || currentRiddle >= riddles.length) {
+      endGame(score > 0, score * 20);
+      return;
+    }
+    
+    const riddle = riddles[currentRiddle];
+    
+    elements.gameContainer.innerHTML = `
+      <div class="riddle-game">
+        <div class="riddle-header">
+          <div class="lives-display">
+            ${Array(MAX_MISTAKES).fill(0).map((_, i) => `
+              <span class="life-heart ${i < MAX_MISTAKES - mistakes ? 'active' : 'lost'}">❤️</span>
+            `).join('')}
+          </div>
+          <div class="riddle-score">Score: ${score}</div>
+        </div>
+        <div class="riddle-text">"${riddle.riddle}"</div>
+        <input type="text" class="riddle-input" id="riddleInput" placeholder="Type your answer..." autocomplete="off" autocapitalize="characters">
+        <button class="riddle-submit" id="riddleSubmit">Submit Answer</button>
+      </div>
+    `;
+    
+    const input = document.getElementById('riddleInput') as HTMLInputElement;
+    const submitBtn = document.getElementById('riddleSubmit')!;
+    input.focus();
+    
+    const checkAnswer = () => {
+      const answer = input.value.toUpperCase().trim();
+      const correct = riddle.answer.toUpperCase();
+      
+      if (answer === correct || answer.includes(correct) || correct.includes(answer)) {
+        score++;
+        soundManager.play('correct');
+      } else {
+        mistakes++;
+        soundManager.play('wrong');
+        input.value = '';
+        input.placeholder = `Answer: ${riddle.answer}`;
+      }
+      
+      currentRiddle++;
+      setTimeout(showRiddle, 1500);
+    };
+    
+    submitBtn.addEventListener('click', checkAnswer);
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') checkAnswer();
+    });
+  }
+  
+  showRiddle();
+}
+
 // Auto-continue timer
 let autoNextTimer: number | null = null;
 let autoNextCountdown = 3;
@@ -2352,6 +3239,17 @@ function setupEventListeners() {
       btn.classList.add('active');
       freePlayDifficulty = btn.getAttribute('data-diff') as GameDifficulty;
       soundManager.play('click');
+    });
+  });
+  
+  // Category filter in Free Play
+  document.getElementById('categoryFilter')?.querySelectorAll('.category-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedCategory = btn.getAttribute('data-category') as GameCategory;
+      soundManager.play('click');
+      renderFreePlayGamesGrid();
     });
   });
   

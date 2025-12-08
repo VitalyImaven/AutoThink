@@ -9,7 +9,7 @@ import {
 } from './types';
 import { checkNewAchievements, Achievement } from './data/achievements';
 
-// Level definitions
+// Level definitions - now with 21 games total
 export const LEVELS: LevelInfo[] = [
   {
     level: 1,
@@ -17,7 +17,7 @@ export const LEVELS: LevelInfo[] = [
     icon: '🧠',
     winsRequired: 5,
     difficulty: 'easy',
-    unlockedGames: ['memory-match', 'math-challenge'],
+    unlockedGames: ['memory-match', 'math-challenge', 'reaction-time'],
   },
   {
     level: 2,
@@ -25,7 +25,7 @@ export const LEVELS: LevelInfo[] = [
     icon: '💭',
     winsRequired: 7,
     difficulty: 'easy',
-    unlockedGames: ['memory-match', 'math-challenge', 'simon-says'],
+    unlockedGames: ['memory-match', 'math-challenge', 'reaction-time', 'simon-says', 'speed-typing', 'emoji-decoder', 'spot-difference'],
   },
   {
     level: 3,
@@ -33,7 +33,7 @@ export const LEVELS: LevelInfo[] = [
     icon: '🔮',
     winsRequired: 10,
     difficulty: 'medium',
-    unlockedGames: ['memory-match', 'math-challenge', 'simon-says', 'minesweeper'],
+    unlockedGames: ['memory-match', 'math-challenge', 'reaction-time', 'simon-says', 'speed-typing', 'emoji-decoder', 'spot-difference', 'minesweeper', 'color-match', 'anagram', 'visual-memory', 'word-search'],
   },
   {
     level: 4,
@@ -41,7 +41,7 @@ export const LEVELS: LevelInfo[] = [
     icon: '🔷',
     winsRequired: 12,
     difficulty: 'medium',
-    unlockedGames: ['memory-match', 'math-challenge', 'simon-says', 'minesweeper', 'sliding-puzzle'],
+    unlockedGames: ['memory-match', 'math-challenge', 'reaction-time', 'simon-says', 'speed-typing', 'emoji-decoder', 'spot-difference', 'minesweeper', 'color-match', 'anagram', 'visual-memory', 'word-search', 'sliding-puzzle', 'pattern-match', 'wordle'],
   },
   {
     level: 5,
@@ -49,7 +49,7 @@ export const LEVELS: LevelInfo[] = [
     icon: '🏃',
     winsRequired: 15,
     difficulty: 'medium',
-    unlockedGames: ['memory-match', 'math-challenge', 'simon-says', 'minesweeper', 'sliding-puzzle', 'wordle'],
+    unlockedGames: ['memory-match', 'math-challenge', 'reaction-time', 'simon-says', 'speed-typing', 'emoji-decoder', 'spot-difference', 'minesweeper', 'color-match', 'anagram', 'visual-memory', 'word-search', 'sliding-puzzle', 'pattern-match', 'wordle', 'number-sequence', 'mental-math', 'ai-trivia'],
   },
   {
     level: 6,
@@ -57,7 +57,7 @@ export const LEVELS: LevelInfo[] = [
     icon: '🧙',
     winsRequired: 18,
     difficulty: 'hard',
-    unlockedGames: ['memory-match', 'math-challenge', 'simon-says', 'minesweeper', 'sliding-puzzle', 'wordle', 'number-sequence'],
+    unlockedGames: ['memory-match', 'math-challenge', 'reaction-time', 'simon-says', 'speed-typing', 'emoji-decoder', 'spot-difference', 'minesweeper', 'color-match', 'anagram', 'visual-memory', 'word-search', 'sliding-puzzle', 'pattern-match', 'wordle', 'number-sequence', 'mental-math', 'ai-trivia', 'word-association'],
   },
   {
     level: 7,
@@ -65,7 +65,7 @@ export const LEVELS: LevelInfo[] = [
     icon: '⚡',
     winsRequired: 20,
     difficulty: 'hard',
-    unlockedGames: ['memory-match', 'math-challenge', 'simon-says', 'minesweeper', 'sliding-puzzle', 'wordle', 'number-sequence', 'pattern-match'],
+    unlockedGames: ['memory-match', 'math-challenge', 'reaction-time', 'simon-says', 'speed-typing', 'emoji-decoder', 'spot-difference', 'minesweeper', 'color-match', 'anagram', 'visual-memory', 'word-search', 'sliding-puzzle', 'pattern-match', 'wordle', 'number-sequence', 'mental-math', 'ai-trivia', 'word-association', 'fact-or-fiction'],
   },
   {
     level: 8,
@@ -73,7 +73,7 @@ export const LEVELS: LevelInfo[] = [
     icon: '🔬',
     winsRequired: 25,
     difficulty: 'expert',
-    unlockedGames: ['memory-match', 'math-challenge', 'simon-says', 'minesweeper', 'sliding-puzzle', 'wordle', 'number-sequence', 'pattern-match', 'ai-trivia'],
+    unlockedGames: ['memory-match', 'math-challenge', 'reaction-time', 'simon-says', 'speed-typing', 'emoji-decoder', 'spot-difference', 'minesweeper', 'color-match', 'anagram', 'visual-memory', 'word-search', 'sliding-puzzle', 'pattern-match', 'wordle', 'number-sequence', 'mental-math', 'ai-trivia', 'word-association', 'fact-or-fiction', 'ai-riddles'],
   },
   {
     level: 9,
@@ -81,7 +81,7 @@ export const LEVELS: LevelInfo[] = [
     icon: '💎',
     winsRequired: 30,
     difficulty: 'expert',
-    unlockedGames: ['memory-match', 'math-challenge', 'simon-says', 'minesweeper', 'sliding-puzzle', 'wordle', 'number-sequence', 'pattern-match', 'ai-trivia', 'word-association'],
+    unlockedGames: ['memory-match', 'math-challenge', 'reaction-time', 'simon-says', 'speed-typing', 'emoji-decoder', 'spot-difference', 'minesweeper', 'color-match', 'anagram', 'visual-memory', 'word-search', 'sliding-puzzle', 'pattern-match', 'wordle', 'number-sequence', 'mental-math', 'ai-trivia', 'word-association', 'fact-or-fiction', 'ai-riddles'],
   },
   {
     level: 10,
@@ -89,7 +89,7 @@ export const LEVELS: LevelInfo[] = [
     icon: '🌟',
     winsRequired: Infinity, // Max level
     difficulty: 'legendary',
-    unlockedGames: ['memory-match', 'math-challenge', 'simon-says', 'minesweeper', 'sliding-puzzle', 'wordle', 'number-sequence', 'pattern-match', 'ai-trivia', 'word-association', 'fact-or-fiction'],
+    unlockedGames: ['memory-match', 'math-challenge', 'reaction-time', 'simon-says', 'speed-typing', 'emoji-decoder', 'spot-difference', 'minesweeper', 'color-match', 'anagram', 'visual-memory', 'word-search', 'sliding-puzzle', 'pattern-match', 'wordle', 'number-sequence', 'mental-math', 'ai-trivia', 'word-association', 'fact-or-fiction', 'ai-riddles'],
   },
 ];
 

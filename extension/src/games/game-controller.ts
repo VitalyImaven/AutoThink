@@ -15,8 +15,19 @@ import {
 } from './level-system';
 import { soundManager } from './sound-manager';
 
+// Game category labels
+export const CATEGORY_LABELS: Record<string, { icon: string; name: string }> = {
+  'all': { icon: '🎮', name: 'All Games' },
+  'memory': { icon: '🧠', name: 'Memory' },
+  'speed': { icon: '⚡', name: 'Speed' },
+  'logic': { icon: '🔢', name: 'Logic' },
+  'words': { icon: '📝', name: 'Words' },
+  'ai': { icon: '🤖', name: 'AI-Powered' },
+};
+
 // Game configurations
 export const GAME_CONFIGS: Record<GameType, GameConfig> = {
+  // Memory Games
   'memory-match': {
     type: 'memory-match',
     name: 'Memory Match',
@@ -24,14 +35,7 @@ export const GAME_CONFIGS: Record<GameType, GameConfig> = {
     description: 'Flip cards to find matching pairs',
     requiresAI: false,
     minLevel: 1,
-  },
-  'math-challenge': {
-    type: 'math-challenge',
-    name: 'Math Challenge',
-    icon: '🔢',
-    description: 'Solve quick arithmetic problems',
-    requiresAI: false,
-    minLevel: 1,
+    category: 'memory',
   },
   'simon-says': {
     type: 'simon-says',
@@ -40,7 +44,75 @@ export const GAME_CONFIGS: Record<GameType, GameConfig> = {
     description: 'Repeat the color sequence',
     requiresAI: false,
     minLevel: 2,
+    category: 'memory',
   },
+  'pattern-match': {
+    type: 'pattern-match',
+    name: 'Pattern Match',
+    icon: '🔷',
+    description: 'Memorize the visual pattern',
+    requiresAI: false,
+    minLevel: 4,
+    category: 'memory',
+  },
+  'visual-memory': {
+    type: 'visual-memory',
+    name: 'Visual Memory',
+    icon: '👁️',
+    description: 'Remember and recreate the grid',
+    requiresAI: false,
+    minLevel: 3,
+    category: 'memory',
+  },
+  
+  // Speed Games
+  'math-challenge': {
+    type: 'math-challenge',
+    name: 'Math Challenge',
+    icon: '🔢',
+    description: 'Solve quick arithmetic problems',
+    requiresAI: false,
+    minLevel: 1,
+    category: 'speed',
+  },
+  'reaction-time': {
+    type: 'reaction-time',
+    name: 'Reaction Time',
+    icon: '🎯',
+    description: 'Test your reflexes',
+    requiresAI: false,
+    minLevel: 1,
+    category: 'speed',
+  },
+  'speed-typing': {
+    type: 'speed-typing',
+    name: 'Speed Typing',
+    icon: '⌨️',
+    description: 'Type as fast as you can',
+    requiresAI: false,
+    minLevel: 2,
+    category: 'speed',
+  },
+  'color-match': {
+    type: 'color-match',
+    name: 'Color Match',
+    icon: '🌈',
+    description: 'Stroop test - match colors quickly',
+    requiresAI: false,
+    minLevel: 3,
+    category: 'speed',
+  },
+  'mental-math': {
+    type: 'mental-math',
+    name: 'Mental Math',
+    icon: '🧮',
+    description: 'Chain calculations in your head',
+    requiresAI: false,
+    minLevel: 5,
+    category: 'speed',
+  },
+
+  // Logic Games
   'minesweeper': {
     type: 'minesweeper',
     name: 'Minesweeper',
@@ -48,6 +120,7 @@ export const GAME_CONFIGS: Record<GameType, GameConfig> = {
     description: 'Clear the minefield using logic',
     requiresAI: false,
     minLevel: 3,
+    category: 'logic',
   },
   'sliding-puzzle': {
     type: 'sliding-puzzle',
@@ -56,14 +129,7 @@ export const GAME_CONFIGS: Record<GameType, GameConfig> = {
     description: 'Arrange tiles in correct order',
     requiresAI: false,
     minLevel: 4,
-  },
-  'wordle': {
-    type: 'wordle',
-    name: 'Wordle',
-    icon: '📝',
-    description: 'Guess the 5-letter word',
-    requiresAI: false,
-    minLevel: 5,
+    category: 'logic',
   },
   'number-sequence': {
     type: 'number-sequence',
@@ -71,23 +137,66 @@ export const GAME_CONFIGS: Record<GameType, GameConfig> = {
     icon: '🔮',
     description: 'Find the pattern in numbers',
     requiresAI: false,
-    minLevel: 6,
+    minLevel: 5,
+    category: 'logic',
   },
-  'pattern-match': {
-    type: 'pattern-match',
-    name: 'Pattern Match',
-    icon: '🔷',
-    description: 'Complete the visual pattern',
+  'spot-difference': {
+    type: 'spot-difference',
+    name: 'Spot Difference',
+    icon: '🔍',
+    description: 'Find the odd one out',
     requiresAI: false,
-    minLevel: 7,
+    minLevel: 2,
+    category: 'logic',
   },
+
+  // Word Games
+  'wordle': {
+    type: 'wordle',
+    name: 'Wordle',
+    icon: '📝',
+    description: 'Guess the 5-letter word',
+    requiresAI: false,
+    minLevel: 4,
+    category: 'words',
+  },
+  'anagram': {
+    type: 'anagram',
+    name: 'Anagram',
+    icon: '🔤',
+    description: 'Unscramble the letters',
+    requiresAI: false,
+    minLevel: 3,
+    category: 'words',
+  },
+  'emoji-decoder': {
+    type: 'emoji-decoder',
+    name: 'Emoji Decoder',
+    icon: '😀',
+    description: 'Guess the phrase from emojis',
+    requiresAI: false,
+    minLevel: 2,
+    category: 'words',
+  },
+  'word-search': {
+    type: 'word-search',
+    name: 'Word Search',
+    icon: '🔎',
+    description: 'Find hidden words in the grid',
+    requiresAI: false,
+    minLevel: 3,
+    category: 'words',
+  },
+
+  // AI-Powered Games
   'ai-trivia': {
     type: 'ai-trivia',
     name: 'AI Trivia',
     icon: '🧪',
     description: 'Answer AI-generated questions',
     requiresAI: true,
-    minLevel: 8,
+    minLevel: 5,
+    category: 'ai',
   },
   'word-association': {
     type: 'word-association',
@@ -95,7 +204,8 @@ export const GAME_CONFIGS: Record<GameType, GameConfig> = {
     icon: '💭',
     description: 'Connect related words with AI',
     requiresAI: true,
-    minLevel: 9,
+    minLevel: 6,
+    category: 'ai',
   },
   'fact-or-fiction': {
     type: 'fact-or-fiction',
@@ -103,7 +213,17 @@ export const GAME_CONFIGS: Record<GameType, GameConfig> = {
     icon: '❓',
     description: 'Identify true statements',
     requiresAI: true,
-    minLevel: 10,
+    minLevel: 7,
+    category: 'ai',
+  },
+  'ai-riddles': {
+    type: 'ai-riddles',
+    name: 'AI Riddles',
+    icon: '🎭',
+    description: 'Solve AI-generated riddles',
+    requiresAI: true,
+    minLevel: 8,
+    category: 'ai',
   },
 };
 

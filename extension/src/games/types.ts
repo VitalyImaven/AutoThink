@@ -11,7 +11,20 @@ export type GameType =
   | 'pattern-match'
   | 'ai-trivia'
   | 'word-association'
-  | 'fact-or-fiction';
+  | 'fact-or-fiction'
+  // New games
+  | 'speed-typing'
+  | 'color-match'
+  | 'reaction-time'
+  | 'visual-memory'
+  | 'anagram'
+  | 'emoji-decoder'
+  | 'ai-riddles'
+  | 'mental-math'
+  | 'spot-difference'
+  | 'word-search';
+
+export type GameCategory = 'all' | 'memory' | 'speed' | 'logic' | 'words' | 'ai';
 
 export type GameDifficulty = 'easy' | 'medium' | 'hard' | 'expert' | 'legendary';
 
@@ -24,6 +37,7 @@ export interface GameConfig {
   description: string;
   requiresAI: boolean;
   minLevel: number;
+  category: GameCategory;
 }
 
 export interface GameResult {

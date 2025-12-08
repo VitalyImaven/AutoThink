@@ -165,11 +165,40 @@
                         </div>
                     </div>
 
+                    <!-- Category Filter -->
+                    <div class="category-filter" id="categoryFilter">
+                        <button class="category-btn active" data-category="all">
+                            <span class="cat-icon">🎮</span>
+                            <span class="cat-name">All</span>
+                        </button>
+                        <button class="category-btn" data-category="memory">
+                            <span class="cat-icon">🧠</span>
+                            <span class="cat-name">Memory</span>
+                        </button>
+                        <button class="category-btn" data-category="speed">
+                            <span class="cat-icon">⚡</span>
+                            <span class="cat-name">Speed</span>
+                        </button>
+                        <button class="category-btn" data-category="logic">
+                            <span class="cat-icon">🔢</span>
+                            <span class="cat-name">Logic</span>
+                        </button>
+                        <button class="category-btn" data-category="words">
+                            <span class="cat-icon">📝</span>
+                            <span class="cat-name">Words</span>
+                        </button>
+                        <button class="category-btn" data-category="ai">
+                            <span class="cat-icon">🤖</span>
+                            <span class="cat-name">AI</span>
+                        </button>
+                    </div>
+
                     <!-- All Games Grid -->
                     <div class="games-section">
                         <h2 class="section-title">
                             <span class="title-icon">🎯</span>
-                            All Games
+                            <span id="categoryTitle">All Games</span>
+                            <span class="game-count" id="gameCount">(21)</span>
                         </h2>
                         <div class="games-grid freeplay-grid" id="freePlayGamesGrid">
                             <!-- All games unlocked -->
