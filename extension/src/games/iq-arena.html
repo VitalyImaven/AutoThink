@@ -71,6 +71,11 @@
                         <span class="mode-label">Free Play</span>
                         <span class="mode-desc">Play any game</span>
                     </button>
+                    <button class="mode-btn iq-test-btn" id="iqTestModeBtn" data-mode="iq-test">
+                        <span class="mode-icon">🧠</span>
+                        <span class="mode-label">IQ Test</span>
+                        <span class="mode-desc">Real assessment</span>
+                    </button>
                 </div>
 
                 <!-- Career Mode Content -->
@@ -211,6 +216,76 @@
                         </h2>
                         <div class="games-grid freeplay-grid" id="freePlayGamesGrid">
                             <!-- All games unlocked -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- IQ Test Mode Content -->
+                <div class="mode-content" id="iqTestModeContent">
+                    <div class="iq-test-intro">
+                        <div class="iq-test-hero">
+                            <div class="iq-hero-icon">🧠</div>
+                            <h2>Professional IQ Assessment</h2>
+                            <p class="iq-test-subtitle">Based on Cattell-Horn-Carroll (CHC) Theory</p>
+                        </div>
+                        
+                        <div class="iq-test-info">
+                            <div class="iq-info-card">
+                                <div class="iq-info-icon">📊</div>
+                                <div class="iq-info-text">
+                                    <strong>50 Questions</strong>
+                                    <span>Comprehensive cognitive assessment</span>
+                                </div>
+                            </div>
+                            <div class="iq-info-card">
+                                <div class="iq-info-icon">⏱️</div>
+                                <div class="iq-info-text">
+                                    <strong>30 Minutes</strong>
+                                    <span>Time-limited for accuracy</span>
+                                </div>
+                            </div>
+                            <div class="iq-info-card">
+                                <div class="iq-info-icon">📈</div>
+                                <div class="iq-info-text">
+                                    <strong>Real IQ Score</strong>
+                                    <span>Standard deviation scale (mean=100)</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="iq-categories">
+                            <h3>7 Cognitive Domains Tested</h3>
+                            <div class="iq-category-list">
+                                <span class="iq-cat">🔷 Pattern Recognition</span>
+                                <span class="iq-cat">📝 Verbal Reasoning</span>
+                                <span class="iq-cat">🔢 Numerical Reasoning</span>
+                                <span class="iq-cat">📐 Spatial Reasoning</span>
+                                <span class="iq-cat">🧩 Logical Deduction</span>
+                                <span class="iq-cat">💭 Working Memory</span>
+                                <span class="iq-cat">👁️ Visual Processing</span>
+                            </div>
+                        </div>
+                        
+                        <div class="iq-test-warning">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="8" x2="12" y2="12"></line>
+                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                            </svg>
+                            <p>For accurate results: Find a quiet place, minimize distractions, and complete the test in one sitting.</p>
+                        </div>
+                        
+                        <button class="play-btn iq-start-btn" id="startIQTest">
+                            <span class="play-btn-icon">🧠</span>
+                            <span class="play-btn-text">START IQ TEST</span>
+                            <div class="play-btn-glow"></div>
+                        </button>
+                        
+                        <div class="iq-test-history" id="iqTestHistory">
+                            <h3>📜 Previous Results</h3>
+                            <div class="iq-history-list" id="iqHistoryList">
+                                <p class="no-results">No previous tests taken</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -403,6 +478,134 @@
                     </div>
                     <div class="all-achievements" id="allAchievements">
                         <!-- All achievements will be listed -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- IQ Test Screen -->
+            <section class="screen" id="iqTestScreen">
+                <div class="iq-test-container">
+                    <div class="iq-test-header">
+                        <button class="back-btn" id="exitIQTest">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M19 12H5M12 19l-7-7 7-7"></path>
+                            </svg>
+                        </button>
+                        <div class="iq-progress-info">
+                            <span class="iq-question-num">Question <span id="iqCurrentQ">1</span>/<span id="iqTotalQ">50</span></span>
+                            <span class="iq-category-tag" id="iqCategoryTag">Pattern Recognition</span>
+                        </div>
+                        <div class="iq-timer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            <span id="iqTimeRemaining">30:00</span>
+                        </div>
+                    </div>
+                    
+                    <div class="iq-progress-bar">
+                        <div class="iq-progress-fill" id="iqProgressFill" style="width: 2%"></div>
+                    </div>
+                    
+                    <div class="iq-question-container">
+                        <div class="iq-difficulty-indicator" id="iqDifficultyIndicator">
+                            <span>Difficulty:</span>
+                            <div class="difficulty-dots">
+                                <span class="dot filled"></span>
+                                <span class="dot"></span>
+                                <span class="dot"></span>
+                                <span class="dot"></span>
+                                <span class="dot"></span>
+                            </div>
+                        </div>
+                        
+                        <div class="iq-question-text" id="iqQuestionText">
+                            Loading question...
+                        </div>
+                        
+                        <div class="iq-options" id="iqOptions">
+                            <!-- Options rendered by JS -->
+                        </div>
+                    </div>
+                    
+                    <div class="iq-test-footer">
+                        <button class="iq-nav-btn" id="iqSkipBtn">
+                            Skip Question
+                        </button>
+                        <button class="iq-nav-btn primary" id="iqNextBtn" disabled>
+                            Next →
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- IQ Test Results Modal -->
+            <div class="modal hidden" id="iqResultsModal">
+                <div class="modal-overlay"></div>
+                <div class="modal-content iq-results-content">
+                    <div class="iq-results-header">
+                        <div class="iq-score-circle">
+                            <span class="iq-score-value" id="iqScoreValue">100</span>
+                            <span class="iq-score-label">IQ Score</span>
+                        </div>
+                    </div>
+                    
+                    <div class="iq-classification" id="iqClassification">
+                        <h2 id="iqClassLabel">Average</h2>
+                        <p id="iqClassDesc">Normal intelligence range</p>
+                    </div>
+                    
+                    <div class="iq-percentile">
+                        <span>You scored higher than</span>
+                        <strong id="iqPercentile">50%</strong>
+                        <span>of the population</span>
+                    </div>
+                    
+                    <div class="iq-stats-summary">
+                        <div class="iq-stat">
+                            <span class="iq-stat-value" id="iqCorrectCount">25</span>
+                            <span class="iq-stat-label">Correct</span>
+                        </div>
+                        <div class="iq-stat">
+                            <span class="iq-stat-value" id="iqTotalCount">50</span>
+                            <span class="iq-stat-label">Questions</span>
+                        </div>
+                        <div class="iq-stat">
+                            <span class="iq-stat-value" id="iqTimeSpent">25:00</span>
+                            <span class="iq-stat-label">Time</span>
+                        </div>
+                    </div>
+                    
+                    <div class="iq-category-breakdown">
+                        <h3>Cognitive Profile</h3>
+                        <div class="iq-category-bars" id="iqCategoryBars">
+                            <!-- Category scores rendered by JS -->
+                        </div>
+                    </div>
+                    
+                    <div class="iq-analysis">
+                        <div class="iq-strengths">
+                            <h4>💪 Strengths</h4>
+                            <ul id="iqStrengths">
+                                <li>Pattern Recognition</li>
+                            </ul>
+                        </div>
+                        <div class="iq-improvements">
+                            <h4>📈 Areas to Improve</h4>
+                            <ul id="iqImprovements">
+                                <li>Working Memory</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="iq-results-actions">
+                        <button class="result-btn primary" id="retakeIQTest">
+                            <span>Retake Test</span>
+                        </button>
+                        <button class="result-btn secondary" id="closeIQResults">
+                            <span>Done</span>
+                        </button>
                     </div>
                 </div>
             </div>

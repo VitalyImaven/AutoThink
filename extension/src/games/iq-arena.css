@@ -4810,3 +4810,642 @@ body {
   }
 }
 
+/* ========================================
+   IQ TEST STYLES
+   ======================================== */
+
+/* IQ Test Mode Button */
+.mode-btn.iq-test-btn {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(255, 0, 229, 0.2));
+  border-color: var(--secondary);
+}
+
+.mode-btn.iq-test-btn:hover {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(255, 0, 229, 0.3));
+  box-shadow: 0 0 20px var(--secondary-glow);
+}
+
+.mode-btn.iq-test-btn.active {
+  background: linear-gradient(135deg, var(--secondary), #8B5CF6);
+}
+
+/* IQ Test Intro Section */
+.iq-test-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 16px;
+}
+
+.iq-test-hero {
+  text-align: center;
+  padding: 32px;
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(255, 0, 229, 0.1));
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.iq-hero-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  animation: brainPulse 2s ease-in-out infinite;
+}
+
+@keyframes brainPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.iq-test-hero h2 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.iq-test-subtitle {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* IQ Info Cards */
+.iq-test-info {
+  display: flex;
+  gap: 12px;
+}
+
+.iq-info-card {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+}
+
+.iq-info-icon {
+  font-size: 28px;
+}
+
+.iq-info-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.iq-info-text strong {
+  font-family: var(--font-display);
+  font-size: 14px;
+  color: var(--primary);
+}
+
+.iq-info-text span {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* IQ Categories */
+.iq-categories {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  border: 1px solid var(--border-color);
+}
+
+.iq-categories h3 {
+  font-family: var(--font-display);
+  font-size: 14px;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.iq-category-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+.iq-cat {
+  padding: 8px 14px;
+  background: var(--bg-glass);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+/* IQ Test Warning */
+.iq-test-warning {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(255, 184, 0, 0.1);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 184, 0, 0.3);
+  align-items: flex-start;
+}
+
+.iq-test-warning svg {
+  width: 24px;
+  height: 24px;
+  color: var(--warning);
+  flex-shrink: 0;
+}
+
+.iq-test-warning p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* IQ Start Button */
+.iq-start-btn {
+  background: linear-gradient(135deg, var(--secondary), #8B5CF6);
+}
+
+.iq-start-btn:hover {
+  box-shadow: 0 0 30px var(--secondary-glow);
+}
+
+/* IQ Test History */
+.iq-test-history {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  border: 1px solid var(--border-color);
+}
+
+.iq-test-history h3 {
+  font-family: var(--font-display);
+  font-size: 14px;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+
+.iq-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.no-results {
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+  padding: 20px;
+}
+
+.iq-history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--bg-glass);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.iq-history-score {
+  font-family: var(--font-display);
+  font-size: 24px;
+  color: var(--primary);
+}
+
+.iq-history-date {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ========================================
+   IQ TEST SCREEN
+   ======================================== */
+
+#iqTestScreen {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.iq-test-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  max-width: 700px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.iq-test-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.iq-progress-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.iq-question-num {
+  font-family: var(--font-display);
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.iq-category-tag {
+  font-size: 11px;
+  color: var(--secondary);
+  padding: 4px 10px;
+  background: rgba(255, 0, 229, 0.1);
+  border-radius: 20px;
+}
+
+.iq-timer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+}
+
+.iq-timer svg {
+  width: 18px;
+  height: 18px;
+  color: var(--warning);
+}
+
+.iq-timer span {
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--text-primary);
+}
+
+.iq-timer.warning span {
+  color: var(--error);
+  animation: timerPulse 1s infinite;
+}
+
+@keyframes timerPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* IQ Progress Bar */
+.iq-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--bg-glass);
+  border-radius: 3px;
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.iq-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--secondary), var(--primary));
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* IQ Question Container */
+.iq-question-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-card);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  border: 1px solid var(--border-color);
+}
+
+.iq-difficulty-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.iq-difficulty-indicator span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.difficulty-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.difficulty-dots .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--bg-glass);
+  border: 1px solid var(--border-color);
+}
+
+.difficulty-dots .dot.filled {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.iq-question-text {
+  font-size: 20px;
+  color: var(--text-primary);
+  line-height: 1.6;
+  margin-bottom: 24px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-family: var(--font-body);
+}
+
+/* IQ Options */
+.iq-options {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.iq-option {
+  padding: 16px 20px;
+  background: var(--bg-glass);
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  font-size: 16px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.iq-option:hover {
+  border-color: var(--primary);
+  background: rgba(0, 245, 255, 0.1);
+}
+
+.iq-option.selected {
+  border-color: var(--secondary);
+  background: rgba(255, 0, 229, 0.2);
+  box-shadow: 0 0 20px var(--secondary-glow);
+}
+
+/* IQ Test Footer */
+.iq-test-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.iq-nav-btn {
+  padding: 14px 28px;
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-glass);
+  color: var(--text-secondary);
+  font-family: var(--font-display);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.iq-nav-btn:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.iq-nav-btn.primary {
+  background: linear-gradient(135deg, var(--secondary), #8B5CF6);
+  border-color: transparent;
+  color: white;
+}
+
+.iq-nav-btn.primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.iq-nav-btn.primary:hover:not(:disabled) {
+  box-shadow: 0 0 20px var(--secondary-glow);
+}
+
+/* ========================================
+   IQ RESULTS MODAL
+   ======================================== */
+
+.iq-results-content {
+  max-width: 500px;
+  text-align: center;
+}
+
+.iq-results-header {
+  margin-bottom: 20px;
+}
+
+.iq-score-circle {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--secondary), #8B5CF6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  box-shadow: 0 0 40px var(--secondary-glow);
+  animation: scoreReveal 1s ease-out;
+}
+
+@keyframes scoreReveal {
+  0% { transform: scale(0); opacity: 0; }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.iq-score-value {
+  font-family: var(--font-display);
+  font-size: 48px;
+  font-weight: 700;
+  color: white;
+}
+
+.iq-score-label {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.iq-classification {
+  margin-bottom: 20px;
+}
+
+.iq-classification h2 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+
+.iq-classification p {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.iq-percentile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px;
+  background: rgba(0, 245, 255, 0.1);
+  border-radius: var(--radius-lg);
+  margin-bottom: 20px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.iq-percentile strong {
+  font-family: var(--font-display);
+  font-size: 24px;
+  color: var(--primary);
+}
+
+.iq-stats-summary {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  margin-bottom: 24px;
+}
+
+.iq-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.iq-stat-value {
+  font-family: var(--font-display);
+  font-size: 24px;
+  color: var(--text-primary);
+}
+
+.iq-stat-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+/* Category Breakdown */
+.iq-category-breakdown {
+  text-align: left;
+  margin-bottom: 20px;
+}
+
+.iq-category-breakdown h3 {
+  font-family: var(--font-display);
+  font-size: 14px;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.iq-category-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.iq-cat-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.iq-cat-name {
+  width: 120px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.iq-cat-track {
+  flex: 1;
+  height: 8px;
+  background: var(--bg-glass);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.iq-cat-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.iq-cat-score {
+  width: 40px;
+  text-align: right;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* IQ Analysis */
+.iq-analysis {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.iq-strengths, .iq-improvements {
+  padding: 16px;
+  background: var(--bg-glass);
+  border-radius: var(--radius-lg);
+}
+
+.iq-strengths h4, .iq-improvements h4 {
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.iq-strengths h4 {
+  color: var(--success);
+}
+
+.iq-improvements h4 {
+  color: var(--warning);
+}
+
+.iq-strengths ul, .iq-improvements ul {
+  list-style: none;
+}
+
+.iq-strengths li, .iq-improvements li {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 4px 0;
+}
+
+/* IQ Results Actions */
+.iq-results-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+

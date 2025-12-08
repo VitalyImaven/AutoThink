@@ -126,3 +126,4 @@ export function getEncouragementMessage(): string {
   return encouragementMessages[Math.floor(Math.random() * encouragementMessages.length)];
 }
 
+

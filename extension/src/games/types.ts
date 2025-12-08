@@ -204,3 +204,58 @@ export interface AITriviaResponse {
   questions: TriviaQuestion[];
 }
 
+// ========== IQ TEST TYPES ==========
+
+export type IQCategory = 
+  | 'pattern-recognition'    // Raven's matrices style
+  | 'verbal-reasoning'       // Word analogies
+  | 'numerical-reasoning'    // Number sequences
+  | 'spatial-reasoning'      // 3D rotation, shapes
+  | 'logical-deduction'      // Syllogisms, if-then
+  | 'working-memory'         // Sequence recall
+  | 'visual-processing';     // Pattern completion
+
+export interface IQQuestion {
+  id: number;
+  category: IQCategory;
+  difficulty: 1 | 2 | 3 | 4 | 5; // 1=easy, 5=hardest
+  question: string;
+  questionType: 'text' | 'visual' | 'grid' | 'sequence';
+  options: string[];
+  correctIndex: number;
+  visualData?: IQVisualData;
+  timeWeight: number; // points multiplier based on time
+}
+
+export interface IQVisualData {
+  type: 'matrix' | 'shapes' | 'rotation' | 'pattern' | 'sequence';
+  grid?: string[][]; // For matrix puzzles
+  shapes?: string[]; // For shape puzzles
+  sequence?: (string | number)[]; // For sequence puzzles
+}
+
+export interface IQTestResult {
+  totalQuestions: number;
+  correctAnswers: number;
+  categoryScores: { [key in IQCategory]?: { correct: number; total: number } };
+  rawScore: number;
+  iqScore: number;
+  percentile: number;
+  classification: string;
+  timeSpent: number; // seconds
+  completedAt: string;
+  detailedAnalysis: {
+    strengths: IQCategory[];
+    areasForImprovement: IQCategory[];
+  };
+}
+
+export interface IQTestSession {
+  questions: IQQuestion[];
+  currentIndex: number;
+  answers: { questionId: number; selectedIndex: number; timeSpent: number }[];
+  startTime: number;
+  timeLimit: number; // 30 minutes in seconds
+  isComplete: boolean;
+}
+

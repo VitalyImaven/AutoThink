@@ -1,6 +1,12 @@
 // IQ Arena - Main Controller
 
-import { GameType, PlayerProgress, GameDifficulty, GameCategory } from './types';
+import { GameType, PlayerProgress, GameDifficulty, GameCategory, IQCategory, IQTestResult, IQTestSession } from './types';
+import { 
+  generateIQTestQuestions, 
+  calculateIQScore, 
+  CATEGORY_NAMES, 
+  IQ_CLASSIFICATIONS 
+} from './data/iq-test-questions';
 import { 
   loadProgress, 
   saveProgress,
@@ -39,12 +45,17 @@ let currentSession: GameSession | null = null;
 let timerInterval: number | null = null;
 
 // Game mode state
-type GameMode = 'career' | 'freeplay';
+type GameMode = 'career' | 'freeplay' | 'iq-test';
 let currentMode: GameMode = 'career';
 let freePlayDifficulty: GameDifficulty = 'medium';
 let freePlayGameSettings: Record<string, any> = {};
 let selectedFreePlayGame: GameType | null = null;
 let selectedCategory: GameCategory = 'all';
+
+// IQ Test state
+let iqTestSession: IQTestSession | null = null;
+let iqTimerInterval: number | null = null;
+let iqTestHistory: IQTestResult[] = [];
 
 // Game Tutorials - Rules and how to play for each game
 const GAME_TUTORIALS: Record<GameType, { title: string; rules: string[]; tips: string }> = {
@@ -535,6 +546,42 @@ const elements = {
   gameStatsList: document.getElementById('gameStatsList')!,
   achievementsProgress: document.getElementById('achievementsProgress')!,
   allAchievements: document.getElementById('allAchievements')!,
+  
+  // IQ Test Mode
+  iqTestModeBtn: document.getElementById('iqTestModeBtn')!,
+  iqTestModeContent: document.getElementById('iqTestModeContent')!,
+  startIQTest: document.getElementById('startIQTest')!,
+  iqHistoryList: document.getElementById('iqHistoryList')!,
+  
+  // IQ Test Screen
+  iqTestScreen: document.getElementById('iqTestScreen')!,
+  exitIQTest: document.getElementById('exitIQTest')!,
+  iqCurrentQ: document.getElementById('iqCurrentQ')!,
+  iqTotalQ: document.getElementById('iqTotalQ')!,
+  iqCategoryTag: document.getElementById('iqCategoryTag')!,
+  iqTimeRemaining: document.getElementById('iqTimeRemaining')!,
+  iqProgressFill: document.getElementById('iqProgressFill')!,
+  iqDifficultyIndicator: document.getElementById('iqDifficultyIndicator')!,
+  iqQuestionText: document.getElementById('iqQuestionText')!,
+  iqOptions: document.getElementById('iqOptions')!,
+  iqSkipBtn: document.getElementById('iqSkipBtn')!,
+  iqNextBtn: document.getElementById('iqNextBtn')!,
+  iqTimer: document.querySelector('.iq-timer') as HTMLElement,
+  
+  // IQ Results Modal
+  iqResultsModal: document.getElementById('iqResultsModal')!,
+  iqScoreValue: document.getElementById('iqScoreValue')!,
+  iqClassLabel: document.getElementById('iqClassLabel')!,
+  iqClassDesc: document.getElementById('iqClassDesc')!,
+  iqPercentile: document.getElementById('iqPercentile')!,
+  iqCorrectCount: document.getElementById('iqCorrectCount')!,
+  iqTotalCount: document.getElementById('iqTotalCount')!,
+  iqTimeSpent: document.getElementById('iqTimeSpent')!,
+  iqCategoryBars: document.getElementById('iqCategoryBars')!,
+  iqStrengths: document.getElementById('iqStrengths')!,
+  iqImprovements: document.getElementById('iqImprovements')!,
+  retakeIQTest: document.getElementById('retakeIQTest')!,
+  closeIQResults: document.getElementById('closeIQResults')!,
 };
 
 // Initialize
@@ -847,10 +894,11 @@ function collectSettingsAndStart() {
 }
 
 // Switch screens
-function showScreen(screenId: 'home' | 'game' | 'result') {
+function showScreen(screenId: 'home' | 'game' | 'result' | 'iqTest') {
   elements.homeScreen.classList.remove('active');
   elements.gameScreen.classList.remove('active');
   elements.resultScreen.classList.remove('active');
+  elements.iqTestScreen.classList.remove('active');
   
   switch (screenId) {
     case 'home':
@@ -862,6 +910,9 @@ function showScreen(screenId: 'home' | 'game' | 'result') {
     case 'result':
       elements.resultScreen.classList.add('active');
       break;
+    case 'iqTest':
+      elements.iqTestScreen.classList.add('active');
+      break;
   }
 }
 
@@ -871,10 +922,368 @@ function switchMode(mode: GameMode) {
   
   elements.careerModeBtn.classList.toggle('active', mode === 'career');
   elements.freePlayModeBtn.classList.toggle('active', mode === 'freeplay');
+  elements.iqTestModeBtn.classList.toggle('active', mode === 'iq-test');
   elements.careerModeContent.classList.toggle('active', mode === 'career');
   elements.freePlayModeContent.classList.toggle('active', mode === 'freeplay');
+  elements.iqTestModeContent.classList.toggle('active', mode === 'iq-test');
+  
+  // Load IQ test history when switching to IQ Test mode
+  if (mode === 'iq-test') {
+    loadIQTestHistory();
+  }
   
   soundManager.play('click');
+}
+
+// ========================================
+// IQ TEST FUNCTIONS
+// ========================================
+
+// Load IQ Test history from storage
+async function loadIQTestHistory() {
+  try {
+    const stored = localStorage.getItem('iq_test_history');
+    if (stored) {
+      iqTestHistory = JSON.parse(stored);
+    }
+    renderIQTestHistory();
+  } catch {
+    iqTestHistory = [];
+  }
+}
+
+// Save IQ Test result
+function saveIQTestResult(result: IQTestResult) {
+  iqTestHistory.unshift(result);
+  // Keep only last 10 results
+  if (iqTestHistory.length > 10) {
+    iqTestHistory = iqTestHistory.slice(0, 10);
+  }
+  localStorage.setItem('iq_test_history', JSON.stringify(iqTestHistory));
+}
+
+// Render IQ Test history
+function renderIQTestHistory() {
+  if (iqTestHistory.length === 0) {
+    elements.iqHistoryList.innerHTML = '<p class="no-results">No previous tests taken</p>';
+    return;
+  }
+  
+  elements.iqHistoryList.innerHTML = iqTestHistory.slice(0, 5).map(result => `
+    <div class="iq-history-item">
+      <div class="iq-history-score">${result.iqScore}</div>
+      <div class="iq-history-details">
+        <span class="iq-history-class">${result.classification}</span>
+        <span class="iq-history-date">${new Date(result.completedAt).toLocaleDateString()}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+// Start IQ Test
+function startIQTest() {
+  const questions = generateIQTestQuestions();
+  
+  iqTestSession = {
+    questions,
+    currentIndex: 0,
+    answers: [],
+    startTime: Date.now(),
+    timeLimit: 30 * 60, // 30 minutes
+    isComplete: false
+  };
+  
+  // Show IQ test screen
+  showScreen('iqTest');
+  
+  // Start timer
+  startIQTimer();
+  
+  // Render first question
+  renderIQQuestion();
+  
+  soundManager.play('click');
+}
+
+// Start IQ Test timer
+function startIQTimer() {
+  if (iqTimerInterval) clearInterval(iqTimerInterval);
+  
+  iqTimerInterval = window.setInterval(() => {
+    if (!iqTestSession) return;
+    
+    const elapsed = Math.floor((Date.now() - iqTestSession.startTime) / 1000);
+    const remaining = Math.max(0, iqTestSession.timeLimit - elapsed);
+    
+    const minutes = Math.floor(remaining / 60);
+    const seconds = remaining % 60;
+    elements.iqTimeRemaining.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    
+    // Warning when under 5 minutes
+    if (remaining < 300) {
+      elements.iqTimer.classList.add('warning');
+    }
+    
+    // Time's up
+    if (remaining === 0) {
+      finishIQTest();
+    }
+  }, 1000);
+}
+
+// Render current IQ question
+function renderIQQuestion() {
+  if (!iqTestSession) return;
+  
+  const question = iqTestSession.questions[iqTestSession.currentIndex];
+  const totalQ = iqTestSession.questions.length;
+  const currentQ = iqTestSession.currentIndex + 1;
+  
+  // Update progress
+  elements.iqCurrentQ.textContent = String(currentQ);
+  elements.iqTotalQ.textContent = String(totalQ);
+  elements.iqProgressFill.style.width = `${(currentQ / totalQ) * 100}%`;
+  
+  // Update category tag
+  elements.iqCategoryTag.textContent = CATEGORY_NAMES[question.category];
+  
+  // Update difficulty indicator
+  const dots = elements.iqDifficultyIndicator.querySelectorAll('.dot');
+  dots.forEach((dot, i) => {
+    dot.classList.toggle('filled', i < question.difficulty);
+  });
+  
+  // Render question
+  elements.iqQuestionText.textContent = question.question;
+  
+  // Render options
+  elements.iqOptions.innerHTML = question.options.map((opt, i) => `
+    <div class="iq-option" data-index="${i}">${opt}</div>
+  `).join('');
+  
+  // Add click handlers
+  elements.iqOptions.querySelectorAll('.iq-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      elements.iqOptions.querySelectorAll('.iq-option').forEach(o => o.classList.remove('selected'));
+      opt.classList.add('selected');
+      (elements.iqNextBtn as HTMLButtonElement).disabled = false;
+      soundManager.play('click');
+    });
+  });
+  
+  // Check if we already answered this question
+  const existingAnswer = iqTestSession.answers.find(a => a.questionId === question.id);
+  if (existingAnswer) {
+    const selectedOpt = elements.iqOptions.querySelector(`[data-index="${existingAnswer.selectedIndex}"]`);
+    if (selectedOpt) {
+      selectedOpt.classList.add('selected');
+      (elements.iqNextBtn as HTMLButtonElement).disabled = false;
+    }
+  } else {
+    (elements.iqNextBtn as HTMLButtonElement).disabled = true;
+  }
+  
+  // Update button text
+  if (currentQ === totalQ) {
+    elements.iqNextBtn.textContent = 'Finish Test';
+  } else {
+    elements.iqNextBtn.textContent = 'Next →';
+  }
+}
+
+// Handle IQ Next button
+function handleIQNext() {
+  if (!iqTestSession) return;
+  
+  const selectedOpt = elements.iqOptions.querySelector('.iq-option.selected');
+  if (!selectedOpt) return;
+  
+  const selectedIndex = parseInt(selectedOpt.getAttribute('data-index')!);
+  const question = iqTestSession.questions[iqTestSession.currentIndex];
+  const questionStartTime = Date.now() - 5000; // Approximate
+  
+  // Save answer
+  const existingIdx = iqTestSession.answers.findIndex(a => a.questionId === question.id);
+  if (existingIdx >= 0) {
+    iqTestSession.answers[existingIdx].selectedIndex = selectedIndex;
+  } else {
+    iqTestSession.answers.push({
+      questionId: question.id,
+      selectedIndex,
+      timeSpent: Math.floor((Date.now() - questionStartTime) / 1000)
+    });
+  }
+  
+  soundManager.play('click');
+  
+  // Check if last question
+  if (iqTestSession.currentIndex >= iqTestSession.questions.length - 1) {
+    finishIQTest();
+  } else {
+    iqTestSession.currentIndex++;
+    renderIQQuestion();
+  }
+}
+
+// Handle IQ Skip button
+function handleIQSkip() {
+  if (!iqTestSession) return;
+  
+  soundManager.play('click');
+  
+  if (iqTestSession.currentIndex >= iqTestSession.questions.length - 1) {
+    finishIQTest();
+  } else {
+    iqTestSession.currentIndex++;
+    renderIQQuestion();
+  }
+}
+
+// Finish IQ Test and calculate results
+function finishIQTest() {
+  if (!iqTestSession) return;
+  
+  // Stop timer
+  if (iqTimerInterval) {
+    clearInterval(iqTimerInterval);
+    iqTimerInterval = null;
+  }
+  
+  // Calculate results
+  const totalQuestions = iqTestSession.questions.length;
+  let correctAnswers = 0;
+  const categoryScores: { [key in IQCategory]?: { correct: number; total: number } } = {};
+  
+  // Initialize category scores
+  iqTestSession.questions.forEach(q => {
+    if (!categoryScores[q.category]) {
+      categoryScores[q.category] = { correct: 0, total: 0 };
+    }
+    categoryScores[q.category]!.total++;
+  });
+  
+  // Calculate correct answers
+  iqTestSession.answers.forEach(answer => {
+    const question = iqTestSession!.questions.find(q => q.id === answer.questionId);
+    if (question && answer.selectedIndex === question.correctIndex) {
+      correctAnswers++;
+      categoryScores[question.category]!.correct++;
+    }
+  });
+  
+  const timeSpent = Math.floor((Date.now() - iqTestSession.startTime) / 1000);
+  const avgTimePerQuestion = timeSpent / totalQuestions;
+  
+  // Calculate IQ score
+  const { iqScore, percentile, classification } = calculateIQScore(
+    correctAnswers, 
+    totalQuestions, 
+    avgTimePerQuestion
+  );
+  
+  // Find strengths and weaknesses
+  const categoryPercentages = Object.entries(categoryScores).map(([cat, score]) => ({
+    category: cat as IQCategory,
+    percentage: score!.total > 0 ? score!.correct / score!.total : 0
+  })).sort((a, b) => b.percentage - a.percentage);
+  
+  const strengths = categoryPercentages.slice(0, 2).map(c => c.category);
+  const improvements = categoryPercentages.slice(-2).map(c => c.category);
+  
+  // Create result object
+  const result: IQTestResult = {
+    totalQuestions,
+    correctAnswers,
+    categoryScores: categoryScores as IQTestResult['categoryScores'],
+    rawScore: correctAnswers,
+    iqScore,
+    percentile,
+    classification,
+    timeSpent,
+    completedAt: new Date().toISOString(),
+    detailedAnalysis: {
+      strengths,
+      areasForImprovement: improvements
+    }
+  };
+  
+  // Save result
+  saveIQTestResult(result);
+  
+  // Show results
+  showIQResults(result);
+  
+  soundManager.play(iqScore >= 100 ? 'win' : 'achievement');
+}
+
+// Show IQ Results modal
+function showIQResults(result: IQTestResult) {
+  // Update score
+  elements.iqScoreValue.textContent = String(result.iqScore);
+  
+  // Update classification
+  const classInfo = IQ_CLASSIFICATIONS.find(c => result.iqScore >= c.min);
+  elements.iqClassLabel.textContent = classInfo?.label || 'Unknown';
+  elements.iqClassDesc.textContent = classInfo?.description || '';
+  
+  // Update percentile
+  elements.iqPercentile.textContent = `${result.percentile}%`;
+  
+  // Update stats
+  elements.iqCorrectCount.textContent = String(result.correctAnswers);
+  elements.iqTotalCount.textContent = String(result.totalQuestions);
+  
+  const minutes = Math.floor(result.timeSpent / 60);
+  const seconds = result.timeSpent % 60;
+  elements.iqTimeSpent.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  
+  // Render category bars
+  elements.iqCategoryBars.innerHTML = Object.entries(result.categoryScores)
+    .map(([cat, score]) => {
+      const percentage = score!.total > 0 ? Math.round((score!.correct / score!.total) * 100) : 0;
+      const catName = CATEGORY_NAMES[cat as IQCategory] || cat;
+      const shortName = catName.split('(')[0].trim();
+      return `
+        <div class="iq-cat-bar">
+          <span class="iq-cat-name">${shortName}</span>
+          <div class="iq-cat-track">
+            <div class="iq-cat-fill" style="width: ${percentage}%"></div>
+          </div>
+          <span class="iq-cat-score">${percentage}%</span>
+        </div>
+      `;
+    }).join('');
+  
+  // Render strengths
+  elements.iqStrengths.innerHTML = result.detailedAnalysis.strengths
+    .map(cat => {
+      const name = CATEGORY_NAMES[cat]?.split('(')[0].trim() || cat;
+      return `<li>${name}</li>`;
+    }).join('');
+  
+  // Render improvements
+  elements.iqImprovements.innerHTML = result.detailedAnalysis.areasForImprovement
+    .map(cat => {
+      const name = CATEGORY_NAMES[cat]?.split('(')[0].trim() || cat;
+      return `<li>${name}</li>`;
+    }).join('');
+  
+  // Show modal
+  elements.iqResultsModal.classList.remove('hidden');
+}
+
+// Exit IQ Test
+function exitIQTest() {
+  if (iqTimerInterval) {
+    clearInterval(iqTimerInterval);
+    iqTimerInterval = null;
+  }
+  
+  const confirmExit = confirm('Are you sure you want to exit? Your progress will be lost.');
+  if (confirmExit) {
+    iqTestSession = null;
+    showScreen('home');
+  }
 }
 
 // Get difficulty params for Free Play (based on selected difficulty or custom settings)
@@ -5841,6 +6250,45 @@ function setupEventListeners() {
   
   document.getElementById('shareCopy')?.addEventListener('click', () => {
     copyToClipboard();
+  });
+  
+  // ========================================
+  // IQ TEST EVENT LISTENERS
+  // ========================================
+  
+  // IQ Test mode button
+  elements.iqTestModeBtn.addEventListener('click', () => switchMode('iq-test'));
+  
+  // Start IQ Test button
+  elements.startIQTest.addEventListener('click', startIQTest);
+  
+  // Exit IQ Test button
+  elements.exitIQTest.addEventListener('click', exitIQTest);
+  
+  // IQ Next button
+  elements.iqNextBtn.addEventListener('click', handleIQNext);
+  
+  // IQ Skip button
+  elements.iqSkipBtn.addEventListener('click', handleIQSkip);
+  
+  // Retake IQ Test button
+  elements.retakeIQTest.addEventListener('click', () => {
+    elements.iqResultsModal.classList.add('hidden');
+    startIQTest();
+  });
+  
+  // Close IQ Results button
+  elements.closeIQResults.addEventListener('click', () => {
+    elements.iqResultsModal.classList.add('hidden');
+    showScreen('home');
+    loadIQTestHistory();
+  });
+  
+  // Close IQ Results modal on overlay click
+  elements.iqResultsModal.querySelector('.modal-overlay')?.addEventListener('click', () => {
+    elements.iqResultsModal.classList.add('hidden');
+    showScreen('home');
+    loadIQTestHistory();
   });
 }
 
