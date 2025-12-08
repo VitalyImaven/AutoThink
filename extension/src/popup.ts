@@ -11,6 +11,7 @@ const summarizePageBtn = document.getElementById('summarizePage') as HTMLButtonE
 const highlightElementsBtn = document.getElementById('highlightElements') as HTMLButtonElement;
 const openOptionsBtn = document.getElementById('openOptions') as HTMLButtonElement;
 const autoFillPageBtn = document.getElementById('autoFillPage') as HTMLButtonElement;
+const openIqArenaBtn = document.getElementById('openIqArena') as HTMLButtonElement;
 const testSuggestionBtn = document.getElementById('testSuggestion') as HTMLButtonElement;
 
 // Load current settings
@@ -110,6 +111,12 @@ autoFillPageBtn.addEventListener('click', async () => {
     chrome.tabs.sendMessage(tab.id, { type: 'AUTO_FILL_PAGE' });
     window.close();
   }
+});
+
+// Open IQ Arena
+openIqArenaBtn.addEventListener('click', () => {
+  chrome.runtime.sendMessage({ type: 'OPEN_IQ_ARENA' });
+  window.close();
 });
 
 // Test suggestion on current page

@@ -3854,58 +3854,132 @@ function load2048() {
 
 // Game 3: SUDOKU
 function loadSudoku() {
-  // Pre-made Sudoku puzzles (0 = empty)
-  const puzzles = [
-    [
-      [5,3,0,0,7,0,0,0,0],
-      [6,0,0,1,9,5,0,0,0],
-      [0,9,8,0,0,0,0,6,0],
-      [8,0,0,0,6,0,0,0,3],
-      [4,0,0,8,0,3,0,0,1],
-      [7,0,0,0,2,0,0,0,6],
-      [0,6,0,0,0,0,2,8,0],
-      [0,0,0,4,1,9,0,0,5],
-      [0,0,0,0,8,0,0,7,9]
-    ]
+  // Multiple Sudoku puzzles for variety (0 = empty)
+  const puzzleData = [
+    {
+      puzzle: [
+        [5,3,0,0,7,0,0,0,0],
+        [6,0,0,1,9,5,0,0,0],
+        [0,9,8,0,0,0,0,6,0],
+        [8,0,0,0,6,0,0,0,3],
+        [4,0,0,8,0,3,0,0,1],
+        [7,0,0,0,2,0,0,0,6],
+        [0,6,0,0,0,0,2,8,0],
+        [0,0,0,4,1,9,0,0,5],
+        [0,0,0,0,8,0,0,7,9]
+      ],
+      solution: [
+        [5,3,4,6,7,8,9,1,2],
+        [6,7,2,1,9,5,3,4,8],
+        [1,9,8,3,4,2,5,6,7],
+        [8,5,9,7,6,1,4,2,3],
+        [4,2,6,8,5,3,7,9,1],
+        [7,1,3,9,2,4,8,5,6],
+        [9,6,1,5,3,7,2,8,4],
+        [2,8,7,4,1,9,6,3,5],
+        [3,4,5,2,8,6,1,7,9]
+      ]
+    },
+    {
+      puzzle: [
+        [0,0,0,2,6,0,7,0,1],
+        [6,8,0,0,7,0,0,9,0],
+        [1,9,0,0,0,4,5,0,0],
+        [8,2,0,1,0,0,0,4,0],
+        [0,0,4,6,0,2,9,0,0],
+        [0,5,0,0,0,3,0,2,8],
+        [0,0,9,3,0,0,0,7,4],
+        [0,4,0,0,5,0,0,3,6],
+        [7,0,3,0,1,8,0,0,0]
+      ],
+      solution: [
+        [4,3,5,2,6,9,7,8,1],
+        [6,8,2,5,7,1,4,9,3],
+        [1,9,7,8,3,4,5,6,2],
+        [8,2,6,1,9,5,3,4,7],
+        [3,7,4,6,8,2,9,1,5],
+        [9,5,1,7,4,3,6,2,8],
+        [5,1,9,3,2,6,8,7,4],
+        [2,4,8,9,5,7,1,3,6],
+        [7,6,3,4,1,8,2,5,9]
+      ]
+    }
   ];
   
-  const solutions = [
-    [
-      [5,3,4,6,7,8,9,1,2],
-      [6,7,2,1,9,5,3,4,8],
-      [1,9,8,3,4,2,5,6,7],
-      [8,5,9,7,6,1,4,2,3],
-      [4,2,6,8,5,3,7,9,1],
-      [7,1,3,9,2,4,8,5,6],
-      [9,6,1,5,3,7,2,8,4],
-      [2,8,7,4,1,9,6,3,5],
-      [3,4,5,2,8,6,1,7,9]
-    ]
-  ];
-  
-  const puzzleIdx = 0;
-  const puzzle = puzzles[puzzleIdx].map(r => [...r]);
-  const solution = solutions[puzzleIdx];
-  const original = puzzles[puzzleIdx].map(r => [...r]);
+  // Pick random puzzle
+  const puzzleIdx = Math.floor(Math.random() * puzzleData.length);
+  const { puzzle: initialPuzzle, solution } = puzzleData[puzzleIdx];
+  const puzzle = initialPuzzle.map(r => [...r]);
+  const original = initialPuzzle.map(r => [...r]);
   let selectedCell: [number, number] | null = null;
+  let mistakes = 0;
+  
+  // Find all conflicts in current grid
+  function findConflicts(): Set<string> {
+    const conflicts = new Set<string>();
+    
+    for (let r = 0; r < 9; r++) {
+      for (let c = 0; c < 9; c++) {
+        const val = puzzle[r][c];
+        if (val === 0) continue;
+        
+        // Check row
+        for (let i = 0; i < 9; i++) {
+          if (i !== c && puzzle[r][i] === val) {
+            conflicts.add(`${r},${c}`);
+            conflicts.add(`${r},${i}`);
+          }
+        }
+        
+        // Check column
+        for (let i = 0; i < 9; i++) {
+          if (i !== r && puzzle[i][c] === val) {
+            conflicts.add(`${r},${c}`);
+            conflicts.add(`${i},${c}`);
+          }
+        }
+        
+        // Check 3x3 box
+        const boxR = Math.floor(r / 3) * 3;
+        const boxC = Math.floor(c / 3) * 3;
+        for (let i = 0; i < 3; i++) {
+          for (let j = 0; j < 3; j++) {
+            const nr = boxR + i, nc = boxC + j;
+            if ((nr !== r || nc !== c) && puzzle[nr][nc] === val) {
+              conflicts.add(`${r},${c}`);
+              conflicts.add(`${nr},${nc}`);
+            }
+          }
+        }
+      }
+    }
+    
+    return conflicts;
+  }
   
   function render() {
     const grid = document.getElementById('sudokuGrid');
     if (!grid) return;
     
+    const conflicts = findConflicts();
+    
     grid.innerHTML = puzzle.map((row, r) => 
       row.map((val, c) => {
         const isOriginal = original[r][c] !== 0;
         const isSelected = selectedCell && selectedCell[0] === r && selectedCell[1] === c;
-        const isWrong = val !== 0 && val !== solution[r][c];
+        const hasConflict = conflicts.has(`${r},${c}`) && !isOriginal;
         return `
-          <div class="sudoku-cell ${isOriginal ? 'original' : ''} ${isSelected ? 'selected' : ''} ${isWrong ? 'wrong' : ''}" 
+          <div class="sudoku-cell ${isOriginal ? 'original' : ''} ${isSelected ? 'selected' : ''} ${hasConflict ? 'conflict' : ''}" 
                data-row="${r}" data-col="${c}">
             ${val || ''}
           </div>
         `;
       }).join('')
     ).join('');
+    
+    // Update mistakes display
+    const mistakesEl = document.getElementById('sudokuMistakes');
+    if (mistakesEl) mistakesEl.textContent = String(mistakes);
     
     // Add click handlers
     grid.querySelectorAll('.sudoku-cell:not(.original)').forEach(cell => {
@@ -3927,14 +4001,27 @@ function loadSudoku() {
     return true;
   }
   
+  function isFilled(): boolean {
+    for (let r = 0; r < 9; r++) {
+      for (let c = 0; c < 9; c++) {
+        if (puzzle[r][c] === 0) return false;
+      }
+    }
+    return true;
+  }
+  
   elements.gameContainer.innerHTML = `
     <div class="sudoku-game">
-      <div class="sudoku-header">Sudoku</div>
+      <div class="sudoku-header">
+        <span>Sudoku</span>
+        <span class="sudoku-info">Fill all cells correctly</span>
+      </div>
       <div class="sudoku-grid" id="sudokuGrid"></div>
       <div class="sudoku-numbers">
         ${[1,2,3,4,5,6,7,8,9].map(n => `<button class="sudoku-num" data-num="${n}">${n}</button>`).join('')}
         <button class="sudoku-num sudoku-clear" data-num="0">✕</button>
       </div>
+      <button class="sudoku-check" id="sudokuCheck">Check Solution</button>
     </div>
   `;
   
@@ -3949,13 +4036,48 @@ function loadSudoku() {
       
       const num = parseInt(btn.getAttribute('data-num')!);
       puzzle[r][c] = num;
+      soundManager.play('click');
+      render();
+    });
+  });
+  
+  // Check solution button
+  document.getElementById('sudokuCheck')?.addEventListener('click', () => {
+    if (!isFilled()) {
+      // Show message that puzzle is not complete
+      const info = document.querySelector('.sudoku-info');
+      if (info) {
+        info.textContent = 'Fill all cells first!';
+        info.classList.add('warning');
+        setTimeout(() => {
+          info.textContent = 'Fill all cells correctly';
+          info.classList.remove('warning');
+        }, 2000);
+      }
+      return;
+    }
+    
+    if (checkWin()) {
+      soundManager.play('win');
+      setTimeout(() => endGame(true, 100), 500);
+    } else {
+      soundManager.play('wrong');
+      mistakes++;
+      const info = document.querySelector('.sudoku-info');
+      if (info) {
+        info.textContent = 'Not correct! Check conflicts.';
+        info.classList.add('error');
+        setTimeout(() => {
+          info.textContent = 'Fill all cells correctly';
+          info.classList.remove('error');
+        }, 2000);
+      }
       render();
       
-      if (checkWin()) {
-        soundManager.play('win');
-        setTimeout(() => endGame(true, 100), 500);
+      if (mistakes >= 3) {
+        setTimeout(() => endGame(false, 0), 1500);
       }
-    });
+    }
   });
 }
 
@@ -5533,17 +5655,6 @@ function showAchievementsModal() {
 
 // Event Listeners
 function setupEventListeners() {
-  // DEV: Unlock all games button
-  document.getElementById('unlockAllBtn')?.addEventListener('click', async () => {
-    currentProgress.level = 10;
-    currentProgress.winsAtCurrentLevel = 0;
-    await import('./level-system').then(m => m.saveProgress(currentProgress));
-    soundManager.play('levelUp');
-    updateUI();
-    renderCareerGamesGrid();
-    alert('🔓 All games unlocked! Level set to 10 (Einstein Mode)');
-  });
-  
   // Mode selector
   elements.careerModeBtn.addEventListener('click', () => switchMode('career'));
   elements.freePlayModeBtn.addEventListener('click', () => switchMode('freeplay'));
