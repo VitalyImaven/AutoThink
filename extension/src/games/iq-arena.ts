@@ -1376,6 +1376,17 @@ function showAchievementsModal() {
 
 // Event Listeners
 function setupEventListeners() {
+  // DEV: Unlock all games button
+  document.getElementById('unlockAllBtn')?.addEventListener('click', async () => {
+    currentProgress.level = 10;
+    currentProgress.winsAtCurrentLevel = 0;
+    await import('./level-system').then(m => m.saveProgress(currentProgress));
+    soundManager.play('levelUp');
+    updateUI();
+    renderGamesGrid();
+    alert('🔓 All games unlocked! Level set to 10 (Einstein Mode)');
+  });
+  
   // Play random game
   elements.playRandomBtn.addEventListener('click', () => {
     const game = getRandomGame(currentProgress.level);
