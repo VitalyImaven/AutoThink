@@ -5026,6 +5026,9 @@ body {
 
 #iqTestScreen {
   height: 100%;
+}
+
+#iqTestScreen.active {
   display: flex;
   flex-direction: column;
 }

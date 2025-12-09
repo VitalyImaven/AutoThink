@@ -38,9 +38,7 @@ export type GameType =
   | 'n-back'
   | 'crossword'
   | 'solitaire'
-  | 'quick-draw'
-  // IQ Assessment
-  | 'iq-test';
+  | 'quick-draw';
 
 export type GameCategory = 
   | 'all' 

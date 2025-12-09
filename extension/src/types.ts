@@ -205,6 +205,11 @@ export interface OpenIQArenaMessage {
   type: "OPEN_IQ_ARENA";
 }
 
+// IQ Test Direct Access
+export interface OpenIQTestMessage {
+  type: "OPEN_IQ_TEST";
+}
+
 // Smart Bookmarks types
 export interface SaveBookmarkMessage {
   type: "SAVE_BOOKMARK";
@@ -312,6 +317,7 @@ export type ExtensionMessage =
   | RecentPagesResultMessage
   | OpenOptionsPageMessage
   | OpenIQArenaMessage
+  | OpenIQTestMessage
   | SaveBookmarkMessage
   | GetBookmarkMessage
   | BookmarkResultMessage

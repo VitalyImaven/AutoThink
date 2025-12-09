@@ -85,7 +85,7 @@ async function handleFieldFocused(
       type: 'SUGGESTION_AVAILABLE',
       fieldId: fieldContext.field_id,
       suggestionText: result.suggestion_text,
-    });
+    }).catch(() => {});
   } catch (error) {
     console.error('Error handling field focus:', error);
     
@@ -102,7 +102,7 @@ async function handleFieldFocused(
         type: 'SUGGESTION_ERROR',
         fieldId: fieldContext.field_id,
         error: errorMessage,
-      });
+      }).catch(() => {});
     }
   }
 }
@@ -305,7 +305,7 @@ async function handleSummarizePage(
       chrome.tabs.sendMessage(tabId, {
         type: 'SUMMARIZE_PAGE_RESULT',
         summary: result.data.summary
-      } as ExtensionMessage);
+      } as ExtensionMessage).catch(() => {});
     }
     
   } catch (error) {
@@ -318,7 +318,7 @@ async function handleSummarizePage(
         type: 'SUMMARIZE_PAGE_RESULT',
         summary: '',
         error: errorMessage
-      } as ExtensionMessage);
+      } as ExtensionMessage).catch(() => {});
     }
   }
 }
@@ -725,6 +725,9 @@ chrome.runtime.onMessage.addListener(
     } else if (message.type === 'OPEN_IQ_ARENA') {
       // Open IQ Arena brain games window
       openIQArena();
+    } else if (message.type === 'OPEN_IQ_TEST') {
+      // Open IQ Test directly
+      openIQTest();
     } 
     // ============================================
     // SMART BOOKMARKS HANDLERS
@@ -766,7 +769,7 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     chrome.tabs.sendMessage(tab.id, {
       type: 'MANUAL_SUGGEST',
       tabId: tab.id,
-    } as ExtensionMessage);
+    } as ExtensionMessage).catch(() => {});
   }
 });
 
@@ -962,6 +965,36 @@ chrome.windows.onRemoved.addListener((windowId) => {
   }
 });
 
+// ============================================
+// IQ TEST - Direct Access
+// ============================================
+
+async function openIQTest() {
+  // Get current window to determine screen position
+  const currentWindow = await chrome.windows.getCurrent();
+  
+  // IQ Test dimensions
+  const testWidth = 520;
+  const testHeight = 700;
+  
+  // Calculate center position
+  const left = Math.round((currentWindow.left || 0) + ((currentWindow.width || 1200) - testWidth) / 2);
+  const top = Math.round((currentWindow.top || 0) + ((currentWindow.height || 800) - testHeight) / 2);
+  
+  // Create new window for IQ Test with autostart parameter
+  await chrome.windows.create({
+    url: chrome.runtime.getURL('src/games/iq-arena.html?mode=iq-test&autostart=true'),
+    type: 'popup',
+    width: testWidth,
+    height: testHeight,
+    left: Math.max(0, left),
+    top: Math.max(0, top),
+    focused: true
+  });
+  
+  console.log('🧠 IQ Test opened!');
+}
+
 // Handle extension icon click - open draggable window in TOP-RIGHT corner
 chrome.action.onClicked.addListener(async () => {
   // Check if window already exists
@@ -1015,4 +1048,5 @@ chrome.windows.onRemoved.addListener((windowId) => {
 });
 
 console.log('AutoThink background service worker loaded');
+
 
