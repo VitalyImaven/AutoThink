@@ -2942,6 +2942,12 @@ function createFABMenu() {
       action: () => showBookmarkModal(), 
       badge: null as string | null 
     },
+    { 
+      id: 'iq-arena', 
+      icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a9 9 0 0 1 9 9c0 3.1-1.6 5.8-4 7.4V21a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-2.6C4.6 16.8 3 14.1 3 11a9 9 0 0 1 9-9z"></path><path d="M10 9h.01M14 9h.01"></path><path d="M9.5 15a3.5 3.5 0 0 0 5 0"></path></svg>`, 
+      label: 'IQ Arena', 
+      action: () => chrome.runtime.sendMessage({ type: 'OPEN_IQ_ARENA' }) 
+    },
   ];
   
   menuItems.forEach(item => {
