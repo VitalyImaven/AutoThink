@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grid Commander</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="game-container">
+        <!-- Start Screen -->
+        <div id="start-screen" class="screen active">
+            <div class="title-container">
+                <h1 class="game-title">GRID<span class="accent">COMMANDER</span></h1>
+                <p class="tagline">Outsmart. Outrun. Survive.</p>
+            </div>
+            <div class="menu-buttons">
+                <button id="start-btn" class="btn primary">START MISSION</button>
+                <button id="how-to-play-btn" class="btn secondary">HOW TO PLAY</button>
+            </div>
+            <div class="high-score-display">
+                <span class="label">HIGH SCORE</span>
+                <span id="high-score" class="value">0</span>
+            </div>
+        </div>
+
+        <!-- How To Play Screen -->
+        <div id="how-to-play-screen" class="screen">
+            <h2>MISSION BRIEFING</h2>
+            <div class="instructions">
+                <div class="instruction-item">
+                    <div class="key-group">
+                        <span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span>
+                        <span class="or">or</span>
+                        <span class="key">↑</span><span class="key">←</span><span class="key">↓</span><span class="key">→</span>
+                    </div>
+                    <p>Move your commander</p>
+                </div>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-box player"></div>
+                        <span>You - The Commander</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box objective"></div>
+                        <span>Objectives - Collect all!</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box enemy"></div>
+                        <span>Enemies - Avoid them!</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box obstacle"></div>
+                        <span>Obstacles - Can't pass</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box powerup"></div>
+                        <span>Power-ups - Grab them!</span>
+                    </div>
+                </div>
+                <div class="tips">
+                    <h3>TACTICAL TIPS</h3>
+                    <ul>
+                        <li>🎯 Collect all objectives to advance</li>
+                        <li>⚡ Move fast - enemies get smarter!</li>
+                        <li>🧠 Plan your route strategically</li>
+                        <li>💀 3 lives - use them wisely</li>
+                    </ul>
+                </div>
+            </div>
+            <button id="back-btn" class="btn secondary">BACK</button>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" class="screen">
+            <div class="game-header">
+                <div class="stat">
+                    <span class="label">LEVEL</span>
+                    <span id="level" class="value">1</span>
+                </div>
+                <div class="stat">
+                    <span class="label">SCORE</span>
+                    <span id="score" class="value">0</span>
+                </div>
+                <div class="stat">
+                    <span class="label">OBJECTIVES</span>
+                    <span id="objectives" class="value">0/3</span>
+                </div>
+                <div class="stat lives">
+                    <span class="label">LIVES</span>
+                    <span id="lives" class="value">❤️❤️❤️</span>
+                </div>
+            </div>
+            
+            <div id="game-grid" class="game-grid"></div>
+            
+            <div class="game-footer">
+                <div id="powerup-status" class="powerup-status"></div>
+                <button id="pause-btn" class="btn small">PAUSE</button>
+            </div>
+        </div>
+
+        <!-- Pause Screen -->
+        <div id="pause-screen" class="screen overlay">
+            <h2>PAUSED</h2>
+            <div class="menu-buttons">
+                <button id="resume-btn" class="btn primary">RESUME</button>
+                <button id="restart-btn" class="btn secondary">RESTART LEVEL</button>
+                <button id="quit-btn" class="btn danger">QUIT TO MENU</button>
+            </div>
+        </div>
+
+        <!-- Level Complete Screen -->
+        <div id="level-complete-screen" class="screen overlay">
+            <h2>LEVEL COMPLETE!</h2>
+            <div class="level-stats">
+                <div class="stat-row">
+                    <span>Time Bonus:</span>
+                    <span id="time-bonus">+500</span>
+                </div>
+                <div class="stat-row">
+                    <span>Objectives:</span>
+                    <span id="obj-bonus">+300</span>
+                </div>
+                <div class="stat-row total">
+                    <span>Total Score:</span>
+                    <span id="level-score">800</span>
+                </div>
+            </div>
+            <button id="next-level-btn" class="btn primary">NEXT LEVEL</button>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="game-over-screen" class="screen overlay">
+            <h2>MISSION FAILED</h2>
+            <div class="final-stats">
+                <div class="stat-row">
+                    <span>Final Score:</span>
+                    <span id="final-score">0</span>
+                </div>
+                <div class="stat-row">
+                    <span>Levels Cleared:</span>
+                    <span id="levels-cleared">0</span>
+                </div>
+                <div class="stat-row" id="new-high-score" style="display: none;">
+                    <span>🏆 NEW HIGH SCORE! 🏆</span>
+                </div>
+            </div>
+            <div class="menu-buttons">
+                <button id="retry-btn" class="btn primary">TRY AGAIN</button>
+                <button id="menu-btn" class="btn secondary">MAIN MENU</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
+

@@ -371,6 +371,15 @@ export const GAME_CONFIGS: Record<GameType, GameConfig> = {
     minLevel: 55,
     category: 'ai',
   },
+  'grid-commander': {
+    type: 'grid-commander',
+    name: 'Grid Commander',
+    icon: '🎮',
+    description: 'Strategic grid-based action game - outsmart enemies and collect objectives',
+    requiresAI: false,
+    minLevel: 1,
+    category: 'logic',
+  },
 };
 
 // Get available games for current level

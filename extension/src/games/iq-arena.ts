@@ -419,6 +419,17 @@ const GAME_TUTORIALS: Record<GameType, { title: string; rules: string[]; tips: s
     ],
     tips: '💡 Draw the most recognizable feature first!'
   },
+  'grid-commander': {
+    title: '🎮 Grid Commander',
+    rules: [
+      'STRATEGIC PUZZLE: Plan your moves carefully!',
+      'Collect all green stars ★ to complete the level',
+      'Red enemies move every 4 seconds - WATCH their patterns!',
+      'Use gray obstacles ▪ to block enemies and hide!',
+      'Enemies move PREDICTABLY - study and outsmart them!'
+    ],
+    tips: '💡 STRATEGY GAME! You have 5 seconds to plan. Watch enemy patterns and use obstacles as shields!'
+  },
 };
 
 // Show tutorial before starting game
@@ -1485,6 +1496,9 @@ function actuallyLoadGame(gameType: GameType, params: ReturnType<typeof getDiffi
       break;
     case 'quick-draw':
       loadQuickDraw();
+      break;
+    case 'grid-commander':
+      loadGridCommander();
       break;
   }
 }
@@ -5788,6 +5802,27 @@ function loadQuickDraw() {
       document.getElementById('qdSubmit')?.click();
     }
   }, 1000);
+}
+
+// Game 16: GRID COMMANDER
+function loadGridCommander() {
+  // Load Grid Commander in an iframe with correct path
+  const gridCommanderPath = chrome?.runtime?.getURL 
+    ? chrome.runtime.getURL('src/games/grid-commander.html')
+    : 'src/games/grid-commander.html';
+  
+  elements.gameContainer.innerHTML = `
+    <div class="grid-commander-container">
+      <iframe src="${gridCommanderPath}" 
+              style="width: 100%; height: 600px; border: none; border-radius: 10px; background: #0a0a0f;"
+              allow="autoplay">
+      </iframe>
+    </div>
+  `;
+  
+  // Grid Commander manages its own scoring internally
+  // For integration, we can add a message listener later if needed
+  // For now, let players enjoy the game without score tracking
 }
 
 // Auto-continue timer

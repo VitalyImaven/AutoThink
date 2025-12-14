@@ -9,10 +9,20 @@ import {
   ExtensionMessage,
   FieldContext,
 } from './types';
+
+/**
+ * Safe message sending - catches errors when no receiver exists
+ */
+function safeSendMessage(message: unknown): void {
+  chrome.runtime.sendMessage(message).catch(() => {
+    // Ignore - no receiver (popup closed, etc.)
+  });
+}
 import { 
   getAllChunks, 
   saveVisitedPage, 
   getAllVisitedPages,
+  getRecentVisitedPages,
   getWebMemoryStats,
   clearWebMemory,
   enforcePageLimit,
@@ -214,7 +224,7 @@ Note: Could not extract full page content. Error: ${e}`;
     
     // Send response back to ALL contexts (both popup and content script)
     // Use runtime.sendMessage for popup/options
-    chrome.runtime.sendMessage({
+    safeSendMessage({
       type: 'CHAT_RESPONSE',
       response: result.data.response
     } as ExtensionMessage);
@@ -260,7 +270,7 @@ If it shows an error, the backend is not running.`;
     }
     
     // Send error to all contexts
-    chrome.runtime.sendMessage({
+    safeSendMessage({
       type: 'CHAT_RESPONSE',
       response: '',
       error: userMessage
@@ -341,7 +351,7 @@ async function handleWebMemorySearch(query: string, sender: chrome.runtime.Messa
         results: [],
         answer: "I don't have any saved websites yet. Browse some websites and I'll remember them for you!"
       };
-      chrome.runtime.sendMessage(response);
+      safeSendMessage(response);
       if (sender.tab?.id) {
         chrome.tabs.sendMessage(sender.tab.id, response).catch(() => {});
       }
@@ -378,7 +388,7 @@ async function handleWebMemorySearch(query: string, sender: chrome.runtime.Messa
       answer: result.data.answer
     };
     
-    chrome.runtime.sendMessage(memoryResult);
+    safeSendMessage(memoryResult as ExtensionMessage);
     if (sender.tab?.id) {
       chrome.tabs.sendMessage(sender.tab.id, memoryResult).catch(() => {});
     }
@@ -390,7 +400,7 @@ async function handleWebMemorySearch(query: string, sender: chrome.runtime.Messa
       results: [],
       answer: getErrorMessage(error instanceof Error ? error.message : 'Unknown error')
     };
-    chrome.runtime.sendMessage(errorResult);
+    safeSendMessage(errorResult as ExtensionMessage);
     if (sender.tab?.id) {
       chrome.tabs.sendMessage(sender.tab.id, errorResult).catch(() => {});
     }
@@ -428,7 +438,7 @@ async function handleSaveBookmark(bookmarkData: any, sender: chrome.runtime.Mess
       saved: true
     };
     
-    chrome.runtime.sendMessage(response);
+    safeSendMessage(response);
     if (sender.tab?.id) {
       chrome.tabs.sendMessage(sender.tab.id, response).catch(() => {});
     }
@@ -436,11 +446,11 @@ async function handleSaveBookmark(bookmarkData: any, sender: chrome.runtime.Mess
     console.log('   ✅ Bookmark saved with rating', bookmark.rating);
   } catch (error) {
     console.error('❌ Error saving bookmark:', error);
-    chrome.runtime.sendMessage({
+    safeSendMessage({
       type: 'BOOKMARK_RESULT',
       saved: false,
       error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    } as ExtensionMessage);
   }
 }
 
@@ -456,7 +466,7 @@ async function handleGetBookmark(url: string, sender: chrome.runtime.MessageSend
       bookmark: bookmark || null
     };
     
-    chrome.runtime.sendMessage(response);
+    safeSendMessage(response);
     if (sender.tab?.id) {
       chrome.tabs.sendMessage(sender.tab.id, response).catch(() => {});
     }
@@ -478,7 +488,7 @@ async function handleDeleteBookmark(url: string, sender: chrome.runtime.MessageS
       deleted: true
     };
     
-    chrome.runtime.sendMessage(response);
+    safeSendMessage(response);
     if (sender.tab?.id) {
       chrome.tabs.sendMessage(sender.tab.id, response).catch(() => {});
     }
@@ -546,7 +556,7 @@ async function handleSearchBookmarks(params: any, sender: chrome.runtime.Message
       answer
     };
     
-    chrome.runtime.sendMessage(response);
+    safeSendMessage(response);
     if (sender.tab?.id) {
       chrome.tabs.sendMessage(sender.tab.id, response).catch(() => {});
     }
@@ -554,11 +564,11 @@ async function handleSearchBookmarks(params: any, sender: chrome.runtime.Message
     console.log(`   ✅ Found ${bookmarks.length} bookmarks`);
   } catch (error) {
     console.error('❌ Error searching bookmarks:', error);
-    chrome.runtime.sendMessage({
+    safeSendMessage({
       type: 'BOOKMARKS_RESULT',
       bookmarks: [],
       answer: `Error searching bookmarks: ${error instanceof Error ? error.message : 'Unknown error'}`
-    });
+    } as ExtensionMessage);
   }
 }
 
@@ -579,7 +589,7 @@ async function handleGetBookmarkStats(sender: chrome.runtime.MessageSender) {
       }
     };
     
-    chrome.runtime.sendMessage(response);
+    safeSendMessage(response);
     if (sender.tab?.id) {
       chrome.tabs.sendMessage(sender.tab.id, response).catch(() => {});
     }
@@ -640,7 +650,7 @@ async function handleGenerateBookmarkSummary(params: { url: string; title: strin
       };
       
       console.log('   📨 Sending message to tab:', sender.tab?.id);
-      chrome.runtime.sendMessage(responseMsg);
+      safeSendMessage(responseMsg as ExtensionMessage);
       if (sender.tab?.id) {
         chrome.tabs.sendMessage(sender.tab.id, responseMsg).catch((err) => {
           console.log('   ⚠️ Tab message error:', err);
@@ -654,10 +664,10 @@ async function handleGenerateBookmarkSummary(params: { url: string; title: strin
   } catch (error) {
     console.error('❌ Error generating bookmark summary:', error);
     const errorMsg = getErrorMessage(error instanceof Error ? error.message : 'Failed to generate summary');
-    chrome.runtime.sendMessage({
+    safeSendMessage({
       type: 'BOOKMARK_RESULT',
       error: errorMsg
-    });
+    } as ExtensionMessage);
     if (sender.tab?.id) {
       chrome.tabs.sendMessage(sender.tab.id, {
         type: 'BOOKMARK_RESULT',
@@ -694,25 +704,23 @@ chrome.runtime.onMessage.addListener(
           type: 'WEB_MEMORY_STATS_RESULT',
           stats
         };
-        chrome.runtime.sendMessage(response);
+        safeSendMessage(response);
         if (sender.tab?.id) {
           chrome.tabs.sendMessage(sender.tab.id, response).catch(() => {});
         }
       });
     } else if (message.type === 'GET_RECENT_PAGES') {
       // Handle recent pages request
-      import('./db').then(({ getRecentVisitedPages }) => {
-        const limit = (message as any).limit || 20;
-        getRecentVisitedPages(limit).then(pages => {
-          const response = {
-            type: 'RECENT_PAGES_RESULT',
-            pages
-          };
-          chrome.runtime.sendMessage(response);
-          if (sender.tab?.id) {
-            chrome.tabs.sendMessage(sender.tab.id, response).catch(() => {});
-          }
-        });
+      const limit = (message as any).limit || 20;
+      getRecentVisitedPages(limit).then(pages => {
+        const response = {
+          type: 'RECENT_PAGES_RESULT',
+          pages
+        };
+        safeSendMessage(response);
+        if (sender.tab?.id) {
+          chrome.tabs.sendMessage(sender.tab.id, response).catch(() => {});
+        }
       });
     } else if (message.type === 'CLEAR_WEB_MEMORY') {
       // Clear all web memory

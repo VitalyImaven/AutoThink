@@ -31,6 +31,7 @@ export type GameType =
   | 'snake'
   | 'match-three'
   | 'google-feud'
+  | 'grid-commander'
   | 'boggle'
   | 'aim-trainer'
   // Additional Popular Games

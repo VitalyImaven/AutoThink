@@ -43,12 +43,26 @@ export default defineConfig({
         if (existsSync(cssPath)) {
           copyFileSync(cssPath, resolve(gamesDistDir, 'iq-arena.css'));
         }
+        
+        // Copy Grid Commander CSS and JS
+        const gridCssPath = resolve(__dirname, 'src/games/grid-commander.css');
+        if (existsSync(gridCssPath)) {
+          copyFileSync(gridCssPath, resolve(gamesDistDir, 'grid-commander.css'));
+        }
+        
+        const gridJsPath = resolve(__dirname, 'src/games/grid-commander.js');
+        if (existsSync(gridJsPath)) {
+          copyFileSync(gridJsPath, resolve(gamesDistDir, 'grid-commander.js'));
+        }
       }
     }
   ],
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    modulePreload: {
+      polyfill: false, // Disable polyfill for service worker compatibility
+    },
     rollupOptions: {
       input: {
         background: resolve(__dirname, 'src/background.ts'),
@@ -57,11 +71,15 @@ export default defineConfig({
         options: resolve(__dirname, 'src/options/index.html'),
         'main-panel-page': resolve(__dirname, 'src/main-panel.html'),
         'iq-arena-page': resolve(__dirname, 'src/games/iq-arena.html'),
+        'grid-commander-page': resolve(__dirname, 'src/games/grid-commander.html'),
       },
       output: {
         entryFileNames: (chunkInfo) => {
           if (chunkInfo.name === 'iq-arena-page') {
             return 'src/games/iq-arena.js';
+          }
+          if (chunkInfo.name === 'grid-commander-page') {
+            return 'src/games/grid-commander.js';
           }
           return '[name].js';
         },
@@ -72,6 +90,9 @@ export default defineConfig({
           }
           if (assetInfo.name === 'iq-arena-page.html') {
             return 'src/games/iq-arena.html';
+          }
+          if (assetInfo.name === 'grid-commander-page.html') {
+            return 'src/games/grid-commander.html';
           }
           if (assetInfo.name === 'index.html') {
             return 'src/options/index.html';
